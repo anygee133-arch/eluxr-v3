@@ -1,0 +1,148 @@
+# Requirements: ELUXR Magic Content Engine v2
+
+**Defined:** 2026-02-27
+**Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post — with zero manual content creation.
+
+## v2 Requirements
+
+Requirements for this release. Each maps to roadmap phases.
+
+### Authentication
+
+- [ ] **AUTH-01**: User can sign up with email and password
+- [ ] **AUTH-02**: User can log in and access their dashboard
+- [ ] **AUTH-03**: User can reset password via email link
+- [ ] **AUTH-04**: Unauthenticated users are redirected to login page (protected routes)
+- [ ] **AUTH-05**: Each user's data is isolated — users cannot see other tenants' content
+
+### Infrastructure
+
+- [ ] **INFRA-01**: Supabase database with tables for users, ICP data, themes, content queue, and chat history
+- [ ] **INFRA-02**: Row-Level Security (RLS) policies on all tables enforcing tenant isolation via user_id
+- [ ] **INFRA-03**: All 16 Google Sheets nodes in n8n replaced with Supabase queries
+- [ ] **INFRA-04**: Every n8n webhook validates Supabase JWT before processing requests
+- [ ] **INFRA-05**: All API keys stored in n8n credential store — zero hardcoded secrets (fix KIE key in 4 nodes)
+- [ ] **INFRA-06**: n8n monolithic workflow split into separate per-phase sub-workflows
+
+### Progress Tracking
+
+- [ ] **PROG-01**: Real-time progress bar that advances when each pipeline step actually completes (not simulated)
+- [ ] **PROG-02**: Each of 6 steps (analyze business, create themes, write posts, generate images, create videos, sync calendar) reports completion individually
+- [ ] **PROG-03**: Checkmark appears next to each completed step
+- [ ] **PROG-04**: Progress state persisted in Supabase via Realtime — survives page refresh
+
+### Content Pipeline
+
+- [ ] **PIPE-01**: ICP analysis via Perplexity market research + Claude synthesis, stored in Supabase per-tenant
+- [ ] **PIPE-02**: 30-day Netflix-model theme generation with 4 weekly themed "shows" per month
+- [ ] **PIPE-03**: Daily content generation producing platform-specific posts for LinkedIn, Instagram, X, YouTube
+- [ ] **PIPE-04**: AI image prompt generation for each post via Claude
+- [ ] **PIPE-05**: Video script generation (hook/setup/value/CTA structure) via Claude
+- [ ] **PIPE-06**: One post per platform per day (4 platforms = 4 posts/day max)
+- [ ] **PIPE-07**: Fix Switch node routing bug — ensure text/image/video branches are mutually exclusive
+
+### Approval Queue
+
+- [ ] **APPR-01**: User can view all content organized by status (pending/approved/rejected)
+- [ ] **APPR-02**: User can approve individual content items
+- [ ] **APPR-03**: User can reject individual content items
+- [ ] **APPR-04**: User can edit content text before approving
+- [ ] **APPR-05**: User can batch approve/reject multiple items
+- [ ] **APPR-06**: Fix schedule edit ID mismatch bug (schedule-edit-content vs schedule-edit-content-{idx})
+
+### Calendar
+
+- [ ] **CAL-01**: Monthly calendar view showing content per day with platform-colored dots and status indicators
+- [ ] **CAL-02**: Weekly content schedule grid with day cards showing theme, platform, and status
+- [ ] **CAL-03**: Google Calendar sync for approved content (post scheduled events)
+- [ ] **CAL-04**: CSV export of all content data
+
+### AI Chat
+
+- [ ] **CHAT-01**: Unified chatbot accessible from all tabs (single conversation thread)
+- [ ] **CHAT-02**: Chat is context-aware — loads user's ICP, themes, and content data before responding
+- [ ] **CHAT-03**: Chat adjusts behavior based on which tab the user is on (setup/generate/calendar)
+
+### Standalone Tools
+
+- [ ] **TOOL-01**: Video Script Builder — generate structured video scripts from topic, platform, style
+- [ ] **TOOL-02**: Image Generator — generate images via KIE Nano Banana Pro with aspect ratio and style options
+- [ ] **TOOL-03**: Video Creator — generate videos via KIE Veo with prompt and reference image support
+- [ ] **TOOL-04**: Content Generator — generate individual posts for any platform with tone/length options
+- [ ] **TOOL-05**: Fix image polling (replace hacky setTimeout with proper polling/wait pattern)
+- [ ] **TOOL-06**: Fix video branch wiring (true/false paths appear inverted in v1)
+
+### Trend Intelligence
+
+- [ ] **TREND-01**: Weekly trend research via Perplexity scanning for trending topics in user's industry
+- [ ] **TREND-02**: Dynamic mid-month content pivots — suggest swapping upcoming posts when major trends detected
+- [ ] **TREND-03**: Dashboard notification banner when trending topics are detected
+
+### UI/UX
+
+- [ ] **UI-01**: Premium animations — staggered reveals, glassmorphism touches, smooth transitions
+- [ ] **UI-02**: Keep existing color scheme (#16a34a green, #0f172a dark) and 3-tab layout
+- [ ] **UI-03**: Fix CSS stagger animation classes 5-6 (only 1-4 defined in v1)
+- [ ] **UI-04**: Store ICP summary from Phase 1 response in frontend state (currently lost)
+- [ ] **UI-05**: Remove fake "estimated time remaining" from progress bar
+- [ ] **UI-06**: Deploy frontend to Vercel or Netlify as static site
+
+## Future Requirements (Post-v2)
+
+### Chat Enhancements
+
+- **CHAT-F01**: Action-capable chat (approve, reject, regenerate, edit content via chat commands)
+- **CHAT-F02**: Persistent chat memory stored in Supabase (remembers across sessions)
+
+### Publishing
+
+- **PUB-F01**: Auto-publish approved content to LinkedIn via API
+- **PUB-F02**: Auto-publish approved content to Instagram via API
+- **PUB-F03**: Scheduled auto-publish at optimal posting times
+
+### Billing
+
+- **BILL-F01**: Stripe integration with subscription tiers
+- **BILL-F02**: Feature gating based on plan level
+- **BILL-F03**: Usage tracking and billing dashboard
+
+### Platform Expansion
+
+- **PLAT-F01**: TikTok platform support
+- **PLAT-F02**: Facebook platform support
+
+### Intelligence
+
+- **INTEL-F01**: AI memory — learns brand voice over time from approved/rejected content
+- **INTEL-F02**: Netflix model enhancements — season arcs, episode numbering, show analytics
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Auto-publishing to social platforms | Requires complex OAuth integrations with Meta/LinkedIn/X APIs — defer to post-v2 |
+| Telegram/push notifications | Dashboard-only approval flow keeps architecture simpler |
+| TikTok and Facebook platforms | Focusing on 4 core platforms first (LinkedIn, Instagram, X, YouTube) |
+| Stripe billing / subscriptions | Get product working first, add monetization later |
+| Supabase Storage for media | KIE-hosted URLs are simpler; revisit if URLs expire |
+| Mobile native app | Responsive web only for v2 |
+| Google OAuth login | Email/password sufficient; Calendar sync is server-side via n8n |
+| Multi-language support | English only for v2 |
+| Analytics dashboard | No post-performance tracking in v2 — manual posting means no metrics pipeline |
+
+## Traceability
+
+Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| (populated by roadmapper) | | |
+
+**Coverage:**
+- v2 requirements: 41 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 41
+
+---
+*Requirements defined: 2026-02-27*
+*Last updated: 2026-02-27 after initial definition*
