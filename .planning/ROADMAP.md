@@ -35,6 +35,13 @@ The build order is driven by three hard constraints: (1) the KIE API key must be
 
 **Pitfalls:** CRIT-1 (tenant isolation), CRIT-2 (hardcoded KIE key), CRIT-4 (RLS performance), MOD-7 (migration strategy)
 
+**Plans:** 3 plans in 2 waves
+
+Plans:
+- [ ] 01-01-PLAN.md -- Supabase schema migration (10 tables, RLS, indexes, trigger)
+- [ ] 01-02-PLAN.md -- n8n credential migration (KIE API key + Supabase service role)
+- [ ] 01-03-PLAN.md -- Tenant isolation verification (test accounts + cross-tenant queries)
+
 ---
 
 ## Phase 2: Authentication
