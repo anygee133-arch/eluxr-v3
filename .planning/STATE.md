@@ -4,18 +4,19 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 1 planned. Ready for execution.
+**Current Focus:** Phase 1 in progress. Plans 01-01 and 01-02 complete.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
-**Phase:** 1 (Security Hardening + Database Foundation)
-**Plan:** 3 plans in 2 waves (01-01, 01-02, 01-03)
-**Status:** PLANNED -- READY FOR EXECUTION
+**Phase:** 1 of 11 (Security Hardening + Database Foundation)
+**Plan:** 2 of 3 in phase (01-01 complete, 01-02 complete, 01-03 pending)
+**Status:** In progress
+**Last activity:** 2026-02-28 - Completed 01-02-PLAN.md (Credential Store Migration)
 
 **Progress:**
 ```
-Phase  1: Security + DB Foundation    [ . . . . . . . . . . ] 0%
+Phase  1: Security + DB Foundation    [## . . . . . . . . . ] 2/3 plans
 Phase  2: Authentication              [ . . . . . . . . . . ] 0%
 Phase  3: Workflow Decomposition      [ . . . . . . . . . . ] 0%
 Phase  4: Progress Tracking           [ . . . . . . . . . . ] 0%
@@ -38,7 +39,7 @@ Overall: 0/50 requirements complete (0%)
 | Requirements complete | 0 |
 | Phases total | 11 |
 | Phases complete | 0 |
-| Current streak | -- |
+| Current streak | 2 plans |
 
 ## Accumulated Context
 
@@ -47,6 +48,8 @@ Overall: 0/50 requirements complete (0%)
 | Decision | Rationale | Phase |
 |----------|-----------|-------|
 | Fix KIE key BEFORE splitting workflows | Prevents propagating hardcoded key to 13 sub-workflows | 1 |
+| Use local n8n instance for programmatic workflow updates | Cloud instance requires API key not available in env; local instance has same workflow active | 1 |
+| predefinedCredentialType + httpHeaderAuth for KIE nodes | Standard n8n pattern for external API auth via credential store | 1 |
 | Supabase replaces Google Sheets entirely | Multi-tenant SaaS needs proper DB + RLS + auth -- Sheets cannot scale | 1 |
 | Email+password auth only (no OAuth) | Simpler; Google Calendar sync is server-side via n8n, not user-side | 2 |
 | Async job pattern for all long-running ops | Prevents n8n execution timeouts; enables real progress tracking | 4 |
@@ -57,7 +60,7 @@ Overall: 0/50 requirements complete (0%)
 
 ### Known Issues
 
-- KIE API key hardcoded in 5 n8n nodes (CRIT -- Phase 1 fix, corrected count from research)
+- ~~KIE API key hardcoded in 5 n8n nodes~~ FIXED in 01-02 -- migrated to credential store
 - All 13 webhooks accept unauthenticated requests (CRIT -- Phase 2 fix)
 - Google Calendar multi-tenant may be infeasible (Phase 8 decision needed)
 - n8n Cloud execution limits unverified (Phase 3 research needed)
@@ -80,15 +83,15 @@ None currently. Phase 1 planned and ready for execution.
 ## Session Continuity
 
 ### Last Session
-- **Date:** 2026-02-27
-- **Activity:** Phase 1 planning -- created 3 PLAN.md files (01-01, 01-02, 01-03) with task breakdown, dependency analysis, and goal-backward verification
-- **Outcome:** Phase 1 planned with 3 plans in 2 waves, ready for execution
+- **Date:** 2026-02-28
+- **Activity:** Executed 01-02-PLAN.md -- Migrated KIE API key from 5 HTTP Request nodes to n8n credential store
+- **Outcome:** All 5 KIE nodes updated, zero hardcoded keys remaining. Local n8n instance updated via API. On-disk workflow JSON updated.
 
 ### Next Session
-- **Expected:** Execute Phase 1 (Security Hardening + Database Foundation)
-- **Prerequisites:** None
-- **Entry point:** `/gsd:execute-phase 1`
+- **Expected:** Execute 01-03-PLAN.md (Supabase schema migration)
+- **Prerequisites:** None (01-01 and 01-02 complete)
+- **Entry point:** `/gsd:execute-phase 1` (will resume at 01-03)
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-02-27*
+*Last updated: 2026-02-28*
