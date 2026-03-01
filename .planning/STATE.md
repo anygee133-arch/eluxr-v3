@@ -4,19 +4,19 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 1 in progress. Plans 01-01 and 01-02 complete.
+**Current Focus:** Phase 1 COMPLETE. All 3 plans done. Ready for Phase 2.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
-**Phase:** 1 of 11 (Security Hardening + Database Foundation)
-**Plan:** 2 of 3 in phase (01-01 complete, 01-02 complete, 01-03 pending)
-**Status:** In progress
-**Last activity:** 2026-02-28 - Completed 01-02-PLAN.md (Credential Store Migration)
+**Phase:** 1 of 11 (Security Hardening + Database Foundation) -- COMPLETE
+**Plan:** 3 of 3 in phase (01-01 complete, 01-02 complete, 01-03 complete)
+**Status:** Phase 1 complete, ready for Phase 2
+**Last activity:** 2026-02-28 - Completed 01-03-PLAN.md (Tenant Isolation Verification)
 
 **Progress:**
 ```
-Phase  1: Security + DB Foundation    [## . . . . . . . . . ] 2/3 plans
+Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [ . . . . . . . . . . ] 0%
 Phase  3: Workflow Decomposition      [ . . . . . . . . . . ] 0%
 Phase  4: Progress Tracking           [ . . . . . . . . . . ] 0%
@@ -38,8 +38,8 @@ Overall: 0/50 requirements complete (0%)
 | Requirements total | 50 |
 | Requirements complete | 0 |
 | Phases total | 11 |
-| Phases complete | 0 |
-| Current streak | 2 plans |
+| Phases complete | 1 |
+| Current streak | 3 plans |
 
 ## Accumulated Context
 
@@ -51,6 +51,8 @@ Overall: 0/50 requirements complete (0%)
 | Use local n8n instance for programmatic workflow updates | Cloud instance requires API key not available in env; local instance has same workflow active | 1 |
 | predefinedCredentialType + httpHeaderAuth for KIE nodes | Standard n8n pattern for external API auth via credential store | 1 |
 | Supabase replaces Google Sheets entirely | Multi-tenant SaaS needs proper DB + RLS + auth -- Sheets cannot scale | 1 |
+| Supabase REST API requires sb_publishable key in apikey header | Legacy JWT keys rejected by gateway; use sb_publishable for apikey + legacy JWT for Authorization | 1 |
+| RLS tenant isolation verified across all 10 tables | SELECT, INSERT, UPDATE, DELETE all correctly enforced by auth.uid() policies | 1 |
 | Email+password auth only (no OAuth) | Simpler; Google Calendar sync is server-side via n8n, not user-side | 2 |
 | Async job pattern for all long-running ops | Prevents n8n execution timeouts; enables real progress tracking | 4 |
 | Frontend migration is atomic, not incremental | Prevents state desync between localStorage/Sheets and Supabase | 5 |
@@ -78,19 +80,19 @@ Overall: 0/50 requirements complete (0%)
 
 ### Blockers
 
-None currently. Phase 1 planned and ready for execution.
+None currently. Phase 1 complete, Phase 2 ready to begin.
 
 ## Session Continuity
 
 ### Last Session
 - **Date:** 2026-02-28
-- **Activity:** Executed 01-02-PLAN.md -- Migrated KIE API key from 5 HTTP Request nodes to n8n credential store
-- **Outcome:** All 5 KIE nodes updated, zero hardcoded keys remaining. Local n8n instance updated via API. On-disk workflow JSON updated.
+- **Activity:** Executed 01-03-PLAN.md -- Created test accounts, inserted test data, verified tenant isolation across all 10 tables
+- **Outcome:** All RLS policies verified correct. SELECT isolation (10/10 tables), INSERT/UPDATE/DELETE protection all pass. Phase 1 complete.
 
 ### Next Session
-- **Expected:** Execute 01-03-PLAN.md (Supabase schema migration)
-- **Prerequisites:** None (01-01 and 01-02 complete)
-- **Entry point:** `/gsd:execute-phase 1` (will resume at 01-03)
+- **Expected:** Begin Phase 2 (Authentication)
+- **Prerequisites:** Phase 1 complete
+- **Entry point:** `/gsd:execute-phase 2`
 
 ---
 *State initialized: 2026-02-27*
