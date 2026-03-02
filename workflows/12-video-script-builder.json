@@ -1,0 +1,184 @@
+{
+  "name": "12-Video-Script-Builder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-videoscript",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "vs-webhook-001",
+      "name": "Video Script \u2014 Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [0, 300],
+      "typeVersion": 2,
+      "webhookId": "eluxr-videoscript"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "vs-auth-exec-001",
+      "name": "Auth Validate (eluxr-videoscript)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-vs",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "vs-auth-if-001",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error || 'Authentication required' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "vs-401-001",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "claude-sonnet-4-20250514"
+            },
+            {
+              "name": "max_tokens",
+              "value": "4096"
+            },
+            {
+              "name": "messages[0].role",
+              "value": "user"
+            },
+            {
+              "name": "messages[0].content",
+              "value": "=You are an expert video scriptwriter. Create a 30 second script for: {{ $json.body.topic }}. Platform: {{ $json.body.platform }}. Style: {{ $json.body.style }}. Return JSON with title, sections, caption, thumbnail_idea."
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "vs-claude-001",
+      "name": "Claude \u2014 Script Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [660, 300],
+      "typeVersion": 4.2,
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nlet script = '';\ntry {\n  script = input.content[0].text;\n} catch(e) {\n  script = JSON.stringify(input);\n}\n\nlet parsed = {};\ntry {\n  parsed = JSON.parse(script);\n} catch(e) {\n  const match = script.match(/\\{[\\s\\S]*\\}/);\n  if (match) parsed = JSON.parse(match[0]);\n  else parsed = { raw: script };\n}\n\nreturn { json: { success: true, tool: 'video_script', script: parsed } };"
+      },
+      "id": "vs-parse-001",
+      "name": "Parse Script Response",
+      "type": "n8n-nodes-base.code",
+      "position": [880, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "vs-response-001",
+      "name": "Video Script \u2014 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1100, 300],
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Video Script \u2014 Webhook": {
+      "main": [
+        [{ "node": "Auth Validate (eluxr-videoscript)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Auth Validate (eluxr-videoscript)": {
+      "main": [
+        [{ "node": "Auth OK?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [{ "node": "Claude \u2014 Script Generator", "type": "main", "index": 0 }],
+        [{ "node": "401 Unauthorized", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude \u2014 Script Generator": {
+      "main": [
+        [{ "node": "Parse Script Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Script Response": {
+      "main": [
+        [{ "node": "Video Script \u2014 Response", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
