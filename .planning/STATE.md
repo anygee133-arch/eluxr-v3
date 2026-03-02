@@ -4,21 +4,21 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 3 in progress (Workflow Decomposition + Backend Bug Fixes). Plans 01, 02, 03, 04 complete.
+**Current Focus:** Phase 3 in progress (Workflow Decomposition + Backend Bug Fixes). Plans 01, 02, 03, 04, 05 complete. One plan remaining (06 - E2E Verification).
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 3 of 11 (Workflow Decomposition + Backend Bug Fixes) -- IN PROGRESS
-**Plan:** 4 of 6 in phase (complete)
-**Status:** In progress -- Plans 01, 02, 03, 04 complete
-**Last activity:** 2026-03-02 - Completed 03-02-PLAN.md (Sub-workflows 01-05 with PIPE-07 Switch fix)
+**Plan:** 5 of 6 in phase (complete)
+**Status:** In progress -- Plans 01, 02, 03, 04, 05 complete
+**Last activity:** 2026-03-02 - Completed 03-05-PLAN.md (Cutover: monolith deactivated, 13 sub-workflows active)
 
 **Progress:**
 ```
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
-Phase  3: Workflow Decomposition      [##############        ] 4/6 plans
+Phase  3: Workflow Decomposition      [#################     ] 5/6 plans
 Phase  4: Progress Tracking           [ . . . . . . . . . . ] 0%
 Phase  5: Frontend Migration + UI     [ . . . . . . . . . . ] 0%
 Phase  6: Content Pipeline            [ . . . . . . . . . . ] 0%
@@ -39,7 +39,7 @@ Overall: 12/50 requirements complete (24%)
 | Requirements complete | 12 |
 | Phases total | 11 |
 | Phases complete | 2 |
-| Current streak | 16 plans |
+| Current streak | 17 plans |
 
 ## Accumulated Context
 
@@ -86,6 +86,8 @@ Overall: 12/50 requirements complete (24%)
 | Content type normalization also in 05-Content-Submit | Prevents DB CHECK constraint violations on user-submitted content with free-text values | 3 |
 | Carousel routes to text branch for generation | Carousel content generation is text-based (Claude writes multi-slide text) | 3 |
 | Switch fallback handler saves unmatched items | Prevents data loss for unexpected content_type values; saves with debug note | 3 |
+| Monolith deactivated, not deleted | Kept as reference and rollback option; can reactivate in ~2 minutes | 3 |
+| Cutover performed manually via n8n Cloud dashboard | n8n Cloud API key not available; user toggled workflows in dashboard | 3 |
 
 ### Known Issues
 
@@ -94,6 +96,7 @@ Overall: 12/50 requirements complete (24%)
 - ~~Image generation uses setTimeout(35000) hack~~ FIXED in 03-04 (TOOL-05) -- proper Wait+IF polling loop
 - ~~Video Ready? IF node has inverted TRUE/FALSE wiring~~ FIXED in 03-04 (TOOL-06) -- TRUE -> Parse Video Result
 - ~~Switch node routes to multiple branches per item~~ FIXED in 03-02 (PIPE-07) -- allMatchingOutputs=false + exact equality + content type normalization
+- ~~Monolith is single point of failure~~ FIXED in 03-05 -- decomposed into 13 independent sub-workflows
 - Google Calendar multi-tenant may be infeasible (Phase 8 decision needed)
 - n8n Cloud Starter: 2.5k executions/month, 5 concurrent -- may need monitoring in Phase 4/6 for batch generation
 - KIE URL longevity unknown (test before launch)
@@ -110,19 +113,19 @@ Overall: 12/50 requirements complete (24%)
 
 ### Blockers
 
-None currently. Phase 3 Plans 01, 02, 03, 04 complete. Ready for Plan 05 (Router) or Plan 06 (Cutover).
+None currently. Phase 3 Plans 01-05 complete. Ready for Plan 06 (E2E Verification).
 
 ## Session Continuity
 
 ### Last Session
 - **Date:** 2026-03-02
-- **Activity:** Completed Phase 3 Plan 02 (Sub-workflows 01-05) -- built ICP Analyzer, Theme Generator, Themes List, Content Studio with PIPE-07 fix, Content Submit
-- **Outcome:** 5 domain sub-workflows created. 5 Google Sheets nodes replaced with 9 Supabase HTTP Request nodes. PIPE-07 Switch routing bug fixed with first-match mode, exact equality rules, and content type normalization.
+- **Activity:** Completed Phase 3 Plan 05 (Cutover) -- deactivated monolith, activated 13 sub-workflows, verified all endpoints, fixed frontend response compatibility
+- **Outcome:** System running on 13 independent sub-workflows. All 13 endpoints verified active and auth-protected (401 without JWT). Frontend compatible with sub-workflow responses.
 
 ### Next Session
-- **Expected:** Execute Phase 3 Plan 05 (Router) or Plan 06 (Cutover)
-- **Prerequisites:** All 13 sub-workflows built (Plans 02, 03, 04). WEBHOOK_PATHS documented in 03-02-SUMMARY.
-- **Entry point:** `/gsd:execute-phase` for 03-05-PLAN.md or 03-06-PLAN.md
+- **Expected:** Execute Phase 3 Plan 06 (E2E Verification)
+- **Prerequisites:** All 13 sub-workflows active (03-05 complete). Full system operational on decomposed architecture.
+- **Entry point:** `/gsd:execute-phase` for 03-06-PLAN.md
 
 ---
 *State initialized: 2026-02-27*
