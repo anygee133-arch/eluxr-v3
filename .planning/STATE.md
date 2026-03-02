@@ -4,20 +4,20 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 2 in progress (Authentication). Plan 02-01 complete.
+**Current Focus:** Phase 2 in progress (Authentication). Plans 02-01 and 02-03 complete.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 2 of 11 (Authentication)
-**Plan:** 1 of 5 in phase (02-01 complete)
+**Plan:** 2 of 5 in phase (02-01, 02-03 complete)
 **Status:** In progress
-**Last activity:** 2026-03-02 - Completed 02-01-PLAN.md (CORS Test + JWT Credential Setup)
+**Last activity:** 2026-03-02 - Completed 02-03-PLAN.md (Auth UI + Auth State Management)
 
 **Progress:**
 ```
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
-Phase  2: Authentication              [##                    ] 1/5 plans
+Phase  2: Authentication              [####                  ] 2/5 plans
 Phase  3: Workflow Decomposition      [ . . . . . . . . . . ] 0%
 Phase  4: Progress Tracking           [ . . . . . . . . . . ] 0%
 Phase  5: Frontend Migration + UI     [ . . . . . . . . . . ] 0%
@@ -28,7 +28,7 @@ Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
 Phase 10: Standalone Tools            [ . . . . . . . . . . ] 0%
 Phase 11: Trend Intelligence          [ . . . . . . . . . . ] 0%
 
-Overall: 4/50 requirements complete (8%)
+Overall: 5/50 requirements complete (10%)
 ```
 
 ## Performance Metrics
@@ -36,10 +36,10 @@ Overall: 4/50 requirements complete (8%)
 | Metric | Value |
 |--------|-------|
 | Requirements total | 50 |
-| Requirements complete | 4 |
+| Requirements complete | 5 |
 | Phases total | 11 |
 | Phases complete | 1 |
-| Current streak | 4 plans |
+| Current streak | 5 plans |
 
 ## Accumulated Context
 
@@ -63,6 +63,8 @@ Overall: 4/50 requirements complete (8%)
 | Google Calendar sync may descope to .ics export | Per-user OAuth is architecturally incompatible with n8n credential model | 8 |
 | Content generation uses batch-and-resume | 120+ API calls per campaign would exceed single execution timeout | 6 |
 | No frameworks, no build step | Existing constraint from v1 -- vanilla HTML/CSS/JS with CDN-loaded supabase-js | All |
+| Module script + window export for supabase-js | Separate script type=module imports ESM; exposes to window for non-module scripts | 2 |
+| Auth gating via show/hide containers | dashboard-container hidden when logged out, auth-container shown; reversed when logged in | 2 |
 
 ### Known Issues
 
@@ -90,13 +92,13 @@ None currently. Phase 1 complete, Phase 2 ready to begin.
 
 ### Last Session
 - **Date:** 2026-03-02
-- **Activity:** Completed 02-01-PLAN.md (CORS Test + JWT Credential Setup)
-- **Outcome:** CORS allows Authorization header, JWT is ES256, n8n JWT Auth credential created (GjLV4iwAj88m95yP). All auth architecture decisions resolved.
+- **Activity:** Completed 02-03-PLAN.md (Auth UI + Auth State Management)
+- **Outcome:** Login/signup/password-reset UI added to index.html with supabase-js@2 client, onAuthStateChange listener, and dashboard gating. Auth forms use existing design system.
 
 ### Next Session
-- **Expected:** Execute 02-02-PLAN.md (Auth Middleware Workflow)
-- **Prerequisites:** 02-01 complete (JWT credential exists, CORS confirmed)
-- **Entry point:** `/gsd:execute-phase` with 02-02-PLAN.md
+- **Expected:** Execute 02-02-PLAN.md (Auth Middleware Workflow) or 02-04-PLAN.md (Protected Webhooks)
+- **Prerequisites:** 02-01 complete (JWT credential exists), 02-03 complete (auth UI, window.supabase available)
+- **Entry point:** `/gsd:execute-phase` with next plan
 
 ---
 *State initialized: 2026-02-27*
