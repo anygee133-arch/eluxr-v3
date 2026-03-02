@@ -11,8 +11,8 @@ requires:
   - phase: 01-security-hardening-database-foundation
     provides: "Supabase project with test accounts, RLS policies using auth.uid()"
 provides:
-  - "AUTH_VALIDATOR_WORKFLOW_ID: ltscbuGU8ovNzLvo (local) -- reusable sub-workflow for JWT validation"
-  - "AUTH_TEST_WORKFLOW_ID: xTD3cxVUqH5ZMecQ (local) -- test webhook demonstrating auth pattern"
+  - "AUTH_VALIDATOR_WORKFLOW_ID: S4QtfIKpvhW4mQYG (cloud) -- reusable sub-workflow for JWT validation"
+  - "AUTH_TEST_WORKFLOW_ID: lnx0S0c83ig0V7da (cloud) -- test webhook demonstrating auth pattern"
   - "VALIDATION_APPROACH: Supabase HTTP API (/auth/v1/user) -- validates JWT and extracts user identity in one call"
   - "JWT_DELIVERY_CONFIRMED: Authorization: Bearer header -- end-to-end tested"
   - "INTEGRATION_PATTERN: Webhook -> Execute Sub-Workflow -> IF authenticated -> Success/Failure response"
@@ -81,8 +81,8 @@ These decisions are consumed by downstream plans (02-03 through 02-05 and Phase 
 
 | Key | Value | Used By |
 |-----|-------|---------|
-| **AUTH_VALIDATOR_WORKFLOW_ID** | `ltscbuGU8ovNzLvo` (local instance) | 02-04 (all webhooks), 02-05 (integration tests) |
-| **AUTH_TEST_WORKFLOW_ID** | `xTD3cxVUqH5ZMecQ` (local instance) | 02-05 (auth integration testing reference) |
+| **AUTH_VALIDATOR_WORKFLOW_ID** | `S4QtfIKpvhW4mQYG` (cloud: flowbound.app.n8n.cloud) | 02-04 (all webhooks), 02-05 (integration tests) |
+| **AUTH_TEST_WORKFLOW_ID** | `lnx0S0c83ig0V7da` (cloud: flowbound.app.n8n.cloud) | 02-05 (auth integration testing reference) |
 | **VALIDATION_APPROACH** | Supabase HTTP API (`/auth/v1/user`) | 02-04 (same approach in sub-workflow), all auth plans |
 | **JWT_DELIVERY_CONFIRMED** | `Authorization: Bearer <JWT>` header -- end-to-end tested | Phase 5 (frontend), all auth plans |
 | **INTEGRATION_PATTERN** | Webhook -> Execute Sub-Workflow -> IF authenticated -> process/401 | 02-04 (apply to all 13 webhooks) |
