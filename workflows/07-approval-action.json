@@ -1,0 +1,320 @@
+{
+  "name": "07-Approval-Action",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-approval-action",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "aa-webhook-001",
+      "name": "Approval Action Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [0, 300],
+      "typeVersion": 2,
+      "webhookId": "eluxr-approval-action"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "aa-auth-002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-aa",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "aa-if-003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized', statusCode: 401 }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "aa-401-004",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [660, 500],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "approve",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "options": {
+                  "caseSensitive": false
+                }
+              },
+              "renameOutput": "Approve"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "reject",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "options": {
+                  "caseSensitive": false
+                }
+              },
+              "renameOutput": "Reject"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "edit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "options": {
+                  "caseSensitive": false
+                }
+              },
+              "renameOutput": "Edit"
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": false,
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "aa-switch-005",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "position": [660, 100],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?id=eq.{{ $json.body.content_id }}&user_id=eq.{{ $json.user_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"approved\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "aa-patch-approve-006",
+      "name": "Supabase -- PATCH Approve",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [880, -100],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?id=eq.{{ $json.body.content_id }}&user_id=eq.{{ $json.user_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"rejected\",\n  \"feedback\": {{ JSON.stringify($json.body.feedback || '') }},\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "aa-patch-reject-007",
+      "name": "Supabase -- PATCH Reject",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [880, 100],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?id=eq.{{ $json.body.content_id }}&user_id=eq.{{ $json.user_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": {{ JSON.stringify($json.body.content || '') }},\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "aa-patch-edit-008",
+      "name": "Supabase -- PATCH Edit",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [880, 300],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, action: $('Approval Action Webhook').item.json.body.action, content_id: $('Approval Action Webhook').item.json.body.content_id, data: $json }) }}",
+        "options": {}
+      },
+      "id": "aa-response-009",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1100, 100],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unknown action: ' + ($json.body.action || 'none'), valid_actions: ['approve', 'reject', 'edit'] }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "aa-fallback-010",
+      "name": "400 Bad Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [880, 500],
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Approval Action Webhook": {
+      "main": [[{"node": "Auth Validator", "type": "main", "index": 0}]]
+    },
+    "Auth Validator": {
+      "main": [[{"node": "Auth OK?", "type": "main", "index": 0}]]
+    },
+    "Auth OK?": {
+      "main": [
+        [{"node": "Route Action", "type": "main", "index": 0}],
+        [{"node": "401 Unauthorized", "type": "main", "index": 0}]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [{"node": "Supabase -- PATCH Approve", "type": "main", "index": 0}],
+        [{"node": "Supabase -- PATCH Reject", "type": "main", "index": 0}],
+        [{"node": "Supabase -- PATCH Edit", "type": "main", "index": 0}],
+        [{"node": "400 Bad Request", "type": "main", "index": 0}]
+      ]
+    },
+    "Supabase -- PATCH Approve": {
+      "main": [[{"node": "Respond Success", "type": "main", "index": 0}]]
+    },
+    "Supabase -- PATCH Reject": {
+      "main": [[{"node": "Respond Success", "type": "main", "index": 0}]]
+    },
+    "Supabase -- PATCH Edit": {
+      "main": [[{"node": "Respond Success", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
