@@ -177,7 +177,85 @@ Prevents DB CHECK constraint violations on user-submitted content.
 
 ## Task 4: TOOL-05 Verification
 
-See detailed results below (populated during task execution).
+### Test 1: No setTimeout in Any Code Node
+
+4 Code nodes scanned in 11-Image-Generator:
+- Prepare Nano Banana Prompt: No setTimeout
+- Init Poll Counter: No setTimeout
+- Check Image Result: No setTimeout
+- Parse Image Result: No setTimeout
+
+**PASS: Zero setTimeout() calls in entire workflow**
+
+### Test 2: Wait Nodes Present
+
+| Wait Node | Duration | Purpose |
+|-----------|----------|---------|
+| Initial Wait | 10 seconds | Wait for KIE to start processing before first poll |
+| Retry Wait | 5 seconds | Interval between polling attempts |
+
+**PASS: Two Wait nodes (initial + retry) found**
+
+### Test 3: Polling Loop Wiring
+
+```
+KIE -- Create Image Task
+  -> Init Poll Counter (pollCount=0, taskId extracted)
+    -> Initial Wait (10s)
+      -> KIE -- Get Image Result (HTTP poll)
+        -> Check Image Result (increment pollCount, check state)
+          -> Is Complete? IF
+            -> TRUE:
+              -> Is Success? IF
+                -> TRUE: Parse Image Result -> Image Gen Response (200)
+                -> FALSE: Error Response (500)
+            -> FALSE: Retry Wait (5s) -> KIE -- Get Image Result (LOOP)
+```
+
+**PASS: Polling loop correctly wired with retry**
+
+### Test 4: Poll Counter Prevents Infinite Loops
+
+- Init Poll Counter: `pollCount = 0`
+- Check Image Result: `pollCount >= 12` triggers timeout
+- Maximum attempts: 12
+- Total max wait: 10s + (11 x 5s) = 65 seconds
+- Detects: success, timeout, and error states
+
+**PASS: Poll counter with max 12 attempts prevents infinite loops**
+
+### Test 5: Complete Node Inventory (16 nodes)
+
+| Node Type | Node Name | Purpose |
+|-----------|-----------|---------|
+| webhook | Image Gen -- Webhook | Entry point |
+| executeWorkflow | Auth Validate | JWT validation |
+| if | Auth OK? | Auth gate |
+| code | Prepare Nano Banana Prompt | Format KIE request |
+| respondToWebhook | 401 Unauthorized | Auth failure response |
+| httpRequest | KIE -- Create Image Task | Start image generation |
+| code | Init Poll Counter | Initialize pollCount=0 |
+| wait | Initial Wait | 10s initial delay |
+| httpRequest | KIE -- Get Image Result | Poll for result |
+| code | Check Image Result | Evaluate poll state |
+| if | Is Complete? | Branch on completion |
+| if | Is Success? | Branch on success/error |
+| wait | Retry Wait | 5s retry delay |
+| code | Parse Image Result | Extract image URL |
+| respondToWebhook | Error Response | 500 error response |
+| respondToWebhook | Image Gen -- Response | 200 success response |
+
+### BUG_FIX_EVIDENCE: TOOL-05
+
+**Before (monolith):** `setTimeout(35000)` in Code node -- blindly waits 35 seconds regardless of whether image is ready. No retry. Single attempt.
+
+**After (fixed):** Wait+IF polling loop:
+- Polls every 5 seconds after 10s initial wait
+- Returns as soon as image is ready (could be 15s, 20s, etc.)
+- Max 65s timeout with graceful error handling
+- Returns specific error on timeout or API failure
+
+**TOOL-05: PASS -- Image polling uses Wait+IF loop. Completion detected via polling, not guessed with setTimeout.**
 
 ## Task 5: TOOL-06 Verification
 
