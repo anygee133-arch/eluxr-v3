@@ -4,20 +4,20 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 2 in progress (Authentication). Plans 02-01, 02-02, and 02-03 complete.
+**Current Focus:** Phase 2 in progress (Authentication). Plans 02-01, 02-02, 02-03, and 02-04 complete.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 2 of 11 (Authentication)
-**Plan:** 3 of 5 in phase (02-01, 02-02, 02-03 complete)
+**Plan:** 4 of 5 in phase (02-01, 02-02, 02-03, 02-04 complete)
 **Status:** In progress
-**Last activity:** 2026-03-02 - Completed 02-02-PLAN.md (Auth Validator Sub-Workflow)
+**Last activity:** 2026-03-02 - Completed 02-04-PLAN.md (Protected Webhooks)
 
 **Progress:**
 ```
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
-Phase  2: Authentication              [######                ] 3/5 plans
+Phase  2: Authentication              [########              ] 4/5 plans
 Phase  3: Workflow Decomposition      [ . . . . . . . . . . ] 0%
 Phase  4: Progress Tracking           [ . . . . . . . . . . ] 0%
 Phase  5: Frontend Migration + UI     [ . . . . . . . . . . ] 0%
@@ -28,7 +28,7 @@ Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
 Phase 10: Standalone Tools            [ . . . . . . . . . . ] 0%
 Phase 11: Trend Intelligence          [ . . . . . . . . . . ] 0%
 
-Overall: 6/50 requirements complete (12%)
+Overall: 7/50 requirements complete (14%)
 ```
 
 ## Performance Metrics
@@ -36,10 +36,10 @@ Overall: 6/50 requirements complete (12%)
 | Metric | Value |
 |--------|-------|
 | Requirements total | 50 |
-| Requirements complete | 6 |
+| Requirements complete | 7 |
 | Phases total | 11 |
 | Phases complete | 1 |
-| Current streak | 6 plans |
+| Current streak | 7 plans |
 
 ## Accumulated Context
 
@@ -68,11 +68,14 @@ Overall: 6/50 requirements complete (12%)
 | Supabase HTTP API for JWT validation (not n8n JWT node) | Validates directly against Supabase /auth/v1/user; no JWT credential needed; returns user profile in same call | 2 |
 | Auth Validator sub-workflow pattern | Webhook -> Execute Sub-Workflow(Auth Validator) -> IF authenticated -> process/401 | 2 |
 | n8n Code node uses $input.item.json (default mode) | Default runOnceForEachItem mode; return single { json } not array | 2 |
+| authenticatedFetch() wrapper for all n8n webhook calls | JWT via Authorization: Bearer header; 401 retry with token refresh; login redirect on failure | 2 |
+| All 13 webhooks protected by Auth Validator | Every endpoint has Execute Sub-Workflow + IF + 401 Respond chain | 2 |
+| Content-Type added by authenticatedFetch() automatically | Removed redundant headers from all 21 call sites | 2 |
 
 ### Known Issues
 
 - ~~KIE API key hardcoded in 5 n8n nodes~~ FIXED in 01-02 -- migrated to credential store
-- All 13 webhooks accept unauthenticated requests (CRIT -- Phase 2 fix)
+- ~~All 13 webhooks accept unauthenticated requests~~ FIXED in 02-04 -- Auth Validator integrated on all endpoints
 - Google Calendar multi-tenant may be infeasible (Phase 8 decision needed)
 - n8n Cloud execution limits unverified (Phase 3 research needed)
 - KIE URL longevity unknown (test before launch)
@@ -95,12 +98,12 @@ None currently. Phase 1 complete, Phase 2 ready to begin.
 
 ### Last Session
 - **Date:** 2026-03-02
-- **Activity:** Completed 02-02-PLAN.md (Auth Validator Sub-Workflow)
-- **Outcome:** Auth Validator sub-workflow deployed and tested on local n8n. All 4 test cases pass (valid JWT, missing JWT, invalid JWT, different users). Uses Supabase HTTP API for validation. Integration pattern established for all future webhooks.
+- **Activity:** Completed 02-04-PLAN.md (Protected Webhooks)
+- **Outcome:** authenticatedFetch() wrapper built and all 27 frontend fetch calls replaced. All 13 n8n webhook endpoints protected by Auth Validator sub-workflow. Updated workflow JSON saved for cloud import. CRIT-3 (unauthenticated webhooks) resolved.
 
 ### Next Session
-- **Expected:** Execute 02-04-PLAN.md (Protected Webhooks) or 02-05-PLAN.md (Auth Integration Tests)
-- **Prerequisites:** 02-01 complete (JWT credential), 02-02 complete (Auth Validator sub-workflow), 02-03 complete (auth UI)
+- **Expected:** Execute 02-05-PLAN.md (Auth Integration Tests)
+- **Prerequisites:** 02-01 through 02-04 complete. Updated workflow must be imported to cloud before end-to-end testing.
 - **Entry point:** `/gsd:execute-phase` with next plan
 
 ---
