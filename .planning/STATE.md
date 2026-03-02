@@ -4,21 +4,21 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 3 in progress (Workflow Decomposition + Backend Bug Fixes). Plan 01 (Prerequisites) complete.
+**Current Focus:** Phase 3 in progress (Workflow Decomposition + Backend Bug Fixes). Plans 01, 03, 04 complete.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 3 of 11 (Workflow Decomposition + Backend Bug Fixes) -- IN PROGRESS
-**Plan:** 1 of 6 in phase (complete)
-**Status:** In progress -- Plan 01 complete, ready for Plan 02
-**Last activity:** 2026-03-02 - Completed 03-01-PLAN.md (Prerequisites)
+**Plan:** 4 of 6 in phase (complete)
+**Status:** In progress -- Plans 01, 03, 04 complete
+**Last activity:** 2026-03-02 - Completed 03-04-PLAN.md (Sub-workflows 11-13 with TOOL-05/TOOL-06 bug fixes)
 
 **Progress:**
 ```
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
-Phase  3: Workflow Decomposition      [##                    ] 1/6 plans
+Phase  3: Workflow Decomposition      [#########             ] 3/6 plans
 Phase  4: Progress Tracking           [ . . . . . . . . . . ] 0%
 Phase  5: Frontend Migration + UI     [ . . . . . . . . . . ] 0%
 Phase  6: Content Pipeline            [ . . . . . . . . . . ] 0%
@@ -28,7 +28,7 @@ Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
 Phase 10: Standalone Tools            [ . . . . . . . . . . ] 0%
 Phase 11: Trend Intelligence          [ . . . . . . . . . . ] 0%
 
-Overall: 9/50 requirements complete (18%)
+Overall: 11/50 requirements complete (22%)
 ```
 
 ## Performance Metrics
@@ -36,10 +36,10 @@ Overall: 9/50 requirements complete (18%)
 | Metric | Value |
 |--------|-------|
 | Requirements total | 50 |
-| Requirements complete | 9 |
+| Requirements complete | 11 |
 | Phases total | 11 |
 | Phases complete | 2 |
-| Current streak | 13 plans |
+| Current streak | 15 plans |
 
 ## Accumulated Context
 
@@ -76,11 +76,19 @@ Overall: 9/50 requirements complete (18%)
 | Content type normalization before Switch node | Claude generates 7 free-text values; normalize to 4 DB values (text/image/video/carousel) in Code node | 3 |
 | Themes stored as 4 weekly rows with JSONB daily details | 30 Claude daily items map to 4 themes table rows; content_types JSONB stores per-day info | 3 |
 | Campaign/themes uses delete-before-insert for re-generation | UPSERT campaign keeps same ID; DELETE old themes then INSERT new ones prevents duplicates | 3 |
+| Switch node replaces IF cascade for approval routing | Cleaner routing with first-match mode and fallback for unknown actions | 3 |
+| DB status is pending_review not pending | v2 content_items CHECK constraint uses pending_review; updated from v1 Sheets convention | 3 |
+| Google Calendar node preserved in calendar sync | Phase 8 will decide Calendar future; OAuth credential FJBcOjKITBIaEqRV kept | 3 |
+| TOOL-05: Wait+IF polling loop replaces setTimeout(35000) | 10s initial, 5s retry, 12 max attempts; detects success/timeout/error states | 3 |
+| TOOL-06: Video Ready? IF TRUE -> Parse Video Result | Monolith had inverted wiring; swapped TRUE/FALSE connections | 3 |
+| Video Creator keeps single Wait + frontend retry | Videos take >60s; server-side loop impractical; frontend already handles retry | 3 |
 
 ### Known Issues
 
 - ~~KIE API key hardcoded in 5 n8n nodes~~ FIXED in 01-02 -- migrated to credential store
 - ~~All 13 webhooks accept unauthenticated requests~~ FIXED in 02-04 -- Auth Validator integrated on all endpoints
+- ~~Image generation uses setTimeout(35000) hack~~ FIXED in 03-04 (TOOL-05) -- proper Wait+IF polling loop
+- ~~Video Ready? IF node has inverted TRUE/FALSE wiring~~ FIXED in 03-04 (TOOL-06) -- TRUE -> Parse Video Result
 - Google Calendar multi-tenant may be infeasible (Phase 8 decision needed)
 - n8n Cloud Starter: 2.5k executions/month, 5 concurrent -- may need monitoring in Phase 4/6 for batch generation
 - KIE URL longevity unknown (test before launch)
@@ -97,19 +105,19 @@ Overall: 9/50 requirements complete (18%)
 
 ### Blockers
 
-None currently. Phase 3 Plan 01 complete. Ready for Plan 02 (Sub-workflows 01-05).
+None currently. Phase 3 Plans 01, 03, 04 complete. Ready for Plan 02 (Sub-workflows 01-05), Plan 05 (Router), or Plan 06 (Cutover).
 
 ## Session Continuity
 
 ### Last Session
 - **Date:** 2026-03-02
-- **Activity:** Completed Phase 3 Plan 01 (Prerequisites) -- validated Supabase REST API patterns, traced content_type values, designed campaign/themes insert
-- **Outcome:** All 5 CRUD operations validated. UPSERT on_conflict discovery. PIPE-07 root cause documented. Campaign/themes 5-step insert designed.
+- **Activity:** Completed Phase 3 Plan 04 (Sub-workflows 11-13) -- built image generator with TOOL-05 fix, video script builder, video creator with TOOL-06 fix
+- **Outcome:** 3 standalone tool sub-workflows created. TOOL-05 (setTimeout -> polling loop) and TOOL-06 (inverted IF wiring) bugs fixed. All Code nodes updated to $input.item.json pattern.
 
 ### Next Session
-- **Expected:** Execute Phase 3 Plan 02 (Sub-workflows 01-05: ICP Analyzer through Content Submit)
+- **Expected:** Execute Phase 3 Plan 02 (Sub-workflows 01-05) or Plan 05 (Router)
 - **Prerequisites:** 03-01 SUMMARY provides SUPABASE_CREDENTIAL_PATTERN, CONTENT_TYPE_VALUES, THEME_INSERT_PATTERN
-- **Entry point:** `/gsd:execute-phase` for 03-02-PLAN.md
+- **Entry point:** `/gsd:execute-phase` for 03-02-PLAN.md or 03-05-PLAN.md
 
 ---
 *State initialized: 2026-02-27*
