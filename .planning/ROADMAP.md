@@ -69,6 +69,15 @@ Plans:
 
 **Pitfalls:** CRIT-3 (unauthenticated webhooks), HIGH-3 (CORS with auth headers), MOD-1 (token refresh in vanilla JS)
 
+**Plans:** 5 plans in 4 waves
+
+Plans:
+- [ ] 02-01-PLAN.md -- CORS test, Supabase auth config, n8n JWT credential
+- [ ] 02-02-PLAN.md -- Auth Validator sub-workflow in n8n (INFRA-04)
+- [ ] 02-03-PLAN.md -- Frontend auth UI: login, signup, password reset, protected routes
+- [ ] 02-04-PLAN.md -- authenticatedFetch() wrapper + webhook integration (all 13 endpoints)
+- [ ] 02-05-PLAN.md -- End-to-end verification of all Phase 2 success criteria
+
 ---
 
 ## Phase 3: Workflow Decomposition + Backend Bug Fixes
@@ -300,7 +309,7 @@ Plans:
 | Phase | Name | Requirements | Status |
 |-------|------|-------------|--------|
 | 1 | Security Hardening + Database Foundation | INFRA-01, INFRA-02, INFRA-05 | Complete |
-| 2 | Authentication | AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, INFRA-04 | Not Started |
+| 2 | Authentication | AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, INFRA-04 | Planned (5 plans) |
 | 3 | Workflow Decomposition + Backend Bug Fixes | INFRA-03, INFRA-06, PIPE-07, TOOL-05, TOOL-06 | Not Started |
 | 4 | Async Pipeline + Real-Time Progress Tracking | PROG-01, PROG-02, PROG-03, PROG-04, UI-05 | Not Started |
 | 5 | Frontend Migration + UI Polish | UI-01, UI-02, UI-03, UI-04, UI-06 | Not Started |
