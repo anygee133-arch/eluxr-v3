@@ -19,14 +19,12 @@
     },
     {
       "parameters": {
-        "source": "database",
-        "workflowId": "ltscbuGU8ovNzLvo",
-        "options": {}
+        "workflowId": "AUTH_VALIDATOR_WORKFLOW_ID"
       },
       "id": "b1b2c3d4-0002-4000-8000-000000000002",
       "name": "Run Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
+      "typeVersion": 1,
       "position": [220, 0]
     },
     {
@@ -34,7 +32,9 @@
         "conditions": {
           "options": {
             "caseSensitive": true,
-            "leftValue": ""
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
           },
           "conditions": [
             {
@@ -88,43 +88,15 @@
   ],
   "connections": {
     "Auth Test Webhook": {
-      "main": [
-        [
-          {
-            "node": "Run Auth Validator",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Run Auth Validator", "type": "main", "index": 0}]]
     },
     "Run Auth Validator": {
-      "main": [
-        [
-          {
-            "node": "Auth OK?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{"node": "Auth OK?", "type": "main", "index": 0}]]
     },
     "Auth OK?": {
       "main": [
-        [
-          {
-            "node": "Success Response",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Auth Failed Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Success Response", "type": "main", "index": 0}],
+        [{"node": "Auth Failed Response", "type": "main", "index": 0}]
       ]
     }
   },
