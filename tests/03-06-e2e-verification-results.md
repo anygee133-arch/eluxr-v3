@@ -259,7 +259,82 @@ KIE -- Create Image Task
 
 ## Task 5: TOOL-06 Verification
 
-See detailed results below (populated during task execution).
+### Test 1: Video Ready? IF Node Wiring
+
+| Output | Target Node | Meaning | Correct? |
+|--------|-------------|---------|----------|
+| TRUE (output 0) | Parse Video Result | Video IS ready, parse the result | YES |
+| FALSE (output 1) | Video Processing -- Response | Video NOT ready, return processing status | YES |
+
+**PASS: Wiring is CORRECT**
+
+### Test 2: Video Ready? IF Condition
+
+```json
+{
+  "conditions": [{
+    "leftValue": "={{ $json.data.successFlag }}",
+    "rightValue": "1",
+    "operator": { "type": "string", "operation": "equals" }
+  }]
+}
+```
+
+When `successFlag === "1"`:
+- TRUE fires -> Parse Video Result -> Video Gen Response (200 with video URL)
+
+When `successFlag !== "1"`:
+- FALSE fires -> Video Processing Response (retry=true message)
+
+### Test 3: Pattern Comparison with Image Ready?
+
+| Workflow | IF Node | TRUE Target | FALSE Target | Pattern Match? |
+|----------|---------|-------------|--------------|----------------|
+| 11-Image-Generator | Is Success? | Parse Image Result | Error Response | Reference |
+| 13-Video-Creator | Video Ready? | Parse Video Result | Video Processing Response | MATCHES |
+
+Both follow the same pattern: TRUE = success/ready -> parse result, FALSE = not ready/error -> alternative response.
+
+### Test 4: Complete Node Inventory (12 nodes)
+
+| Node Type | Node Name | Purpose |
+|-----------|-----------|---------|
+| webhook | Video Gen -- Webhook | Entry point |
+| executeWorkflow | Auth Validate | JWT validation |
+| if | Auth OK? | Auth gate |
+| code | Prepare Veo Prompt | Format KIE video request |
+| respondToWebhook | 401 Unauthorized | Auth failure response |
+| httpRequest | KIE -- Create Video Task | Start video generation |
+| wait | Wait for Video | 120s wait (videos take >60s) |
+| httpRequest | KIE -- Get Video Status | Check video status |
+| if | Video Ready? | Branch on success flag |
+| code | Parse Video Result | Extract video URL |
+| respondToWebhook | Video Processing -- Response | Not-ready response |
+| respondToWebhook | Video Gen -- Response | Success response |
+
+### BUG_FIX_EVIDENCE: TOOL-06
+
+**Before (monolith -- INVERTED):**
+```
+Video Ready? TRUE (successFlag=1, video IS ready) -> Video Processing Response
+  WRONG: Returns "still processing" when video IS actually ready
+Video Ready? FALSE (successFlag!=1, NOT ready) -> Parse Video Result
+  WRONG: Tries to parse incomplete/empty result
+```
+
+**After (fixed):**
+```
+Video Ready? TRUE (successFlag=1, video IS ready) -> Parse Video Result -> Video Gen Response (200)
+  CORRECT: Parses and returns video URL when ready
+Video Ready? FALSE (successFlag!=1, NOT ready) -> Video Processing Response
+  CORRECT: Returns "processing, retry later" when not yet ready
+```
+
+**Impact of fix:** Users will now:
+- See video results immediately when generation completes (not "still processing")
+- See "processing" status while video is still generating (not garbled empty data)
+
+**TOOL-06: PASS -- Video Ready? IF node correctly wired. TRUE=parse result, FALSE=processing response.**
 
 ---
 
