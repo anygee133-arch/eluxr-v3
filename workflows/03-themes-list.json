@@ -3,7 +3,6 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
         "path": "eluxr-themes-list",
         "responseMode": "responseNode",
         "options": {

@@ -2291,7 +2291,19 @@ details .details-content { padding: 20px; }
     }
   }
 
+  // Safe JSON parser for responses that may have empty bodies
+  // (n8n returns empty body when Supabase query has 0 results)
+  async function safeJson(response, fallback = {}) {
+    try {
+      const text = await response.text();
+      return text ? JSON.parse(text) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
   // Expose functions to window for onclick handlers
+  window.safeJson = safeJson
   window.authenticatedFetch = authenticatedFetch
   window.handleLogin = handleLogin
   window.handleSignup = handleSignup
@@ -2468,7 +2480,7 @@ async function generateVideoScript() {
       })
     });
 
-    const data = await response.json();
+    const data = await safeJson(response, {});
     currentScript = data.script || data;
     displayScript(currentScript);
     showToast('Video script generated!', 'success');
@@ -2604,7 +2616,7 @@ async function generateImage() {
       })
     });
 
-    const data = await response.json();
+    const data = await safeJson(response, {});
     const imageUrl = data.image_url || data.data?.resultUrls?.[0];
 
     if (imageUrl) {
@@ -2662,7 +2674,7 @@ async function generateVideo() {
       })
     });
 
-    const data = await response.json();
+    const data = await safeJson(response, {});
 
     if (data.success && data.video_url) {
       generatedVideoUrl = data.video_url;
@@ -2692,7 +2704,7 @@ async function pollVideoStatus(taskId) {
         method: 'POST',
         body: JSON.stringify({ taskId: taskId })
       });
-      const data = await response.json();
+      const data = await safeJson(response, {});
 
       if (data.success && data.video_url) {
         generatedVideoUrl = data.video_url;
@@ -2768,7 +2780,7 @@ async function generateSingleContent() {
     try {
       const approvalResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
       if (approvalResponse.ok) {
-        const approvalData = await approvalResponse.json();
+        const approvalData = await safeJson(approvalResponse, { pending: [], approved: [], all: [] });
         console.log('Approval list response:', approvalData);
 
         // Get the most recent pending content
@@ -2862,7 +2874,7 @@ async function generateSingleContent() {
           })
         });
 
-        const imgData = await imgResponse.json();
+        const imgData = await safeJson(imgResponse, {});
         if (imgData.image_url) {
           lastGeneratedContent.image_url = imgData.image_url;
           mediaOutput.innerHTML = `
@@ -2902,7 +2914,7 @@ async function generateSingleContent() {
           });
 
           if (scriptResponse.ok) {
-            const scriptData = await scriptResponse.json();
+            const scriptData = await safeJson(scriptResponse, {});
             videoScript = scriptData.script || scriptData;
             console.log('Video script generated:', videoScript);
 
@@ -2929,7 +2941,7 @@ async function generateSingleContent() {
           })
         });
 
-        const vidData = await vidResponse.json();
+        const vidData = await safeJson(vidResponse, {});
         if (vidData.video_url) {
           lastGeneratedContent.video_url = vidData.video_url;
           lastGeneratedContent.video_script = videoScript;
@@ -3081,7 +3093,7 @@ async function generateContent(formData) {
     });
 
     if (phase1Response.ok) {
-      const phase1Data = await phase1Response.json();
+      const phase1Data = await safeJson(phase1Response, {});
       // Use session_id from backend if provided
       if (phase1Data.session_id) {
         currentSessionId = phase1Data.session_id;
@@ -3100,7 +3112,7 @@ async function generateContent(formData) {
     });
 
     if (phase2Response.ok) {
-      const phase2Data = await phase2Response.json();
+      const phase2Data = await safeJson(phase2Response, {});
       console.log('Phase 2 complete:', phase2Data);
     }
 
@@ -3130,7 +3142,7 @@ async function fetchCalendarData() {
   try {
     const response = await authenticatedFetch(`${API_BASE}/eluxr-approval-list`);
     if (!response.ok) throw new Error('Network response was not ok');
-    return response.json();
+    return safeJson(response, { pending: [], approved: [], all: [] });
   } catch (error) {
     // Check if it's a CORS error (likely when opening from file://)
     if (window.location.protocol === 'file:') {
@@ -3487,7 +3499,7 @@ async function loadScheduleThemes() {
   try {
     const themesResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-themes-list`);
     if (themesResponse.ok) {
-      const themesData = await themesResponse.json();
+      const themesData = await safeJson(themesResponse, { themes: [], count: 0 });
       weeklyThemes = themesData.themes || themesData || [];
       console.log('Loaded themes from backend:', weeklyThemes.length);
     }
@@ -3500,7 +3512,7 @@ async function loadScheduleThemes() {
   try {
     const approvalResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
     if (approvalResponse.ok) {
-      approvalData = await approvalResponse.json();
+      approvalData = await safeJson(approvalResponse, { pending: [], approved: [], all: [] });
     }
   } catch (error) {
     console.log('Approval list fetch error:', error);
@@ -3720,7 +3732,7 @@ async function openScheduleCard(dateStr) {
   try {
     const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
     if (response.ok) {
-      const data = await response.json();
+      const data = await safeJson(response, { pending: [], approved: [], all: [] });
       pendingItems = (data.pending || []).filter(p => (p.date || p.scheduled_date) === dateStr);
       approvedItems = (data.approved || []).filter(a => (a.date || a.scheduled_date) === dateStr);
     }
@@ -3912,7 +3924,7 @@ async function approveScheduleContent(dateStrOrId) {
     if (dateStrOrId.match(/^\d{4}-\d{2}-\d{2}$/)) {
       // It's a date, need to find the content ID
       const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
-      const data = await response.json();
+      const data = await safeJson(response, { pending: [], approved: [], all: [] });
       const pending = (data.pending || []).find(p => (p.date || p.scheduled_date || '').startsWith(dateStrOrId));
       if (pending) {
         contentId = pending.id;
@@ -3945,7 +3957,7 @@ async function rejectScheduleContent(dateStrOrId) {
     if (dateStrOrId.match(/^\d{4}-\d{2}-\d{2}$/)) {
       // It's a date, need to find the content ID
       const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
-      const data = await response.json();
+      const data = await safeJson(response, { pending: [], approved: [], all: [] });
       const pending = (data.pending || []).find(p => (p.date || p.scheduled_date || '').startsWith(dateStrOrId));
       if (pending) {
         contentId = pending.id;
@@ -4289,7 +4301,7 @@ async function regenerateContent() {
     });
 
     if (response.ok) {
-      const result = await response.json();
+      const result = await safeJson(response, {});
       if (result.content) {
         content.post_text = result.content;
         content.content = result.content;
@@ -4452,7 +4464,7 @@ async function syncToGoogleCalendar() {
         content_ids: approvedIds
       })
     });
-    const result = await response.json();
+    const result = await safeJson(response, {});
     if (result.success || result.events_created) {
       showToast(`Google Calendar sync complete! ${result.events_created || approvedIds.length} events created.`, 'success');
     } else {
@@ -4619,7 +4631,7 @@ async function clearPendingContent(silent = false) {
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data = await safeJson(response, {});
       console.log('Cleared from backend:', data);
     }
   } catch (error) {
