@@ -1,0 +1,129 @@
+{
+  "name": "10-Chat",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-chat",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "chat-webhook-001",
+      "name": "Chat -- Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [0, 300],
+      "typeVersion": 2,
+      "webhookId": "eluxr-chat"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "chat-auth-002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-chat",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "chat-if-003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized', statusCode: 401 }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "chat-401-004",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [660, 500],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body;\nconst phase = body.phase || 1;\nconst message = body.message || '';\nconst context = body.context || {};\n\nconst systemPrompts = {\n  1: 'You are the ELUXR Business Analyzer AI assistant. You help users analyze their business, build ICPs (Ideal Customer Profiles), and perform market research. You have access to their business data and provide actionable insights for social media content strategy. Be specific, data-driven, and strategic.',\n  2: 'You are the ELUXR Theme Engine AI assistant. You help users create 30-day content themes using the Netflix model -- 4 weekly \"shows\" with hooks, variety, and audience retention. You understand content cyclicity, platform-specific strategies, and engagement psychology. Help them refine weekly themes and daily content plans.',\n  3: 'You are the ELUXR Content Calendar AI assistant. You help users manage their 30-day content calendar, reschedule posts, swap themes between days, add special events, and optimize posting times. You know optimal posting times for each platform and can suggest schedule adjustments based on engagement patterns.',\n  4: 'You are the ELUXR Content Studio AI assistant. You help users write social media posts, generate image prompts for Nano Banana Pro, create video scripts, and repurpose content across platforms. You write in the user\\'s brand voice and optimize for each platform\\'s algorithm and best practices.',\n  5: 'You are the ELUXR Approval Queue AI assistant. You help users review pending content, suggest edits, approve or reject posts in bulk, and manage the publishing pipeline. You can summarize pending items, flag potential issues, and recommend improvements before publishing.',\n  6: 'You are the ELUXR Image Generation AI assistant specializing in Nano Banana Pro prompts. You help users craft optimal image prompts, suggest styles, aspect ratios, and refinements. You understand composition rules, social media visual best practices, and platform-specific image requirements.',\n  7: 'You are the ELUXR Video Script AI assistant. You help users generate video ideas, create camera-ready scripts with hooks/setup/value/CTA structure, suggest B-roll, on-screen text cues, and thumbnail ideas. You understand short-form video psychology and platform algorithms.'\n};\n\nreturn { json: {\n  phase: phase,\n  message: message,\n  system_prompt: systemPrompts[phase] || systemPrompts[1],\n  context: context\n} };"
+      },
+      "id": "chat-prepare-005",
+      "name": "Prepare Chat Context",
+      "type": "n8n-nodes-base.code",
+      "position": [660, 100],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://api.anthropic.com/v1/messages',\n  headers: {\n    'Content-Type': 'application/json',\n    'anthropic-version': '2023-06-01',\n    'x-api-key': $env.get('ANTHROPIC_API_KEY') || ''\n  },\n  body: {\n    model: 'claude-sonnet-4-20250514',\n    max_tokens: 2048,\n    system: $input.item.json.system_prompt,\n    messages: [{role: 'user', content: $input.item.json.message}]\n  }\n});\n\nreturn {json: response};"
+      },
+      "id": "chat-claude-006",
+      "name": "Claude Chat Call",
+      "type": "n8n-nodes-base.code",
+      "position": [880, 100],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "chat-response-007",
+      "name": "Chat -- Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1100, 100],
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Chat -- Webhook": {
+      "main": [[{"node": "Auth Validator", "type": "main", "index": 0}]]
+    },
+    "Auth Validator": {
+      "main": [[{"node": "Auth OK?", "type": "main", "index": 0}]]
+    },
+    "Auth OK?": {
+      "main": [
+        [{"node": "Prepare Chat Context", "type": "main", "index": 0}],
+        [{"node": "401 Unauthorized", "type": "main", "index": 0}]
+      ]
+    },
+    "Prepare Chat Context": {
+      "main": [[{"node": "Claude Chat Call", "type": "main", "index": 0}]]
+    },
+    "Claude Chat Call": {
+      "main": [[{"node": "Chat -- Response", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
