@@ -2235,7 +2235,64 @@ details .details-content { padding: 20px; }
     })
   }
 
+  /**
+   * Authenticated fetch wrapper for all n8n webhook requests.
+   * Attaches JWT via Authorization: Bearer header (CORS_RESULT = "header").
+   * On 401: refreshes token via supabase.auth.refreshSession(), retries once.
+   * On refresh failure: redirects to login via showLoginPage().
+   *
+   * @param {string} url - The webhook URL
+   * @param {object} options - Standard fetch options (method, headers, body)
+   * @returns {Promise<Response>} - The fetch response
+   */
+  async function authenticatedFetch(url, options = {}) {
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+      showLoginPage()
+      throw new Error('Not authenticated')
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      ...(options.headers || {})
+    }
+
+    let fetchOptions = { ...options, headers }
+
+    try {
+      const response = await fetch(url, fetchOptions)
+
+      if (response.status === 401) {
+        // Token rejected -- try refreshing
+        console.log('Got 401, attempting token refresh...')
+        const { data: { session: newSession } } = await supabase.auth.refreshSession()
+
+        if (!newSession) {
+          console.log('Token refresh failed, redirecting to login')
+          showLoginPage()
+          throw new Error('Session expired')
+        }
+
+        // Retry with new token
+        headers['Authorization'] = `Bearer ${newSession.access_token}`
+        fetchOptions = { ...options, headers }
+        return fetch(url, fetchOptions)
+      }
+
+      return response
+    } catch (error) {
+      if (error.message === 'Not authenticated' || error.message === 'Session expired') {
+        throw error
+      }
+      throw error
+    }
+  }
+
   // Expose functions to window for onclick handlers
+  window.authenticatedFetch = authenticatedFetch
   window.handleLogin = handleLogin
   window.handleSignup = handleSignup
   window.handleResetRequest = handleResetRequest
@@ -2400,9 +2457,8 @@ async function generateVideoScript() {
   showToast('Generating video script...', 'success');
 
   try {
-    const response = await fetch(`${N8N_BASE_URL}/eluxr-videoscript`, {
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-videoscript`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         topic: topic,
         duration: duration,
@@ -2539,9 +2595,8 @@ async function generateImage() {
   showToast('Generating image with Nano Banana Pro...', 'success');
 
   try {
-    const response = await fetch(`${N8N_BASE_URL}/eluxr-imagegen`, {
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-imagegen`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt: prompt,
         aspect_ratio: aspectRatio,
@@ -2597,9 +2652,8 @@ async function generateVideo() {
   document.getElementById('video-url-display').style.display = 'none';
 
   try {
-    const response = await fetch(`${N8N_BASE_URL}/eluxr-videogen`, {
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-videogen`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         image_url: imageUrl,
         prompt: prompt,
@@ -2634,9 +2688,8 @@ async function pollVideoStatus(taskId) {
   // Simple polling - in production you'd implement proper polling
   setTimeout(async () => {
     try {
-      const response = await fetch(`${N8N_BASE_URL}/eluxr-videogen`, {
+      const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-videogen`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskId: taskId })
       });
       const data = await response.json();
@@ -2695,9 +2748,8 @@ async function generateSingleContent() {
 
     // Step 1: Trigger Phase 4 to generate content (it saves to Google Sheets)
     try {
-      await fetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
+      await authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: currentSessionId,
           date: new Date().toISOString().split('T')[0],
@@ -2714,7 +2766,7 @@ async function generateSingleContent() {
 
     // Step 2: Fetch actual content from approval list
     try {
-      const approvalResponse = await fetch(`${N8N_BASE_URL}/eluxr-approval-list`);
+      const approvalResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
       if (approvalResponse.ok) {
         const approvalData = await approvalResponse.json();
         console.log('Approval list response:', approvalData);
@@ -2801,9 +2853,8 @@ async function generateSingleContent() {
       mediaOutput.innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner" style="width:30px;height:30px;margin:0 auto;"></div><p style="margin-top:12px;color:var(--text-muted);">Generating image...</p></div>';
 
       try {
-        const imgResponse = await fetch(`${N8N_BASE_URL}/eluxr-imagegen`, {
+        const imgResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-imagegen`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: imagePrompt,
             aspect_ratio: aspectRatio,
@@ -2839,9 +2890,8 @@ async function generateSingleContent() {
         // Step 1: Generate video script using /eluxr-videoscript
         let videoScript = null;
         try {
-          const scriptResponse = await fetch(`${N8N_BASE_URL}/eluxr-videoscript`, {
+          const scriptResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-videoscript`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               topic: topic,
               duration: '30s',
@@ -2870,9 +2920,8 @@ async function generateSingleContent() {
         // Step 2: Generate video using /eluxr-videogen
         mediaOutput.innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner" style="width:30px;height:30px;margin:0 auto;"></div><p style="margin-top:12px;color:var(--text-muted);">Generating video... (20-60 seconds)</p></div>';
 
-        const vidResponse = await fetch(`${N8N_BASE_URL}/eluxr-videogen`, {
+        const vidResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-videogen`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: `Create a ${platform} video about: ${topic}. Style: ${tone}`,
             aspect_ratio: aspectRatio,
@@ -3026,9 +3075,8 @@ async function generateContent(formData) {
 
   try {
     // PHASE 1: Call the analyzer
-    const phase1Response = await fetch(`${API_BASE}/eluxr-phase1-analyzer`, {
+    const phase1Response = await authenticatedFetch(`${API_BASE}/eluxr-phase1-analyzer`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     });
 
@@ -3042,9 +3090,8 @@ async function generateContent(formData) {
     }
 
     // PHASE 2: Generate themes
-    const phase2Response = await fetch(`${API_BASE}/eluxr-phase2-themes`, {
+    const phase2Response = await authenticatedFetch(`${API_BASE}/eluxr-phase2-themes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...formData,
         session_id: currentSessionId,
@@ -3058,9 +3105,8 @@ async function generateContent(formData) {
     }
 
     // PHASE 4: Generate content (studio)
-    const phase4Response = await fetch(`${API_BASE}/eluxr-phase4-studio`, {
+    const phase4Response = await authenticatedFetch(`${API_BASE}/eluxr-phase4-studio`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         session_id: currentSessionId,
         date: new Date().toISOString().split('T')[0]
@@ -3082,11 +3128,7 @@ async function generateContent(formData) {
 async function fetchCalendarData() {
   // FIXED: Fetch from approval-list instead of phase3-calendar
   try {
-    const response = await fetch(`${API_BASE}/eluxr-approval-list`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      mode: 'cors'
-    });
+    const response = await authenticatedFetch(`${API_BASE}/eluxr-approval-list`);
     if (!response.ok) throw new Error('Network response was not ok');
     return response.json();
   } catch (error) {
@@ -3101,9 +3143,8 @@ async function fetchCalendarData() {
 
 async function submitApproval(action, contentId, feedback = '') {
   try {
-    const response = await fetch(`${API_BASE}/eluxr-approval-action`, {
+    const response = await authenticatedFetch(`${API_BASE}/eluxr-approval-action`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, content_id: contentId, feedback })
     });
     return response.json();
@@ -3444,7 +3485,7 @@ async function loadScheduleThemes() {
 
   // Fetch themes from Google Sheets via n8n
   try {
-    const themesResponse = await fetch(`${N8N_BASE_URL}/eluxr-themes-list`);
+    const themesResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-themes-list`);
     if (themesResponse.ok) {
       const themesData = await themesResponse.json();
       weeklyThemes = themesData.themes || themesData || [];
@@ -3457,7 +3498,7 @@ async function loadScheduleThemes() {
   // Fetch from approval list - this has all generated content
   let approvalData = { pending: [], approved: [], all: [] };
   try {
-    const approvalResponse = await fetch(`${N8N_BASE_URL}/eluxr-approval-list`);
+    const approvalResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
     if (approvalResponse.ok) {
       approvalData = await approvalResponse.json();
     }
@@ -3677,7 +3718,7 @@ async function openScheduleCard(dateStr) {
   let approvedItems = [];
 
   try {
-    const response = await fetch(`${N8N_BASE_URL}/eluxr-approval-list`);
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
     if (response.ok) {
       const data = await response.json();
       pendingItems = (data.pending || []).filter(p => (p.date || p.scheduled_date) === dateStr);
@@ -3827,9 +3868,8 @@ async function generateScheduleContent(dateStr) {
 
   try {
     // Call Phase 4 Studio to generate content with full theme context
-    const response = await fetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         session_id: currentSessionId,
         date: dateStr,
@@ -3871,7 +3911,7 @@ async function approveScheduleContent(dateStrOrId) {
     let contentId = dateStrOrId;
     if (dateStrOrId.match(/^\d{4}-\d{2}-\d{2}$/)) {
       // It's a date, need to find the content ID
-      const response = await fetch(`${N8N_BASE_URL}/eluxr-approval-list`);
+      const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
       const data = await response.json();
       const pending = (data.pending || []).find(p => (p.date || p.scheduled_date || '').startsWith(dateStrOrId));
       if (pending) {
@@ -3882,9 +3922,8 @@ async function approveScheduleContent(dateStrOrId) {
       }
     }
 
-    await fetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
+    await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: contentId,
         action: 'approve'
@@ -3905,7 +3944,7 @@ async function rejectScheduleContent(dateStrOrId) {
     let contentId = dateStrOrId;
     if (dateStrOrId.match(/^\d{4}-\d{2}-\d{2}$/)) {
       // It's a date, need to find the content ID
-      const response = await fetch(`${N8N_BASE_URL}/eluxr-approval-list`);
+      const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
       const data = await response.json();
       const pending = (data.pending || []).find(p => (p.date || p.scheduled_date || '').startsWith(dateStrOrId));
       if (pending) {
@@ -3916,9 +3955,8 @@ async function rejectScheduleContent(dateStrOrId) {
       }
     }
 
-    await fetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
+    await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: contentId,
         action: 'reject'
@@ -3941,9 +3979,8 @@ async function saveScheduleEdit(dateStr) {
   }
 
   try {
-    await fetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
+    await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         date: dateStr,
         action: 'edit',
@@ -4242,9 +4279,8 @@ async function regenerateContent() {
 
   try {
     // Call the phase4 studio to regenerate
-    const response = await fetch(`${API_BASE}/eluxr-phase4-studio`, {
+    const response = await authenticatedFetch(`${API_BASE}/eluxr-phase4-studio`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         theme: content.theme || content.title,
         platform: content.platform,
@@ -4408,9 +4444,8 @@ async function syncToGoogleCalendar() {
       return;
     }
 
-    const response = await fetch(`${API_BASE}/eluxr-phase3-calendar`, {
+    const response = await authenticatedFetch(`${API_BASE}/eluxr-phase3-calendar`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         session_id: currentSessionId,
         month: currentMonth,
@@ -4578,9 +4613,8 @@ async function clearPendingContent(silent = false) {
 
   try {
     // Call n8n endpoint to clear from Google Sheets
-    const response = await fetch(`${N8N_BASE_URL}/eluxr-clear-pending`, {
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-clear-pending`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'clear_pending' })
     });
 
@@ -4669,9 +4703,8 @@ async function sendChat(phase, el) {
   container.scrollTop = container.scrollHeight;
 
   try {
-    const data = await fetch(`${N8N_BASE_URL}/eluxr-chat`, {
+    const data = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phase, message: text, session_id: currentSessionId || `session_${Date.now()}`, context: {} })
     }).then(r => r.json());
 
