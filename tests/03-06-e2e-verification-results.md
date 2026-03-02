@@ -123,7 +123,57 @@ This confirms the endpoint reads from Supabase (not Google Sheets) -- Sheets wou
 
 ## Task 3: PIPE-07 Verification
 
-See detailed results below (populated during task execution).
+### Test 1: Structural Verification of 04-Content-Studio Switch Node
+
+**Switch node:** "Route: Text / Image / Video / Carousel"
+
+| Check | Expected | Actual | Result |
+|-------|----------|--------|--------|
+| allMatchingOutputs | false | false | PASS |
+| fallbackOutput | extra | extra | PASS |
+| Rule count | 4 | 4 | PASS |
+| All rules use exact equality | Yes | Yes (string.equals) | PASS |
+| caseSensitive | false | false | PASS |
+| Normalization node present | Yes | Yes ("Normalize Content Type") | PASS |
+
+### Test 2: Switch Rule Details
+
+| Rule | Field | Operator | Value | Output Target |
+|------|-------|----------|-------|---------------|
+| 0 | $json.content_type | string.equals | text | Claude -- Write Post Content |
+| 1 | $json.content_type | string.equals | image | KIE -- Generate Content Image |
+| 2 | $json.content_type | string.equals | video | Claude -- Video Script Generator |
+| 3 | $json.content_type | string.equals | carousel | Claude -- Write Post Content |
+| Fallback | -- | -- | -- | Fallback Handler |
+
+### Test 3: Content Type Normalization
+
+"Normalize Content Type" Code node (before Switch):
+- Has `toLowerCase()` for case normalization
+- Maps 7 Claude values to 4 DB values: text/image/video/carousel
+- Prevents partial matching issues from the v1 bug
+
+### Test 4: Normalization in 05-Content-Submit
+
+"Format Queue Item" Code node normalizes content_type before Supabase INSERT.
+Prevents DB CHECK constraint violations on user-submitted content.
+
+### Analysis: Why PIPE-07 Bug is Fixed
+
+**v1 Bug:** Switch used `notContains "Video"` as first rule, catching everything except Video. Image items matched Rule 0 and never reached Image Output 1.
+
+**v2 Fix:** Three changes eliminate the bug:
+1. `allMatchingOutputs: false` -- first match only (items cannot trigger multiple branches)
+2. Exact equality (`string.equals`) -- "text" only matches "text", not "text includes image"
+3. Normalization before Switch -- Claude's 7 free-text values mapped to 4 DB values
+
+**Mutual exclusivity guaranteed because:**
+- Each item has exactly ONE content_type value after normalization
+- Each rule tests for ONE specific value with exact equality
+- First-match mode stops after the first rule matches
+- Fallback catches any value that doesn't match (safety net)
+
+**PIPE-07: PASS -- Switch routes to exactly one branch per content item. Mutually exclusive routing confirmed.**
 
 ## Task 4: TOOL-05 Verification
 
