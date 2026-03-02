@@ -1,0 +1,258 @@
+{
+  "name": "01-ICP-Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase1-analyzer",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "01-icp-0001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "eluxr-phase1-analyzer"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "01-icp-0002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "01-icp-0003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "01-icp-0004",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nconst businessUrl = body.business_url || '';\nconst industry = body.industry || '';\n\nreturn { json: { user_id: authData.user_id, business_url: businessUrl, industry: industry } };"
+      },
+      "id": "01-icp-0005",
+      "name": "Prepare Perplexity Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "perplexityApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{}]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a market research analyst. Provide detailed, actionable market research for social media content strategy. Include: target demographics, competitor analysis, content gaps, trending topics, and audience pain points. Return structured JSON.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Perform deep market research for this business. Business URL or description: {{ $json.business_url }}. Industry: {{ $json.industry }}. Analyze competitors, target audience demographics, content gaps in their social media presence, trending topics in this industry, and key pain points of their ideal customers. Return as structured JSON with keys: target_demographics, competitors, content_gaps, trending_topics, audience_pain_points, recommended_platforms.\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 4000\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "01-icp-0006",
+      "name": "Perplexity -- Market Research",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, -200],
+      "credentials": {
+        "perplexityApi": {
+          "id": "3rYRY1C2K9o0DDXI",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const perplexityData = $input.item.json;\nconst prepData = $('Prepare Perplexity Request').item.json;\n\nconst research = perplexityData.choices ? perplexityData.choices[0].message.content : JSON.stringify(perplexityData);\n\nconst prompt = 'You are an ICP specialist for social media marketing. Based on the following market research, create a comprehensive Ideal Customer Profile.\\n\\nBusiness: ' + prepData.business_url + '\\nIndustry: ' + prepData.industry + '\\nMarket Research: ' + research + '\\n\\nReturn a JSON object with keys: icp_summary, demographics, psychographics, content_preferences, competitors, content_opportunities, recommended_hashtags.\\n\\nReturn ONLY valid JSON, no markdown.';\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  messages: [{ role: 'user', content: prompt }]\n});\n\nreturn { json: { apiBody: body, user_id: prepData.user_id, business_url: prepData.business_url, industry: prepData.industry } };"
+      },
+      "id": "01-icp-0007",
+      "name": "Prepare ICP Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.apiBody }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "01-icp-0008",
+      "name": "Claude -- ICP Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, -200],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare ICP Prompt').item.json;\n\nlet icpContent = '';\ntry {\n  icpContent = input.content[0].text;\n} catch(e) {\n  icpContent = JSON.stringify(input);\n}\n\nlet icpParsed = {};\ntry {\n  icpParsed = JSON.parse(icpContent);\n} catch(e) {\n  icpParsed = { raw: icpContent };\n}\n\nreturn {\n  json: {\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    icp_summary: icpParsed.icp_summary || '',\n    demographics: icpParsed.demographics || {},\n    psychographics: icpParsed.psychographics || {},\n    content_preferences: icpParsed.content_preferences || {},\n    competitors: icpParsed.competitors || [],\n    content_opportunities: icpParsed.content_opportunities || [],\n    recommended_hashtags: icpParsed.recommended_hashtags || [],\n    raw_research: icpContent\n  }\n};"
+      },
+      "id": "01-icp-0009",
+      "name": "Parse ICP Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?on_conflict=user_id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"business_url\": {{ JSON.stringify($json.business_url) }},\n  \"industry\": {{ JSON.stringify($json.industry) }},\n  \"icp_summary\": {{ JSON.stringify($json.icp_summary) }},\n  \"demographics\": {{ JSON.stringify($json.demographics) }},\n  \"psychographics\": {{ JSON.stringify($json.psychographics) }},\n  \"content_preferences\": {{ JSON.stringify($json.content_preferences) }},\n  \"competitors\": {{ JSON.stringify($json.competitors) }},\n  \"content_opportunities\": {{ JSON.stringify($json.content_opportunities) }},\n  \"recommended_hashtags\": {{ JSON.stringify($json.recommended_hashtags) }},\n  \"raw_research\": {{ JSON.stringify($json.raw_research) }}\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "01-icp-0010",
+      "name": "Supabase -- UPSERT ICP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, -200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, phase: 1, session_id: 'session_' + Date.now(), data: $json }) }}",
+        "options": {}
+      },
+      "id": "01-icp-0011",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1980, -200]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Auth Validator", "type": "main", "index": 0 }]]
+    },
+    "Auth Validator": {
+      "main": [[{ "node": "Auth OK?", "type": "main", "index": 0 }]]
+    },
+    "Auth OK?": {
+      "main": [
+        [{ "node": "Prepare Perplexity Request", "type": "main", "index": 0 }],
+        [{ "node": "401 Unauthorized", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Perplexity Request": {
+      "main": [[{ "node": "Perplexity -- Market Research", "type": "main", "index": 0 }]]
+    },
+    "Perplexity -- Market Research": {
+      "main": [[{ "node": "Prepare ICP Prompt", "type": "main", "index": 0 }]]
+    },
+    "Prepare ICP Prompt": {
+      "main": [[{ "node": "Claude -- ICP Generator", "type": "main", "index": 0 }]]
+    },
+    "Claude -- ICP Generator": {
+      "main": [[{ "node": "Parse ICP Response", "type": "main", "index": 0 }]]
+    },
+    "Parse ICP Response": {
+      "main": [[{ "node": "Supabase -- UPSERT ICP", "type": "main", "index": 0 }]]
+    },
+    "Supabase -- UPSERT ICP": {
+      "main": [[{ "node": "Response", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
