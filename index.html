@@ -3925,7 +3925,7 @@ async function approveScheduleContent(dateStrOrId) {
     await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
       method: 'POST',
       body: JSON.stringify({
-        id: contentId,
+        content_id: contentId,
         action: 'approve'
       })
     });
@@ -3958,7 +3958,7 @@ async function rejectScheduleContent(dateStrOrId) {
     await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
       method: 'POST',
       body: JSON.stringify({
-        id: contentId,
+        content_id: contentId,
         action: 'reject'
       })
     });
