@@ -1,0 +1,293 @@
+{
+  "name": "13-Video-Creator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-videogen",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "vg-webhook-001",
+      "name": "Video Gen \u2014 Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [0, 300],
+      "typeVersion": 2,
+      "webhookId": "eluxr-videogen"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "vg-auth-exec-001",
+      "name": "Auth Validate (eluxr-videogen)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-vg",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "vg-auth-if-001",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error || 'Authentication required' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "vg-401-001",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body;\nconst imageUrl = body.image_url || '';\nconst prompt = body.prompt || 'Professional UGC-style promotional video';\nconst aspectRatio = body.aspect_ratio || '9:16';\nconst platform = body.platform || 'Instagram Reels';\n\nconst dimensions = {\n  '9:16': { width: 720, height: 1280 },\n  '16:9': { width: 1280, height: 720 },\n  '1:1': { width: 720, height: 720 }\n};\n\nconst dim = dimensions[aspectRatio] || dimensions['9:16'];\n\nreturn {\n  json: {\n    image_url: imageUrl,\n    prompt: prompt,\n    aspect_ratio: aspectRatio,\n    width: dim.width,\n    height: dim.height,\n    platform: platform\n  }\n};"
+      },
+      "id": "vg-prepare-001",
+      "name": "Prepare Veo Prompt",
+      "type": "n8n-nodes-base.code",
+      "position": [660, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/veo/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.prompt }}"
+            },
+            {
+              "name": "model",
+              "value": "veo3_fast"
+            },
+            {
+              "name": "generationType",
+              "value": "TEXT_2_VIDEO"
+            },
+            {
+              "name": "aspect_ratio",
+              "value": "={{ $json.aspect_ratio }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "vg-kie-create-001",
+      "name": "KIE \u2014 Create Video Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [880, 300],
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 120
+      },
+      "id": "vg-wait-001",
+      "name": "Wait for Video",
+      "type": "n8n-nodes-base.wait",
+      "position": [1100, 300],
+      "typeVersion": 1.1,
+      "webhookId": "vg-wait-video-webhook"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/veo/record-info?taskId={{ $json.data.taskId }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "vg-kie-get-001",
+      "name": "KIE \u2014 Get Video Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1320, 300],
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "video-success-check",
+              "leftValue": "={{ $json.data.successFlag }}",
+              "rightValue": "1",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "vg-if-ready-001",
+      "name": "Video Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\n\nlet videoUrl = '';\n\nif (result.data && result.data.resultJson) {\n  try {\n    const parsed = JSON.parse(result.data.resultJson);\n    if (parsed.resultUrls && parsed.resultUrls.length > 0) {\n      videoUrl = parsed.resultUrls[0];\n    }\n  } catch(e) {}\n}\n\nreturn {\n  json: {\n    success: !!videoUrl,\n    video_url: videoUrl,\n    taskId: result.data?.taskId || result.taskId || ''\n  }\n};"
+      },
+      "id": "vg-parse-result-001",
+      "name": "Parse Video Result",
+      "type": "n8n-nodes-base.code",
+      "position": [1760, 200],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "vg-response-001",
+      "name": "Video Gen \u2014 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1980, 200],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Video generation still processing', retry: true, taskId: $json.data?.taskId }) }}",
+        "options": {}
+      },
+      "id": "vg-processing-001",
+      "name": "Video Processing \u2014 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1760, 400],
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Video Gen \u2014 Webhook": {
+      "main": [
+        [{ "node": "Auth Validate (eluxr-videogen)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Auth Validate (eluxr-videogen)": {
+      "main": [
+        [{ "node": "Auth OK?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [{ "node": "Prepare Veo Prompt", "type": "main", "index": 0 }],
+        [{ "node": "401 Unauthorized", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Veo Prompt": {
+      "main": [
+        [{ "node": "KIE \u2014 Create Video Task", "type": "main", "index": 0 }]
+      ]
+    },
+    "KIE \u2014 Create Video Task": {
+      "main": [
+        [{ "node": "Wait for Video", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait for Video": {
+      "main": [
+        [{ "node": "KIE \u2014 Get Video Status", "type": "main", "index": 0 }]
+      ]
+    },
+    "KIE \u2014 Get Video Status": {
+      "main": [
+        [{ "node": "Video Ready?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Video Ready?": {
+      "main": [
+        [{ "node": "Parse Video Result", "type": "main", "index": 0 }],
+        [{ "node": "Video Processing \u2014 Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Video Result": {
+      "main": [
+        [{ "node": "Video Gen \u2014 Response", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
