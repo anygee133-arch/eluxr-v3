@@ -1,0 +1,4715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELUXR Magic Content Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f8fafb;
+  --bg-card: #ffffff;
+  --sidebar-bg: #0f172a;
+  --sidebar-hover: #1e293b;
+  --sidebar-active: #16a34a;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-on-dark: #f1f5f9;
+  --green: #16a34a;
+  --green-light: #22c55e;
+  --green-bg: #f0fdf4;
+  --green-border: #bbf7d0;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-xl: 0 24px 60px rgba(0,0,0,0.1);
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --transition: cubic-bezier(0.4, 0, 0.2, 1);
+  --purple: #7c3aed;
+  --purple-light: #a78bfa;
+  --purple-bg: #f5f3ff;
+  --purple-border: #ddd6fe;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* HEADER */
+.header {
+  background: var(--sidebar-bg);
+  padding: 28px 32px;
+  text-align: center;
+}
+.header-logo h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px; font-weight: 400; color: #fff; letter-spacing: 6px;
+}
+.header-logo span {
+  display: block; font-family: 'DM Sans', sans-serif;
+  font-size: 11px; font-weight: 500; color: var(--green-light);
+  letter-spacing: 3px; text-transform: uppercase; margin-top: 4px;
+}
+
+/* PHASE NAVIGATION */
+.phase-nav {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 32px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+}
+.phase-nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: 10px;
+  color: var(--text-muted); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.25s var(--transition);
+  border: 1px solid transparent;
+}
+.phase-nav-item .phase-num {
+  width: 26px; height: 26px; border-radius: 8px;
+  background: var(--border); display: flex;
+  align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0; transition: all 0.25s var(--transition);
+}
+.phase-nav-item:hover { color: var(--text-secondary); border-color: var(--border); }
+.phase-nav-item.active {
+  background: var(--green-bg); color: var(--green);
+  border-color: var(--green-border); font-weight: 600;
+}
+.phase-nav-item.active .phase-num { background: var(--green); color: #fff; }
+.phase-nav-item.completed .phase-num { background: var(--green); color: #fff; }
+.phase-nav-item.completed { color: var(--green); }
+
+/* PAGE SECTIONS */
+.page-section {
+  display: none; opacity: 0; transform: translateY(12px);
+  transition: opacity 0.5s var(--transition), transform 0.5s var(--transition);
+}
+.page-section.active { display: block; }
+.page-section.visible { opacity: 1; transform: translateY(0); }
+.section-inner { max-width: 900px; margin: 0 auto; padding: 40px 32px; }
+
+/* PHASE HEADER */
+.phase-header { margin-bottom: 28px; text-align: center; }
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; background: var(--green-bg); color: var(--green);
+  font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; border-radius: 20px;
+  border: 1px solid var(--green-border); margin-bottom: 12px;
+}
+.phase-header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;
+}
+.phase-header p {
+  font-size: 15px; color: var(--text-secondary); line-height: 1.6; max-width: 600px; margin: 0 auto;
+}
+
+/* CARDS */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 32px;
+  transition: all 0.35s var(--transition); position: relative; overflow: hidden;
+}
+.card::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--green), var(--green-light));
+  transform: scaleX(0); transform-origin: left;
+  transition: transform 0.4s var(--transition);
+}
+.card:hover { border-color: var(--green-border); box-shadow: var(--shadow-md); }
+.card:hover::after { transform: scaleX(1); }
+
+/* FORMS */
+.form-group { margin-bottom: 20px; }
+.form-label {
+  display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%; padding: 12px 16px; border: 1px solid var(--border);
+  border-radius: 10px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; color: var(--text-primary); background: var(--bg);
+  transition: all 0.2s var(--transition); outline: none;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  border-color: var(--green); box-shadow: 0 0 0 3px rgba(22,163,74,0.1);
+}
+.form-textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 28px; border-radius: 10px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+  transition: all 0.25s var(--transition);
+}
+.btn-primary { background: var(--green); color: #fff; }
+.btn-primary:hover { background: #15803d; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
+.btn-outline { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--green); color: var(--green); }
+.btn-purple { background: var(--purple); color: #fff; }
+.btn-purple:hover { background: #6d28d9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.3); }
+.btn-sm { padding: 10px 18px; font-size: 13px; }
+.btn-lg { padding: 16px 32px; font-size: 15px; }
+.btn-block { width: 100%; }
+
+/* DETAILS / ADVANCED */
+details {
+  margin-top: 24px; border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+details summary {
+  cursor: pointer; font-weight: 600; color: var(--green);
+  padding: 16px 20px; background: var(--bg-subtle);
+  transition: background 0.2s;
+}
+details summary:hover { background: var(--green-bg); }
+details[open] summary { border-bottom: 1px solid var(--border); }
+details .details-content { padding: 20px; }
+
+/* PLATFORMS */
+.platforms-group {
+  display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;
+}
+.platforms-group label {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; padding: 10px 16px;
+  border: 1px solid var(--border); border-radius: 8px;
+  transition: all 0.2s; font-size: 13px;
+}
+.platforms-group label:has(input:checked) {
+  border-color: var(--green); background: var(--green-bg); color: var(--green);
+}
+.platforms-group input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--green);
+}
+
+/* PROGRESS */
+.progress-card { text-align: center; }
+.progress-container {
+  background: var(--border); border-radius: 20px;
+  height: 24px; overflow: hidden; margin-bottom: 20px;
+}
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green), var(--green-light));
+  border-radius: 20px; width: 0%;
+  transition: width 0.5s ease; position: relative;
+}
+.progress-bar::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+  animation: shimmer 2s infinite;
+}
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+.progress-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 36px; font-weight: 600; color: var(--green); margin-bottom: 8px;
+}
+.phase-text {
+  font-size: 16px; color: var(--text-secondary); margin-bottom: 32px;
+}
+.phase-list { text-align: left; max-width: 400px; margin: 0 auto; }
+.phase-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0; color: var(--text-muted); transition: color 0.3s;
+  border-bottom: 1px solid var(--border-light);
+}
+.phase-item:last-child { border-bottom: none; }
+.phase-item.active { color: var(--green); font-weight: 600; }
+.phase-item.completed { color: var(--green); }
+.phase-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--border); font-size: 12px; font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+.phase-item.active .phase-icon {
+  background: var(--green); color: white; animation: pulse 1.5s infinite;
+}
+.phase-item.completed .phase-icon { background: var(--green); color: white; }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+.time-remaining { margin-top: 24px; font-size: 14px; color: var(--text-muted); }
+
+/* STATS */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; text-align: center;
+  transition: all 0.3s var(--transition); cursor: pointer;
+}
+.stat-card:hover { border-color: var(--green-border); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.stat-card.active { border-color: var(--green); background: var(--green-bg); }
+.stat-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+.stat-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 600; color: var(--green); }
+
+/* CONTENT LIST PANEL */
+.content-list-panel {
+  display: none; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); margin-bottom: 24px; overflow: hidden;
+}
+.content-list-panel.visible { display: block; animation: slideDown 0.3s ease; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.content-list-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--bg-subtle);
+}
+.content-list-header h4 { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.content-list-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); }
+.content-list-close:hover { color: var(--text-primary); }
+.content-list-body { max-height: 300px; overflow-y: auto; }
+.content-list-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+  border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.2s;
+}
+.content-list-item:hover { background: var(--bg-subtle); }
+.content-list-item:last-child { border-bottom: none; }
+.content-list-day { width: 36px; height: 36px; border-radius: 8px; background: var(--green-bg);
+  display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--green); font-size: 14px; }
+.content-list-info { flex: 1; }
+.content-list-title { font-weight: 500; font-size: 14px; color: var(--text-primary); margin-bottom: 2px; }
+.content-list-meta { font-size: 12px; color: var(--text-muted); }
+.content-list-status { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+.content-list-status.pending { background: #fef3c7; color: #d97706; }
+.content-list-status.approved { background: var(--green-bg); color: var(--green); }
+.content-list-status.rejected { background: #fee2e2; color: #dc2626; }
+
+/* CALENDAR LEGEND */
+.calendar-legend {
+  display: flex; flex-wrap: wrap; gap: 16px; padding: 12px 24px;
+  border-top: 1px solid var(--border-light); background: var(--bg-subtle);
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.legend-dot.linkedin { background: #0077B5; }
+.legend-dot.instagram { background: #E4405F; }
+.legend-dot.x { background: #1DA1F2; }
+.legend-dot.youtube { background: #FF0000; }
+.legend-dot.facebook { background: #1877F2; }
+.legend-dot.tiktok { background: #000000; }
+.legend-dot.pending { background: #f59e0b; }
+.legend-dot.approved { background: var(--green); }
+.legend-dot.video { background: var(--purple); }
+
+/* CALENDAR */
+.calendar-container {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.calendar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap; gap: 16px;
+}
+.calendar-nav {
+  display: flex; align-items: center; gap: 16px;
+}
+.calendar-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 600; color: var(--text-primary);
+  min-width: 280px; text-align: center;
+}
+.calendar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.calendar-body { padding: 24px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-header {
+  text-align: center; font-size: 11px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 1px; padding: 12px 0;
+}
+.cal-day {
+  aspect-ratio: 1; border-radius: 10px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s var(--transition);
+  border: 1px solid transparent; position: relative; background: var(--bg-subtle);
+}
+.cal-day:hover:not(.empty) { background: var(--green-bg); border-color: var(--green-border); }
+.cal-day .platform-dots {
+  display: flex; gap: 3px; position: absolute; bottom: 6px;
+}
+.cal-day .platform-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.cal-day .platform-dot.linkedin { background: #0077B5; }
+.cal-day .platform-dot.instagram { background: #E4405F; }
+.cal-day .platform-dot.x { background: #1DA1F2; }
+.cal-day .platform-dot.youtube { background: #FF0000; }
+.cal-day .platform-dot.facebook { background: #1877F2; }
+.cal-day .platform-dot.tiktok { background: #000000; }
+.cal-day .platform-dot.video { background: var(--purple); }
+.cal-day.today { background: var(--green); color: #fff; font-weight: 600; }
+.cal-day.today::after { background: #fff; }
+.cal-day.empty { background: transparent; pointer-events: none; opacity: 0.3; }
+.cal-day.selected { border-color: var(--green); box-shadow: 0 0 0 2px rgba(22,163,74,0.2); }
+
+/* PLATFORM BADGES */
+.platform-badge {
+  display: inline-block; padding: 4px 10px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; color: white;
+}
+.platform-linkedin { background: #0077B5; }
+.platform-instagram { background: #E4405F; }
+.platform-x { background: #1DA1F2; }
+.platform-youtube { background: #FF0000; }
+
+/* STATUS */
+.status-badge {
+  position: absolute; top: 6px; right: 6px;
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.status-pending { background: #f59e0b; }
+.status-approved { background: var(--green); }
+.status-rejected { background: #ef4444; }
+
+.video-indicator {
+  position: absolute; bottom: 6px; right: 6px;
+  font-size: 10px; background: #ef4444; color: white;
+  padding: 2px 6px; border-radius: 4px; font-weight: 600;
+}
+
+/* MODAL */
+.modal {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 20px;
+}
+.modal.hidden { display: none; }
+.modal-content {
+  background: white; border-radius: var(--radius-xl);
+  max-width: 600px; width: 100%; max-height: 90vh;
+  overflow-y: auto; position: relative; box-shadow: var(--shadow-xl);
+}
+.close-btn {
+  position: absolute; top: 16px; right: 16px;
+  width: 36px; height: 36px; border: 1px solid var(--border);
+  background: var(--bg); border-radius: 8px; font-size: 18px;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; color: var(--text-secondary); transition: all 0.2s; z-index: 10;
+}
+.close-btn:hover { background: #fef2f2; border-color: #fecaca; color: #ef4444; }
+.preview-header {
+  padding: 24px; border-bottom: 1px solid var(--border-light);
+  display: flex; align-items: center; gap: 16px;
+}
+.preview-image-container {
+  position: relative; background: var(--bg-subtle);
+}
+.preview-image-container img { width: 100%; display: block; }
+.download-btn {
+  position: absolute; bottom: 16px; right: 16px;
+  padding: 10px 16px; background: rgba(0,0,0,0.7); color: white;
+  border: none; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 500; transition: background 0.2s;
+}
+.download-btn:hover { background: rgba(0,0,0,0.85); }
+.preview-content { padding: 24px; }
+.preview-content h3 { color: var(--green); margin-bottom: 16px; font-family: 'Playfair Display', serif; }
+.preview-content p {
+  color: var(--text-primary); white-space: pre-wrap; margin-bottom: 16px;
+  line-height: 1.7; max-height: 400px; overflow-y: auto;
+  padding: 16px; background: var(--bg-subtle); border-radius: 10px;
+  font-size: 14px;
+}
+.preview-content p hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.preview-hashtags { display: flex; flex-wrap: wrap; gap: 8px; max-height: 150px; overflow-y: auto; padding: 4px 0; }
+.hashtag {
+  background: var(--green-bg); color: var(--green);
+  padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;
+}
+.preview-actions {
+  display: flex; gap: 12px; padding: 24px; border-top: 1px solid var(--border-light); flex-wrap: wrap;
+}
+.preview-actions button {
+  flex: 1; min-width: 100px; padding: 12px 16px;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-approve { background: var(--green); color: white; }
+.btn-approve:hover { background: #15803d; }
+.btn-edit { background: #f59e0b; color: white; }
+.btn-edit:hover { background: #d97706; }
+.btn-regenerate { background: #6366f1; color: white; }
+.btn-regenerate:hover { background: #4f46e5; }
+.btn-reject { background: #ef4444; color: white; }
+.btn-reject:hover { background: #dc2626; }
+
+/* BATCH BAR */
+.batch-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: white; border-top: 1px solid var(--border);
+  padding: 16px 32px; display: flex; align-items: center;
+  justify-content: space-between; gap: 20px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.1); z-index: 100; flex-wrap: wrap;
+}
+.batch-bar.hidden { display: none; }
+.selected-count { font-weight: 600; color: var(--green); }
+.batch-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* CHATBOX */
+.chatbox {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: hidden;
+  margin-top: 24px; transition: all 0.3s var(--transition);
+}
+.chatbox:hover { box-shadow: var(--shadow-sm); }
+.chatbox-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; background: var(--bg-subtle); border-bottom: 1px solid var(--border-light);
+}
+.chatbox-header-left { display: flex; align-items: center; gap: 10px; }
+.chatbox-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green-light); animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.chatbox-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.chatbox-messages {
+  height: 240px; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.chat-msg {
+  max-width: 85%; padding: 12px 16px; border-radius: 12px;
+  font-size: 13px; line-height: 1.5; animation: msgSlideIn 0.3s var(--transition);
+}
+@keyframes msgSlideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.chat-msg.ai {
+  background: var(--bg-subtle); color: var(--text-primary);
+  border-bottom-left-radius: 4px; align-self: flex-start;
+}
+.chat-msg.user {
+  background: var(--green); color: #fff;
+  border-bottom-right-radius: 4px; align-self: flex-end;
+}
+.chatbox-input {
+  display: flex; gap: 8px; padding: 14px 16px;
+  border-top: 1px solid var(--border-light); background: var(--bg);
+}
+.chatbox-input input {
+  flex: 1; padding: 10px 14px; border: 1px solid var(--border);
+  border-radius: 8px; font-family: 'DM Sans', sans-serif;
+  font-size: 13px; outline: none; transition: border-color 0.2s;
+}
+.chatbox-input input:focus { border-color: var(--green); }
+.chatbox-input button {
+  padding: 10px 18px; background: var(--green); color: #fff;
+  border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background 0.2s; font-family: 'DM Sans', sans-serif;
+}
+.chatbox-input button:hover { background: #15803d; }
+
+/* EDIT TEXTAREA */
+.edit-textarea {
+  width: 100%; min-height: 200px; padding: 16px;
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: 14px; font-family: 'DM Sans', sans-serif;
+  line-height: 1.6; resize: vertical;
+  resize: vertical; margin-bottom: 16px; line-height: 1.6;
+}
+.edit-textarea:focus { outline: none; border-color: var(--green); }
+
+/* NAVIGATION BUTTONS */
+.nav-buttons {
+  display: flex; justify-content: center; gap: 16px;
+  margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border);
+}
+
+/* TOAST */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
+.toast {
+  background: var(--sidebar-bg); color: white;
+  padding: 16px 24px; border-radius: 10px; margin-bottom: 10px;
+  animation: slideIn 0.3s ease; display: flex; align-items: center; gap: 12px;
+  font-size: 14px; font-weight: 500;
+}
+.toast.success { background: var(--green); }
+.toast.error { background: #ef4444; }
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* SPINNER */
+.spinner {
+  width: 20px; height: 20px; border: 2px solid var(--border);
+  border-top-color: var(--green); border-radius: 50%;
+  animation: spin 0.8s linear infinite; display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* TOOL SECTIONS */
+.tool-section {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); margin-top: 24px; overflow: hidden;
+}
+.tool-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px; background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-light); cursor: pointer;
+  transition: background 0.2s;
+}
+.tool-header:hover { background: var(--green-bg); }
+.tool-header h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px; font-weight: 600; color: var(--text-primary);
+  display: flex; align-items: center; gap: 10px;
+}
+.tool-header .tool-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--green); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.tool-header .tool-icon.purple { background: var(--purple); }
+.tool-header .toggle-icon {
+  font-size: 20px; color: var(--text-muted); transition: transform 0.3s;
+}
+.tool-section.open .toggle-icon { transform: rotate(180deg); }
+.tool-body { padding: 24px; display: none; }
+.tool-section.open .tool-body { display: block; }
+
+/* SCRIPT SECTIONS */
+.script-section {
+  background: var(--bg-subtle); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; margin-bottom: 16px;
+}
+.script-section-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.script-section-header .section-num {
+  width: 24px; height: 24px; border-radius: 6px;
+  background: var(--green); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600;
+}
+.script-section-header .section-title { font-weight: 600; color: var(--text-primary); }
+.script-section-header .section-time {
+  margin-left: auto; font-size: 12px; color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* SCRIPT OUTPUT */
+.script-output {
+  background: var(--sidebar-bg); border-radius: 12px;
+  padding: 24px; margin-top: 20px; color: var(--text-on-dark);
+}
+.script-output h4 {
+  color: var(--green-light); margin-bottom: 16px;
+  font-family: 'Playfair Display', serif;
+}
+.script-output pre {
+  white-space: pre-wrap; font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; line-height: 1.8;
+}
+.script-output .script-section-output {
+  margin-bottom: 20px; padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.script-output .script-section-output:last-child {
+  margin-bottom: 0; padding-bottom: 0; border-bottom: none;
+}
+.script-output .section-label {
+  color: var(--green-light); font-weight: 600;
+  text-transform: uppercase; font-size: 11px;
+  letter-spacing: 1px; margin-bottom: 8px;
+}
+.script-output .camera-cue {
+  color: #f59e0b; font-style: italic; font-size: 12px;
+  margin-top: 8px;
+}
+
+/* VIDEO OUTPUT */
+.video-output {
+  background: var(--sidebar-bg); border-radius: 12px;
+  padding: 24px; margin-top: 20px; color: var(--text-on-dark);
+}
+.video-output h4 {
+  color: var(--purple-light); margin-bottom: 16px;
+  font-family: 'Playfair Display', serif;
+}
+.video-output video {
+  width: 100%; border-radius: 8px; margin-bottom: 16px;
+}
+.video-output .video-url {
+  background: rgba(255,255,255,0.1); padding: 12px;
+  border-radius: 8px; font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; word-break: break-all;
+}
+
+/* ANIMATIONS */
+.fade-in-up { opacity: 0; transform: translateY(20px); animation: fadeInUp 0.5s var(--transition) forwards; }
+@keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .section-inner { padding: 24px 16px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .phase-nav { flex-wrap: wrap; padding: 16px; }
+  .phase-nav-item { font-size: 12px; padding: 8px 14px; }
+  .phase-header h2 { font-size: 26px; }
+  .preview-actions { flex-direction: column; }
+  .preview-actions button { min-width: auto; }
+  .batch-bar { flex-direction: column; text-align: center; }
+}
+
+.page-section.active:has(.calendar-container) .section-inner { padding-bottom: 100px; }
+
+.hidden { display: none !important; }
+
+/* CONTENT SCHEDULE */
+.content-schedule {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.content-schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.content-schedule-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.content-schedule-nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.week-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 0 12px;
+}
+.content-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+}
+@media (max-width: 1200px) {
+  .content-schedule-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 768px) {
+  .content-schedule-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.schedule-card {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: all 0.25s var(--transition);
+  cursor: pointer;
+}
+.schedule-card:hover {
+  border-color: var(--green-border);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.schedule-card.generated {
+  border-color: var(--green-border);
+  background: var(--green-bg);
+}
+.schedule-card.pending {
+  border-color: #fbbf24;
+  background: #fefce8;
+}
+.schedule-card-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.schedule-card-day {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.schedule-card-platform {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.schedule-card-theme {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.schedule-card-type {
+  font-size: 11px;
+  color: var(--purple);
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+.schedule-card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.schedule-card-status.not-generated {
+  background: var(--border);
+  color: var(--text-muted);
+}
+.schedule-card-status.generated {
+  background: var(--green-bg);
+  color: var(--green);
+}
+.schedule-card-status.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+.schedule-card-status.approved {
+  background: var(--green-bg);
+  color: var(--green);
+}
+.schedule-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.schedule-card-actions .btn {
+  flex: 1;
+  min-width: 60px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+/* Schedule Detail Modal */
+.schedule-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.schedule-modal.active {
+  display: flex;
+}
+.schedule-modal-content {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+}
+.schedule-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.schedule-modal-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.schedule-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.schedule-modal-body {
+  padding: 24px;
+}
+.schedule-modal-field {
+  margin-bottom: 16px;
+}
+.schedule-modal-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.schedule-modal-field .value {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.schedule-modal-field textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+.schedule-modal-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.schedule-modal-actions .btn {
+  flex: 1;
+  min-width: 100px;
+}
+
+/* Loading state for schedule */
+.schedule-loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+.schedule-empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+.schedule-empty p {
+  margin-bottom: 16px;
+}
+/* AUTH PAGES */
+#auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--sidebar-bg) 0%, #1a2332 50%, var(--sidebar-bg) 100%);
+  padding: 20px;
+}
+
+.auth-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 440px;
+  animation: authFadeIn 0.5s var(--transition);
+}
+
+@keyframes authFadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-logo h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--text-primary);
+  letter-spacing: 6px;
+}
+
+.auth-logo span {
+  display: block;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  margin-top: 4px;
+}
+
+.auth-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.auth-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+}
+
+.auth-field input {
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  color: var(--text-primary);
+  background: var(--bg);
+  transition: border-color 0.2s var(--transition), box-shadow 0.2s var(--transition);
+  outline: none;
+}
+
+.auth-field input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.auth-field input::placeholder {
+  color: var(--text-muted);
+}
+
+.auth-submit-btn {
+  padding: 14px 24px;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s var(--transition), transform 0.1s;
+  margin-top: 8px;
+}
+
+.auth-submit-btn:hover {
+  background: var(--green-light);
+}
+
+.auth-submit-btn:active {
+  transform: scale(0.98);
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-error {
+  color: #dc2626;
+  font-size: 13px;
+  min-height: 20px;
+  text-align: center;
+}
+
+.auth-success {
+  color: var(--green);
+  font-size: 13px;
+  min-height: 20px;
+  text-align: center;
+}
+
+.auth-links {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.auth-links a {
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.auth-links a:hover {
+  text-decoration: underline;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 8px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-divider span {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* User menu in header */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: absolute;
+  right: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.user-menu span {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--text-on-dark);
+  opacity: 0.8;
+}
+
+.logout-btn {
+  padding: 6px 16px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  color: var(--text-on-dark);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.logout-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.4);
+}
+
+/* Make header position relative for user menu positioning */
+.header {
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .user-menu {
+    position: static;
+    transform: none;
+    justify-content: center;
+    margin-top: 12px;
+  }
+  .auth-card {
+    padding: 32px 24px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH CONTAINER -->
+<div id="auth-container" style="display: none;">
+
+  <!-- LOGIN -->
+  <div id="auth-login" class="auth-card">
+    <div class="auth-logo">
+      <h1>ELUXR</h1>
+      <span>Magic Content Engine</span>
+    </div>
+    <h2 class="auth-title">Welcome back</h2>
+    <p class="auth-subtitle">Sign in to your content dashboard</p>
+    <form class="auth-form" onsubmit="handleLogin(event)">
+      <div class="auth-field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="you@company.com" required autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
+      </div>
+      <div class="auth-error" id="login-error"></div>
+      <button type="submit" class="auth-submit-btn">Sign In</button>
+    </form>
+    <div class="auth-links">
+      <a onclick="showResetRequestPage()">Forgot password?</a>
+    </div>
+    <div class="auth-divider"><span>or</span></div>
+    <div class="auth-links">
+      Don't have an account? <a onclick="showSignupPage()">Sign up</a>
+    </div>
+  </div>
+
+  <!-- SIGNUP -->
+  <div id="auth-signup" class="auth-card" style="display: none;">
+    <div class="auth-logo">
+      <h1>ELUXR</h1>
+      <span>Magic Content Engine</span>
+    </div>
+    <h2 class="auth-title">Create your account</h2>
+    <p class="auth-subtitle">Start creating AI-powered content</p>
+    <form class="auth-form" onsubmit="handleSignup(event)">
+      <div class="auth-field">
+        <label for="signup-email">Email</label>
+        <input type="email" id="signup-email" placeholder="you@company.com" required autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label for="signup-password">Password</label>
+        <input type="password" id="signup-password" placeholder="Minimum 8 characters" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="auth-field">
+        <label for="signup-confirm-password">Confirm password</label>
+        <input type="password" id="signup-confirm-password" placeholder="Confirm your password" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="auth-error" id="signup-error"></div>
+      <div class="auth-success" id="signup-success"></div>
+      <button type="submit" class="auth-submit-btn">Create Account</button>
+    </form>
+    <div class="auth-links">
+      Already have an account? <a onclick="showLoginPage()">Sign in</a>
+    </div>
+  </div>
+
+  <!-- PASSWORD RESET REQUEST -->
+  <div id="auth-reset-request" class="auth-card" style="display: none;">
+    <div class="auth-logo">
+      <h1>ELUXR</h1>
+      <span>Magic Content Engine</span>
+    </div>
+    <h2 class="auth-title">Reset your password</h2>
+    <p class="auth-subtitle">Enter your email to receive a reset link</p>
+    <form class="auth-form" onsubmit="handleResetRequest(event)">
+      <div class="auth-field">
+        <label for="reset-email">Email</label>
+        <input type="email" id="reset-email" placeholder="you@company.com" required autocomplete="email">
+      </div>
+      <div class="auth-error" id="reset-request-error"></div>
+      <div class="auth-success" id="reset-request-success"></div>
+      <button type="submit" class="auth-submit-btn">Send Reset Link</button>
+    </form>
+    <div class="auth-links">
+      <a onclick="showLoginPage()">Back to sign in</a>
+    </div>
+  </div>
+
+  <!-- PASSWORD RESET CONFIRMATION -->
+  <div id="auth-reset-confirm" class="auth-card" style="display: none;">
+    <div class="auth-logo">
+      <h1>ELUXR</h1>
+      <span>Magic Content Engine</span>
+    </div>
+    <h2 class="auth-title">Set new password</h2>
+    <p class="auth-subtitle">Enter your new password below</p>
+    <form class="auth-form" onsubmit="handleResetConfirm(event)">
+      <div class="auth-field">
+        <label for="reset-new-password">New password</label>
+        <input type="password" id="reset-new-password" placeholder="Minimum 8 characters" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="auth-field">
+        <label for="reset-confirm-password">Confirm new password</label>
+        <input type="password" id="reset-confirm-password" placeholder="Confirm your new password" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="auth-error" id="reset-confirm-error"></div>
+      <div class="auth-success" id="reset-confirm-success"></div>
+      <button type="submit" class="auth-submit-btn">Set New Password</button>
+    </form>
+  </div>
+
+</div>
+
+<!-- DASHBOARD CONTAINER (hidden until authenticated) -->
+<div id="dashboard-container" style="display: none;">
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-logo">
+    <h1>ELUXR</h1>
+    <span>Magic Content Engine</span>
+  </div>
+  <div id="user-menu" style="display: none;" class="user-menu">
+    <span id="user-email-display"></span>
+    <button onclick="handleLogout()" class="logout-btn">Sign Out</button>
+  </div>
+</header>
+
+<!-- PHASE NAVIGATION -->
+<nav class="phase-nav" id="phase-nav">
+  <div class="phase-nav-item active" data-phase="1" onclick="goToPhase(1)">
+    <span class="phase-num">01</span> Setup
+  </div>
+  <div class="phase-nav-item" data-phase="2" onclick="goToPhase(2)">
+    <span class="phase-num">02</span> Generate
+  </div>
+  <div class="phase-nav-item" data-phase="3" onclick="goToPhase(3)">
+    <span class="phase-num">03</span> Calendar
+  </div>
+</nav>
+
+<!-- PHASE 1: BUSINESS SETUP -->
+<section class="page-section active visible" id="phase-1">
+  <div class="section-inner">
+    <div class="phase-header fade-in-up">
+      <div class="phase-tag">Step 1</div>
+      <h2>Tell Us About Your Business</h2>
+      <p>Enter your business details once. Our AI will analyze your market, build your ICP, and generate an entire month of content.</p>
+    </div>
+
+    <div class="card fade-in-up stagger-1">
+      <form id="business-form">
+        <div class="form-group">
+          <label class="form-label" for="business_url">Website URL *</label>
+          <input type="url" class="form-input" id="business_url" name="business_url" placeholder="https://yourcompany.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="industry">Industry *</label>
+          <select class="form-select" id="industry" name="industry" required>
+            <option value="">Select Industry</option>
+            <option value="SaaS">SaaS / Software</option>
+            <option value="E-commerce">E-commerce / Retail</option>
+            <option value="Health & Wellness">Health & Wellness</option>
+            <option value="Finance">Finance / Fintech</option>
+            <option value="Marketing Agency">Marketing Agency</option>
+            <option value="Real Estate">Real Estate</option>
+            <option value="Education">Education / EdTech</option>
+            <option value="Consulting">Consulting / B2B Services</option>
+            <option value="Food & Beverage">Food & Beverage</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="month">Content Month *</label>
+          <input type="month" class="form-input" id="month" name="month" required>
+        </div>
+
+        <details>
+          <summary>Advanced Options</summary>
+          <div class="details-content">
+            <div class="form-group">
+              <label class="form-label" for="products">Products/Services to Feature</label>
+              <textarea class="form-textarea" id="products" name="products" placeholder="List your main products or services you want to promote..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="brand_voice">Brand Voice</label>
+              <textarea class="form-textarea" id="brand_voice" name="brand_voice" placeholder="Describe your brand voice (e.g., professional, friendly, witty, inspirational)..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Target Platforms</label>
+              <div class="platforms-group" id="platforms">
+                <label><input type="checkbox" name="platforms" value="LinkedIn" checked> LinkedIn</label>
+                <label><input type="checkbox" name="platforms" value="Instagram" checked> Instagram</label>
+                <label><input type="checkbox" name="platforms" value="X"> X (Twitter)</label>
+                <label><input type="checkbox" name="platforms" value="YouTube"> YouTube</label>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="nav-buttons">
+          <button type="submit" class="btn btn-primary btn-lg">Generate My Content Calendar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="chatbox fade-in-up stagger-2">
+      <div class="chatbox-header">
+        <div class="chatbox-header-left">
+          <div class="chatbox-dot"></div>
+          <span class="chatbox-title">ELUXR AI - Setup Assistant</span>
+        </div>
+        <span style="font-size:11px; color:var(--text-muted);">Powered by Claude</span>
+      </div>
+      <div class="chatbox-messages" id="chat-1">
+        <div class="chat-msg ai">Hi! I'm your content generation assistant. Share your business details and I'll help you create a month of engaging social media content. What does your business do?</div>
+      </div>
+      <div class="chatbox-input">
+        <input placeholder="Ask me about content strategy, best practices..." onkeydown="if(event.key==='Enter')sendChat(1, this)">
+        <button onclick="sendChat(1, this.previousElementSibling)">Send</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PHASE 2: PROGRESS + TOOLS -->
+<section class="page-section" id="phase-2">
+  <div class="section-inner">
+    <div class="phase-header fade-in-up">
+      <div class="phase-tag">Step 2</div>
+      <h2>Creating Your Content Magic</h2>
+      <p>Sit back while our AI analyzes your business, creates themes, writes posts, generates images, and syncs your calendar.</p>
+    </div>
+
+    <div class="card progress-card fade-in-up stagger-1">
+      <div class="progress-container">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+
+      <div id="progress-text" class="progress-text">0%</div>
+      <div id="phase-text" class="phase-text">Initializing...</div>
+
+      <div class="phase-list">
+        <div class="phase-item" data-step="1">
+          <span class="phase-icon">1</span>
+          <span>Analyzing your business... (30s)</span>
+        </div>
+        <div class="phase-item" data-step="2">
+          <span class="phase-icon">2</span>
+          <span>Creating content themes... (45s)</span>
+        </div>
+        <div class="phase-item" data-step="3">
+          <span class="phase-icon">3</span>
+          <span>Writing posts... (2-3min)</span>
+        </div>
+        <div class="phase-item" data-step="4">
+          <span class="phase-icon">4</span>
+          <span>Generating images... (1-2min)</span>
+        </div>
+        <div class="phase-item" data-step="5">
+          <span class="phase-icon">5</span>
+          <span>Creating videos... (2-3min)</span>
+        </div>
+        <div class="phase-item" data-step="6">
+          <span class="phase-icon">6</span>
+          <span>Syncing calendar... (30s)</span>
+        </div>
+      </div>
+
+      <div id="time-remaining" class="time-remaining">Estimated time remaining: ~8 minutes</div>
+    </div>
+
+    <!-- VIDEO SCRIPT BUILDER TOOL -->
+    <div class="tool-section fade-in-up stagger-2" id="video-script-tool">
+      <div class="tool-header" onclick="toggleTool('video-script-tool')">
+        <h3>
+          <span class="tool-icon">&#127916;</span>
+          Video Script Builder
+        </h3>
+        <span class="toggle-icon">&#9660;</span>
+      </div>
+      <div class="tool-body">
+        <p style="color:var(--text-secondary); margin-bottom:20px;">Create camera-ready video scripts for your own recordings. Perfect for Instagram Reels, TikTok, YouTube Shorts, and LinkedIn Video.</p>
+
+        <div class="form-group">
+          <label class="form-label">Video Topic</label>
+          <input type="text" class="form-input" id="script-topic" placeholder="e.g., 3 Tips for Better Social Media Engagement">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Duration</label>
+            <select class="form-select" id="script-duration">
+              <option value="15s">15 seconds</option>
+              <option value="30s" selected>30 seconds</option>
+              <option value="60s">60 seconds</option>
+              <option value="90s">90 seconds</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Platform</label>
+            <select class="form-select" id="script-platform">
+              <option value="Instagram Reels" selected>Instagram Reels</option>
+              <option value="TikTok">TikTok</option>
+              <option value="YouTube Shorts">YouTube Shorts</option>
+              <option value="LinkedIn Video">LinkedIn Video</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Style</label>
+            <select class="form-select" id="script-style">
+              <option value="energetic" selected>Energetic</option>
+              <option value="professional">Professional</option>
+              <option value="casual">Casual / Conversational</option>
+              <option value="educational">Educational</option>
+              <option value="inspirational">Inspirational</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Content Pillars</label>
+            <input type="text" class="form-input" id="script-pillars" placeholder="e.g., tips, behind the scenes">
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block" onclick="generateVideoScript()">
+          Generate Video Script
+        </button>
+
+        <!-- Script Output -->
+        <div id="script-output" class="script-output" style="display:none;">
+          <h4 id="script-title">Your Video Script</h4>
+
+          <div class="script-section-output">
+            <div class="section-label">&#129693; Hook (0:00 - 0:03)</div>
+            <pre id="script-hook"></pre>
+            <div class="camera-cue" id="script-hook-camera"></div>
+          </div>
+
+          <div class="script-section-output">
+            <div class="section-label">&#128203; Setup (0:03 - 0:10)</div>
+            <pre id="script-setup"></pre>
+            <div class="camera-cue" id="script-setup-camera"></div>
+          </div>
+
+          <div class="script-section-output">
+            <div class="section-label">&#128142; Value (0:10 - 0:25)</div>
+            <pre id="script-value"></pre>
+            <div class="camera-cue" id="script-value-camera"></div>
+          </div>
+
+          <div class="script-section-output">
+            <div class="section-label">&#128227; Call to Action (0:25 - 0:30)</div>
+            <pre id="script-cta"></pre>
+            <div class="camera-cue" id="script-cta-camera"></div>
+          </div>
+
+          <div style="margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1);">
+            <div class="section-label">&#127925; Music Mood</div>
+            <pre id="script-music"></pre>
+          </div>
+
+          <div style="margin-top:16px;">
+            <div class="section-label">&#128248; Thumbnail Idea</div>
+            <pre id="script-thumbnail"></pre>
+          </div>
+
+          <div style="margin-top:20px; display:flex; gap:12px;">
+            <button class="btn btn-outline" onclick="copyScript()" style="flex:1;">Copy Script</button>
+            <button class="btn btn-primary" onclick="downloadScript()" style="flex:1;">Download PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMAGE GENERATOR TOOL -->
+    <div class="tool-section fade-in-up stagger-3" id="image-gen-tool">
+      <div class="tool-header" onclick="toggleTool('image-gen-tool')">
+        <h3>
+          <span class="tool-icon">&#128444;</span>
+          Image Generator
+        </h3>
+        <span class="toggle-icon">&#9660;</span>
+      </div>
+      <div class="tool-body">
+        <p style="color:var(--text-secondary); margin-bottom:20px;">Generate custom images using Nano Banana Pro AI. Perfect for social media graphics, thumbnails, and promotional content.</p>
+
+        <div class="form-group">
+          <label class="form-label">Image Prompt</label>
+          <textarea class="form-textarea" id="image-prompt" placeholder="Describe the image you want to generate..."></textarea>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Aspect Ratio</label>
+            <select class="form-select" id="image-aspect">
+              <option value="1:1" selected>1:1 (Square)</option>
+              <option value="16:9">16:9 (Landscape)</option>
+              <option value="9:16">9:16 (Portrait/Story)</option>
+              <option value="4:3">4:3 (Standard)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Style</label>
+            <select class="form-select" id="image-style">
+              <option value="photorealistic" selected>Photorealistic</option>
+              <option value="illustration">Illustration</option>
+              <option value="3d-render">3D Render</option>
+              <option value="minimalist">Minimalist</option>
+              <option value="cinematic">Cinematic</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block" onclick="generateImage()">
+          Generate Image (~$0.02)
+        </button>
+
+        <div id="image-output" style="display:none; margin-top:20px;">
+          <div style="position:relative; border-radius:12px; overflow:hidden;">
+            <img id="generated-image" src="" alt="Generated Image" style="width:100%; display:block;">
+            <button onclick="downloadGeneratedImage()" class="download-btn">Download Image</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIDEO CREATOR TOOL (VEO) -->
+    <div class="tool-section fade-in-up stagger-4" id="video-gen-tool">
+      <div class="tool-header" onclick="toggleTool('video-gen-tool')">
+        <h3>
+          <span class="tool-icon purple">&#127909;</span>
+          Video Creator (Veo)
+        </h3>
+        <span class="toggle-icon">&#9660;</span>
+      </div>
+      <div class="tool-body">
+        <p style="color:var(--text-secondary); margin-bottom:20px;">Generate AI videos using Veo. Create stunning promotional clips from text prompts or reference images. Perfect for social media ads, reels, and product showcases.</p>
+
+        <div class="form-group">
+          <label class="form-label">Image URL (Optional Reference)</label>
+          <input type="url" class="form-input" id="video-image-url" placeholder="https://example.com/your-image.jpg">
+          <span style="font-size:11px; color:var(--text-muted); display:block; margin-top:4px;">Leave blank to generate from prompt only</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Video Prompt</label>
+          <textarea class="form-textarea" id="video-prompt" placeholder="Describe the video you want to create. E.g., 'Professional UGC-style promotional video of a happy person using a laptop, modern office setting, warm lighting, smooth camera movements'"></textarea>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Aspect Ratio</label>
+            <select class="form-select" id="video-aspect">
+              <option value="9:16" selected>9:16 (Portrait/Reels)</option>
+              <option value="16:9">16:9 (Landscape/YouTube)</option>
+              <option value="1:1">1:1 (Square)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Platform</label>
+            <select class="form-select" id="video-platform">
+              <option value="Instagram Reels" selected>Instagram Reels</option>
+              <option value="TikTok">TikTok</option>
+              <option value="YouTube Shorts">YouTube Shorts</option>
+              <option value="LinkedIn Video">LinkedIn Video</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn btn-purple btn-block" onclick="generateVideo()">
+          Generate Video (~$0.60)
+        </button>
+
+        <div id="video-output" class="video-output" style="display:none;">
+          <h4>Your Generated Video</h4>
+          <div id="video-loading" style="text-align:center; padding:40px;">
+            <div class="spinner" style="width:40px;height:40px;border-width:3px;"></div>
+            <p style="margin-top:16px; color:var(--text-muted);">Generating video... This may take 20-60 seconds</p>
+          </div>
+          <video id="generated-video" controls style="display:none;"></video>
+          <div class="video-url" id="video-url-display" style="display:none;"></div>
+          <div style="margin-top:16px; display:flex; gap:12px;">
+            <button class="btn btn-outline" onclick="copyVideoUrl()" style="flex:1;">Copy URL</button>
+            <button class="btn btn-purple" onclick="downloadGeneratedVideo()" style="flex:1;">Download Video</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT GENERATOR TOOL -->
+    <div class="tool-section fade-in-up stagger-5" id="content-gen-tool">
+      <div class="tool-header" onclick="toggleTool('content-gen-tool')">
+        <h3>
+          <span class="tool-icon" style="color:#10b981;">&#128221;</span>
+          Content Generator
+        </h3>
+        <span class="toggle-icon">&#9660;</span>
+      </div>
+      <div class="tool-body">
+        <p style="color:var(--text-secondary); margin-bottom:20px;">Generate individual posts for any platform. Choose your content type and let AI create engaging content tailored to your needs.</p>
+
+        <div class="form-group">
+          <label class="form-label">Topic / What to post about</label>
+          <textarea class="form-textarea" id="content-topic" placeholder="e.g., Share tips about our new product launch, Behind the scenes of our team meeting, Customer success story about..."></textarea>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Platform</label>
+            <select class="form-select" id="content-platform">
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Instagram" selected>Instagram</option>
+              <option value="X/Twitter">X/Twitter</option>
+              <option value="Facebook">Facebook</option>
+              <option value="TikTok">TikTok</option>
+              <option value="YouTube">YouTube</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Content Type</label>
+            <select class="form-select" id="content-type" onchange="updateContentTypeUI()">
+              <option value="text">Text Post Only</option>
+              <option value="image" selected>Text + Image</option>
+              <option value="video">Text + Video</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Tone</label>
+            <select class="form-select" id="content-tone">
+              <option value="professional">Professional</option>
+              <option value="casual" selected>Casual / Friendly</option>
+              <option value="inspirational">Inspirational</option>
+              <option value="educational">Educational</option>
+              <option value="humorous">Humorous</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Length</label>
+            <select class="form-select" id="content-length">
+              <option value="short">Short (1-2 paragraphs)</option>
+              <option value="medium" selected>Medium (2-3 paragraphs)</option>
+              <option value="long">Long (4+ paragraphs)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Image options (shown when content-type is image) -->
+        <div id="content-image-options" style="margin-top:16px; padding:16px; background:var(--bg-subtle); border-radius:12px;">
+          <h4 style="margin-bottom:12px; font-size:14px; color:var(--text-primary);">Image Options</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Aspect Ratio</label>
+              <select class="form-select" id="content-image-aspect">
+                <option value="1:1" selected>1:1 (Square)</option>
+                <option value="16:9">16:9 (Landscape)</option>
+                <option value="9:16">9:16 (Portrait/Story)</option>
+                <option value="4:3">4:3 (Standard)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Image Style</label>
+              <select class="form-select" id="content-image-style">
+                <option value="photorealistic" selected>Photorealistic</option>
+                <option value="illustration">Illustration</option>
+                <option value="3d-render">3D Render</option>
+                <option value="minimalist">Minimalist</option>
+                <option value="cinematic">Cinematic</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Video options (shown when content-type is video) -->
+        <div id="content-video-options" style="display:none; margin-top:16px; padding:16px; background:var(--bg-subtle); border-radius:12px;">
+          <h4 style="margin-bottom:12px; font-size:14px; color:var(--text-primary);">Video Options</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Aspect Ratio</label>
+              <select class="form-select" id="content-video-aspect">
+                <option value="9:16" selected>9:16 (Portrait/Reels)</option>
+                <option value="16:9">16:9 (Landscape)</option>
+                <option value="1:1">1:1 (Square)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Reference Image URL (Optional)</label>
+              <input type="url" class="form-input" id="content-video-ref" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-block" style="margin-top:20px; background: linear-gradient(135deg, #10b981, #059669); color:white;" onclick="generateSingleContent()">
+          Generate Content
+        </button>
+
+        <!-- Output Section -->
+        <div id="content-gen-output" style="display:none; margin-top:24px;">
+          <div style="background:var(--bg-subtle); border-radius:12px; padding:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <h4 style="margin:0; color:var(--text-primary);">Generated Content</h4>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-outline btn-sm" onclick="copyGeneratedContent()">Copy Text</button>
+                <button class="btn btn-outline btn-sm" onclick="addToCalendar()">Add to Calendar</button>
+              </div>
+            </div>
+            <div id="content-gen-text" style="white-space:pre-wrap; line-height:1.6; color:var(--text-secondary); margin-bottom:16px;"></div>
+            <div id="content-gen-media" style="margin-top:16px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chatbox fade-in-up stagger-6">
+      <div class="chatbox-header">
+        <div class="chatbox-header-left">
+          <div class="chatbox-dot"></div>
+          <span class="chatbox-title">ELUXR AI - Content Assistant</span>
+        </div>
+        <span style="font-size:11px; color:var(--text-muted);">Powered by Claude</span>
+      </div>
+      <div class="chatbox-messages" id="chat-2">
+        <div class="chat-msg ai">Your content is being generated! While you wait, you can use the Video Script Builder, Image Generator, Video Creator, or Content Generator tools above. Ask me anything about content creation!</div>
+      </div>
+      <div class="chatbox-input">
+        <input placeholder="Ask about video tips, content ideas..." onkeydown="if(event.key==='Enter')sendChat(2, this)">
+        <button onclick="sendChat(2, this.previousElementSibling)">Send</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PHASE 3: CALENDAR -->
+<section class="page-section" id="phase-3">
+  <div class="section-inner">
+    <div class="phase-header fade-in-up">
+      <div class="phase-tag">Step 3</div>
+      <h2>Your Content Calendar</h2>
+      <p>Review, approve, and download your month of content. Click any day to preview and take action.</p>
+    </div>
+
+    <!-- WEEKLY CONTENT SCHEDULE -->
+    <div class="content-schedule fade-in-up stagger-1" id="content-schedule">
+      <div class="content-schedule-header">
+        <h3>📅 This Week's Content Schedule</h3>
+        <div class="content-schedule-nav">
+          <button class="btn btn-outline btn-sm" onclick="changeScheduleWeek(-1)">← Prev Week</button>
+          <span class="week-label" id="schedule-week-label">Loading...</span>
+          <button class="btn btn-outline btn-sm" onclick="changeScheduleWeek(1)">Next Week →</button>
+          <button class="btn btn-outline btn-sm" onclick="refreshSchedule()">↻ Refresh</button>
+        </div>
+      </div>
+      <div id="schedule-grid" class="content-schedule-grid">
+        <div class="schedule-loading">
+          <div class="spinner" style="width:30px;height:30px;margin:0 auto 12px;"></div>
+          <p>Loading weekly themes...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule Detail Modal -->
+    <div class="schedule-modal" id="schedule-modal">
+      <div class="schedule-modal-content">
+        <div class="schedule-modal-header">
+          <h3 id="schedule-modal-title">Content Details</h3>
+          <button class="schedule-modal-close" onclick="closeScheduleModal()">&times;</button>
+        </div>
+        <div class="schedule-modal-body" id="schedule-modal-body">
+          <!-- Content loaded dynamically -->
+        </div>
+        <div class="schedule-modal-actions" id="schedule-modal-actions">
+          <!-- Actions loaded dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-row fade-in-up stagger-2">
+      <div class="stat-card" onclick="showContentList('total')" id="stat-card-total">
+        <div class="stat-label">Total Posts</div>
+        <div class="stat-value" id="stat-total">0</div>
+      </div>
+      <div class="stat-card" onclick="showContentList('pending')" id="stat-card-pending">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value" id="stat-pending">0</div>
+      </div>
+      <div class="stat-card" onclick="showContentList('approved')" id="stat-card-approved">
+        <div class="stat-label">Approved</div>
+        <div class="stat-value" id="stat-approved">0</div>
+      </div>
+      <div class="stat-card" onclick="showContentList('videos')" id="stat-card-videos">
+        <div class="stat-label">Videos</div>
+        <div class="stat-value" id="stat-videos">0</div>
+      </div>
+    </div>
+
+    <!-- Content List Panel -->
+    <div class="content-list-panel" id="content-list-panel">
+      <div class="content-list-header">
+        <h4 id="content-list-title">All Posts</h4>
+        <button class="content-list-close" onclick="closeContentList()">&times;</button>
+      </div>
+      <div class="content-list-body" id="content-list-body"></div>
+    </div>
+
+    <div class="calendar-container fade-in-up stagger-2">
+      <div class="calendar-header">
+        <div class="calendar-nav">
+          <button class="btn btn-outline btn-sm" onclick="changeMonth(-1)">← Prev</button>
+          <h3 class="calendar-title" id="calendar-title">Content Calendar</h3>
+          <button class="btn btn-outline btn-sm" onclick="changeMonth(1)">Next →</button>
+        </div>
+        <div class="calendar-actions">
+          <button class="btn btn-outline btn-sm" onclick="goToCurrentMonth()">Today</button>
+          <button class="btn btn-outline btn-sm" onclick="refreshCalendarData()" id="refresh-btn">↻ Refresh</button>
+          <button class="btn btn-outline btn-sm" onclick="exportToCSV()">Export CSV</button>
+          <button class="btn btn-outline btn-sm" onclick="syncToGoogleCalendar()">Sync to Google</button>
+          <button class="btn btn-outline btn-sm" style="color:#ef4444; border-color:#ef4444;" onclick="clearPendingContent()">Clear Pending</button>
+          <button class="btn btn-primary btn-sm" onclick="startOver()">New Calendar</button>
+        </div>
+      </div>
+      <div class="calendar-body">
+        <div id="calendar-grid" class="calendar-grid"></div>
+      </div>
+      <div class="calendar-legend">
+        <div class="legend-item"><div class="legend-dot linkedin"></div> LinkedIn</div>
+        <div class="legend-item"><div class="legend-dot instagram"></div> Instagram</div>
+        <div class="legend-item"><div class="legend-dot x"></div> X/Twitter</div>
+        <div class="legend-item"><div class="legend-dot youtube"></div> YouTube</div>
+        <div class="legend-item"><div class="legend-dot facebook"></div> Facebook</div>
+        <div class="legend-item"><div class="legend-dot tiktok"></div> TikTok</div>
+        <div class="legend-item"><div class="legend-dot video"></div> Has Video</div>
+        <div class="legend-item"><div class="legend-dot pending"></div> Pending</div>
+        <div class="legend-item"><div class="legend-dot approved"></div> Approved</div>
+      </div>
+    </div>
+
+    <div class="chatbox fade-in-up stagger-3">
+      <div class="chatbox-header">
+        <div class="chatbox-header-left">
+          <div class="chatbox-dot"></div>
+          <span class="chatbox-title">ELUXR AI - Calendar Assistant</span>
+        </div>
+        <span style="font-size:11px; color:var(--text-muted);">Powered by Claude</span>
+      </div>
+      <div class="chatbox-messages" id="chat-3">
+        <div class="chat-msg ai">Your content calendar is ready! Click on any day to preview content, approve posts, or make edits. What would you like to do?</div>
+      </div>
+      <div class="chatbox-input">
+        <input placeholder="Ask about your content, request changes..." onkeydown="if(event.key==='Enter')sendChat(3, this)">
+        <button onclick="sendChat(3, this.previousElementSibling)">Send</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTENT PREVIEW MODAL -->
+<div id="content-modal" class="modal hidden">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeModal()">&times;</button>
+
+    <div class="preview-header">
+      <span id="preview-date"></span>
+      <span id="preview-platform" class="platform-badge"></span>
+    </div>
+
+    <div id="preview-image-container" class="preview-image-container">
+      <img id="preview-image" src="" alt="Generated image">
+      <button onclick="downloadCurrentImage()" class="download-btn">Download Image</button>
+    </div>
+
+    <div id="preview-video-container" class="preview-image-container hidden">
+      <video id="preview-video" controls style="width:100%;"></video>
+      <button onclick="downloadCurrentVideo()" class="download-btn">Download Video</button>
+    </div>
+
+    <div class="preview-content">
+      <h3 id="preview-theme"></h3>
+      <p id="preview-text"></p>
+      <div id="preview-hashtags"></div>
+    </div>
+
+    <div id="edit-section" class="preview-content hidden">
+      <textarea id="edit-textarea" class="edit-textarea"></textarea>
+      <div style="display:flex;gap:12px;">
+        <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+        <button class="btn btn-outline" onclick="cancelEdit()">Cancel</button>
+      </div>
+    </div>
+
+    <div id="preview-actions" class="preview-actions">
+      <button onclick="approveContent()" class="btn-approve">Approve</button>
+      <button onclick="editContent()" class="btn-edit">Edit</button>
+      <button onclick="regenerateContent()" class="btn-regenerate">Regenerate</button>
+      <button onclick="rejectContent()" class="btn-reject">Reject</button>
+    </div>
+  </div>
+</div>
+
+<!-- BATCH BAR -->
+<div id="batch-bar" class="batch-bar hidden">
+  <span class="selected-count"><span id="selected-count">0</span> items selected</span>
+  <div class="batch-actions">
+    <button class="btn btn-outline btn-sm" onclick="selectAllPending()">Select All Pending</button>
+    <button class="btn btn-primary btn-sm" onclick="approveSelected()">Approve Selected</button>
+    <button class="btn btn-outline btn-sm" onclick="exportToCSV()">Export CSV</button>
+    <button class="btn btn-outline btn-sm" onclick="syncToGoogleCalendar()">Sync to Google</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container" class="toast-container"></div>
+
+</div><!-- /dashboard-container -->
+
+<!-- SUPABASE AUTH MODULE -->
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+  // Supabase client
+  const SUPABASE_URL = 'https://llpnwaoxisfwptxvdfed.supabase.co'
+  const SUPABASE_ANON_KEY = 'sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ'
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  window.supabase = supabase  // Expose for non-module scripts
+
+  // Auth state
+  let currentUser = null
+
+  // Navigation functions
+  function showLoginPage() {
+    document.getElementById('auth-container').style.display = 'flex'
+    document.getElementById('auth-login').style.display = 'block'
+    document.getElementById('auth-signup').style.display = 'none'
+    document.getElementById('auth-reset-request').style.display = 'none'
+    document.getElementById('auth-reset-confirm').style.display = 'none'
+    document.getElementById('dashboard-container').style.display = 'none'
+    document.getElementById('user-menu').style.display = 'none'
+  }
+
+  function showSignupPage() {
+    document.getElementById('auth-container').style.display = 'flex'
+    document.getElementById('auth-login').style.display = 'none'
+    document.getElementById('auth-signup').style.display = 'block'
+    document.getElementById('auth-reset-request').style.display = 'none'
+    document.getElementById('auth-reset-confirm').style.display = 'none'
+    document.getElementById('dashboard-container').style.display = 'none'
+  }
+
+  function showResetRequestPage() {
+    document.getElementById('auth-container').style.display = 'flex'
+    document.getElementById('auth-login').style.display = 'none'
+    document.getElementById('auth-signup').style.display = 'none'
+    document.getElementById('auth-reset-request').style.display = 'block'
+    document.getElementById('auth-reset-confirm').style.display = 'none'
+    document.getElementById('dashboard-container').style.display = 'none'
+  }
+
+  function showResetConfirmPage() {
+    document.getElementById('auth-container').style.display = 'flex'
+    document.getElementById('auth-login').style.display = 'none'
+    document.getElementById('auth-signup').style.display = 'none'
+    document.getElementById('auth-reset-request').style.display = 'none'
+    document.getElementById('auth-reset-confirm').style.display = 'block'
+    document.getElementById('dashboard-container').style.display = 'none'
+  }
+
+  function showDashboard() {
+    document.getElementById('auth-container').style.display = 'none'
+    document.getElementById('dashboard-container').style.display = 'block'
+    document.getElementById('user-menu').style.display = 'flex'
+
+    // Update user display
+    if (currentUser) {
+      document.getElementById('user-email-display').textContent = currentUser.email
+    }
+  }
+
+  // Auth event handlers
+  async function handleLogin(e) {
+    e.preventDefault()
+    const email = document.getElementById('login-email').value
+    const password = document.getElementById('login-password').value
+    const errorEl = document.getElementById('login-error')
+    const submitBtn = e.target.querySelector('button[type="submit"]')
+
+    errorEl.textContent = ''
+    submitBtn.disabled = true
+    submitBtn.textContent = 'Signing in...'
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+    submitBtn.disabled = false
+    submitBtn.textContent = 'Sign In'
+
+    if (error) {
+      errorEl.textContent = error.message
+      return
+    }
+
+    currentUser = data.user
+    showDashboard()
+  }
+
+  async function handleSignup(e) {
+    e.preventDefault()
+    const email = document.getElementById('signup-email').value
+    const password = document.getElementById('signup-password').value
+    const confirmPassword = document.getElementById('signup-confirm-password').value
+    const errorEl = document.getElementById('signup-error')
+    const successEl = document.getElementById('signup-success')
+    const submitBtn = e.target.querySelector('button[type="submit"]')
+
+    errorEl.textContent = ''
+    successEl.textContent = ''
+
+    if (password !== confirmPassword) {
+      errorEl.textContent = 'Passwords do not match'
+      return
+    }
+
+    if (password.length < 8) {
+      errorEl.textContent = 'Password must be at least 8 characters'
+      return
+    }
+
+    submitBtn.disabled = true
+    submitBtn.textContent = 'Creating account...'
+
+    const { data, error } = await supabase.auth.signUp({ email, password })
+
+    submitBtn.disabled = false
+    submitBtn.textContent = 'Create Account'
+
+    if (error) {
+      errorEl.textContent = error.message
+      return
+    }
+
+    // If email confirmation is enabled, show success message
+    if (data.user && !data.session) {
+      successEl.textContent = 'Account created! Check your email to confirm your account.'
+      return
+    }
+
+    // If auto-confirmed (unlikely in production), go to dashboard
+    if (data.session) {
+      currentUser = data.user
+      showDashboard()
+    }
+  }
+
+  async function handleResetRequest(e) {
+    e.preventDefault()
+    const email = document.getElementById('reset-email').value
+    const errorEl = document.getElementById('reset-request-error')
+    const successEl = document.getElementById('reset-request-success')
+    const submitBtn = e.target.querySelector('button[type="submit"]')
+
+    errorEl.textContent = ''
+    successEl.textContent = ''
+    submitBtn.disabled = true
+    submitBtn.textContent = 'Sending...'
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    })
+
+    submitBtn.disabled = false
+    submitBtn.textContent = 'Send Reset Link'
+
+    if (error) {
+      errorEl.textContent = error.message
+      return
+    }
+
+    successEl.textContent = 'If an account exists with that email, you will receive a password reset link.'
+  }
+
+  async function handleResetConfirm(e) {
+    e.preventDefault()
+    const password = document.getElementById('reset-new-password').value
+    const confirmPassword = document.getElementById('reset-confirm-password').value
+    const errorEl = document.getElementById('reset-confirm-error')
+    const successEl = document.getElementById('reset-confirm-success')
+    const submitBtn = e.target.querySelector('button[type="submit"]')
+
+    errorEl.textContent = ''
+    successEl.textContent = ''
+
+    if (password !== confirmPassword) {
+      errorEl.textContent = 'Passwords do not match'
+      return
+    }
+
+    if (password.length < 8) {
+      errorEl.textContent = 'Password must be at least 8 characters'
+      return
+    }
+
+    submitBtn.disabled = true
+    submitBtn.textContent = 'Updating...'
+
+    const { error } = await supabase.auth.updateUser({ password })
+
+    submitBtn.disabled = false
+    submitBtn.textContent = 'Set New Password'
+
+    if (error) {
+      errorEl.textContent = error.message
+      return
+    }
+
+    successEl.textContent = 'Password updated successfully! Redirecting to dashboard...'
+    setTimeout(() => showDashboard(), 2000)
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    currentUser = null
+    showLoginPage()
+  }
+
+  // Initialize auth on page load
+  async function initAuth() {
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (session) {
+      currentUser = session.user
+      showDashboard()
+    } else {
+      showLoginPage()
+    }
+
+    // Listen for auth state changes
+    supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event)
+
+      switch (event) {
+        case 'SIGNED_IN':
+          if (session) {
+            currentUser = session.user
+            showDashboard()
+          }
+          break
+        case 'SIGNED_OUT':
+          currentUser = null
+          showLoginPage()
+          break
+        case 'TOKEN_REFRESHED':
+          // Automatic -- supabase-js handles this
+          console.log('Token refreshed')
+          break
+        case 'PASSWORD_RECOVERY':
+          showResetConfirmPage()
+          break
+        case 'USER_UPDATED':
+          if (session) {
+            currentUser = session.user
+          }
+          break
+      }
+    })
+  }
+
+  // Expose functions to window for onclick handlers
+  window.handleLogin = handleLogin
+  window.handleSignup = handleSignup
+  window.handleResetRequest = handleResetRequest
+  window.handleResetConfirm = handleResetConfirm
+  window.handleLogout = handleLogout
+  window.showLoginPage = showLoginPage
+  window.showSignupPage = showSignupPage
+  window.showResetRequestPage = showResetRequestPage
+  window.showDashboard = showDashboard
+
+  // Start auth
+  initAuth()
+</script>
+
+<script>
+// Configuration - Production n8n instance
+const API_BASE = 'https://flowbound.app.n8n.cloud/webhook';
+const N8N_BASE_URL = 'https://flowbound.app.n8n.cloud/webhook';
+
+// Themes from Google Sheets (loaded from backend)
+let weeklyThemes = [];
+
+// State
+let currentPhase = 1;
+let currentSessionId = null;
+let contentData = [];
+let selectedItems = new Set();
+let currentPreviewDay = null;
+let currentMonth = new Date().toISOString().slice(0, 7); // Default to current month YYYY-MM
+let currentScript = null;
+let generatedVideoUrl = null;
+let businessContext = null; // Stores business info from Step 1 for use in content generation
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  const now = new Date();
+  const monthInput = document.getElementById('month');
+  const currentMonthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  monthInput.value = currentMonthValue;
+  currentMonth = currentMonthValue; // Set global currentMonth
+
+  // Load saved business context
+  const savedBusinessContext = localStorage.getItem('eluxr_business_context');
+  if (savedBusinessContext) {
+    businessContext = JSON.parse(savedBusinessContext);
+  }
+
+  const savedSession = localStorage.getItem('eluxr_current_session');
+  if (savedSession) {
+    const session = JSON.parse(savedSession);
+    if (session.sessionId && session.contentData) {
+      const resume = confirm('You have a previous session. Would you like to resume?');
+      if (resume) {
+        currentSessionId = session.sessionId;
+        contentData = session.contentData;
+        currentMonth = session.month || currentMonthValue;
+        goToPhase(3);
+        renderCalendar(currentMonth, contentData);
+        updateStats();
+        return;
+      }
+    }
+  }
+
+  // Try to load any existing content from the backend
+  fetchAndDisplayCalendar(true).catch(() => {});
+
+  document.getElementById('business-form').addEventListener('submit', handleFormSubmit);
+});
+
+// Tool toggle
+function toggleTool(toolId) {
+  const tool = document.getElementById(toolId);
+  tool.classList.toggle('open');
+}
+
+// Phase Navigation
+function goToPhase(n) {
+  currentPhase = n;
+
+  document.querySelectorAll('.phase-nav-item').forEach((item, index) => {
+    item.classList.remove('active', 'completed');
+    if (index + 1 < n) item.classList.add('completed');
+    if (index + 1 === n) item.classList.add('active');
+  });
+
+  document.querySelectorAll('.page-section').forEach(s => {
+    s.classList.remove('active', 'visible');
+  });
+  const target = document.getElementById(`phase-${n}`);
+  target.classList.add('active');
+  requestAnimationFrame(() => requestAnimationFrame(() => target.classList.add('visible')));
+
+  // Start auto-refresh when on calendar tab
+  if (n === 3) {
+    startCalendarAutoRefresh();
+    closeContentList(); // Close any open lists when switching
+    loadScheduleThemes(); // Load the weekly content schedule
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Form submission
+async function handleFormSubmit(e) {
+  e.preventDefault();
+
+  const formData = {
+    business_url: document.getElementById('business_url').value,
+    industry: document.getElementById('industry').value,
+    month: document.getElementById('month').value,
+    products: document.getElementById('products').value,
+    brand_voice: document.getElementById('brand_voice').value,
+    platforms: Array.from(document.querySelectorAll('input[name="platforms"]:checked')).map(cb => cb.value)
+  };
+
+  // Store business context globally for use in Content Generator
+  businessContext = {
+    business_url: formData.business_url,
+    industry: formData.industry,
+    products: formData.products,
+    brand_voice: formData.brand_voice,
+    platforms: formData.platforms
+  };
+
+  // Save to localStorage so it persists across page refreshes
+  localStorage.setItem('eluxr_business_context', JSON.stringify(businessContext));
+
+  // Check if there's existing pending content and offer to clear it
+  const pendingCount = contentData.filter(c => c.status !== 'approved').length;
+  if (pendingCount > 0) {
+    const clearFirst = confirm(`You have ${pendingCount} pending posts. Clear them before generating new content?\n\n(Approved posts will be kept)`);
+    if (clearFirst) {
+      await clearPendingContent(true); // silent mode
+    }
+  }
+
+  currentMonth = formData.month;
+  goToPhase(2);
+
+  try {
+    await generateContent(formData);
+  } catch (error) {
+    showToast('Error generating content: ' + error.message, 'error');
+    goToPhase(1);
+  }
+}
+
+// Video Script Generator
+async function generateVideoScript() {
+  const topic = document.getElementById('script-topic').value;
+  const duration = document.getElementById('script-duration').value;
+  const platform = document.getElementById('script-platform').value;
+  const style = document.getElementById('script-style').value;
+  const pillars = document.getElementById('script-pillars').value;
+
+  if (!topic) {
+    showToast('Please enter a video topic', 'error');
+    return;
+  }
+
+  showToast('Generating video script...', 'success');
+
+  try {
+    const response = await fetch(`${N8N_BASE_URL}/eluxr-videoscript`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic: topic,
+        duration: duration,
+        platform: platform,
+        style: style,
+        content_pillars: pillars
+      })
+    });
+
+    const data = await response.json();
+    currentScript = data.script || data;
+    displayScript(currentScript);
+    showToast('Video script generated!', 'success');
+  } catch (error) {
+    // Demo fallback
+    currentScript = {
+      title: topic,
+      duration_seconds: parseInt(duration),
+      platform: platform,
+      sections: [
+        { name: 'Hook', timestamp: '0:00-0:03', script: `Stop what you're doing! Here's something you need to know about ${topic}...`, camera_direction: 'Close-up, direct eye contact' },
+        { name: 'Setup', timestamp: '0:03-0:10', script: "Most people get this completely wrong. They think it's about [common misconception], but that's only half the story.", camera_direction: 'Medium shot, casual posture' },
+        { name: 'Value', timestamp: '0:10-0:25', script: 'Here are 3 things that actually work:\n1. First tip here\n2. Second tip here  \n3. Third tip here', camera_direction: 'Mix of close-up and medium shots' },
+        { name: 'CTA', timestamp: '0:25-0:30', script: 'Follow for more tips like this, and drop a comment with your biggest challenge!', camera_direction: 'Close-up, friendly smile' }
+      ],
+      music_mood: 'Upbeat, energetic, modern electronic',
+      thumbnail_idea: 'You pointing at camera with surprised expression, bold text overlay with key stat'
+    };
+    displayScript(currentScript);
+    showToast('Demo script generated', 'success');
+  }
+}
+
+function displayScript(script) {
+  const output = document.getElementById('script-output');
+  output.style.display = 'block';
+
+  document.getElementById('script-title').textContent = script.title || 'Your Video Script';
+
+  const sections = script.sections || [];
+  const hook = sections.find(s => s.name === 'Hook') || {};
+  const setup = sections.find(s => s.name === 'Setup') || {};
+  const value = sections.find(s => s.name === 'Value') || {};
+  const cta = sections.find(s => s.name === 'CTA') || {};
+
+  document.getElementById('script-hook').textContent = hook.script || '';
+  document.getElementById('script-hook-camera').textContent = `[CAMERA: ${hook.camera_direction || ''}]`;
+
+  document.getElementById('script-setup').textContent = setup.script || '';
+  document.getElementById('script-setup-camera').textContent = `[CAMERA: ${setup.camera_direction || ''}]`;
+
+  document.getElementById('script-value').textContent = value.script || '';
+  document.getElementById('script-value-camera').textContent = `[CAMERA: ${value.camera_direction || ''}]`;
+
+  document.getElementById('script-cta').textContent = cta.script || '';
+  document.getElementById('script-cta-camera').textContent = `[CAMERA: ${cta.camera_direction || ''}]`;
+
+  document.getElementById('script-music').textContent = script.music_mood || '';
+  document.getElementById('script-thumbnail').textContent = script.thumbnail_idea || '';
+
+  output.scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyScript() {
+  if (!currentScript) return;
+
+  const text = `
+VIDEO SCRIPT: ${currentScript.title}
+Platform: ${currentScript.platform}
+Duration: ${currentScript.duration_seconds}s
+
+---
+
+HOOK (0:00-0:03)
+${currentScript.sections?.[0]?.script || ''}
+[CAMERA: ${currentScript.sections?.[0]?.camera_direction || ''}]
+
+SETUP (0:03-0:10)
+${currentScript.sections?.[1]?.script || ''}
+[CAMERA: ${currentScript.sections?.[1]?.camera_direction || ''}]
+
+VALUE (0:10-0:25)
+${currentScript.sections?.[2]?.script || ''}
+[CAMERA: ${currentScript.sections?.[2]?.camera_direction || ''}]
+
+CTA (0:25-0:30)
+${currentScript.sections?.[3]?.script || ''}
+[CAMERA: ${currentScript.sections?.[3]?.camera_direction || ''}]
+
+---
+Music Mood: ${currentScript.music_mood || ''}
+Thumbnail Idea: ${currentScript.thumbnail_idea || ''}
+
+Generated by ELUXR Magic Content Engine
+`.trim();
+
+  navigator.clipboard.writeText(text);
+  showToast('Script copied to clipboard!', 'success');
+}
+
+function downloadScript() {
+  if (!currentScript) return;
+
+  const text = `VIDEO SCRIPT: ${currentScript.title}\n\n` +
+    `Platform: ${currentScript.platform}\n` +
+    `Duration: ${currentScript.duration_seconds}s\n\n` +
+    `---\n\n` +
+    (currentScript.sections || []).map(s =>
+      `${s.name.toUpperCase()} (${s.timestamp})\n${s.script}\n[CAMERA: ${s.camera_direction}]\n`
+    ).join('\n') +
+    `\n---\nMusic Mood: ${currentScript.music_mood}\nThumbnail Idea: ${currentScript.thumbnail_idea}`;
+
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `script-${currentScript.title?.replace(/\s+/g, '-').toLowerCase() || 'video'}.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('Script downloaded!', 'success');
+}
+
+// Image Generator
+async function generateImage() {
+  const prompt = document.getElementById('image-prompt').value;
+  const aspectRatio = document.getElementById('image-aspect').value;
+  const style = document.getElementById('image-style').value;
+
+  if (!prompt) {
+    showToast('Please enter an image prompt', 'error');
+    return;
+  }
+
+  showToast('Generating image with Nano Banana Pro...', 'success');
+
+  try {
+    const response = await fetch(`${N8N_BASE_URL}/eluxr-imagegen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: prompt,
+        aspect_ratio: aspectRatio,
+        style: style
+      })
+    });
+
+    const data = await response.json();
+    const imageUrl = data.image_url || data.data?.resultUrls?.[0];
+
+    if (imageUrl) {
+      document.getElementById('generated-image').src = imageUrl;
+      document.getElementById('image-output').style.display = 'block';
+      showToast('Image generated!', 'success');
+    } else {
+      throw new Error('No image URL returned');
+    }
+  } catch (error) {
+    // Demo fallback using Picsum
+    const seed = Math.random().toString(36).substr(2, 9);
+    document.getElementById('generated-image').src = `https://picsum.photos/seed/${seed}/800/800`;
+    document.getElementById('image-output').style.display = 'block';
+    showToast('Demo image loaded (API unavailable)', 'success');
+  }
+}
+
+function downloadGeneratedImage() {
+  const img = document.getElementById('generated-image');
+  if (img.src) {
+    window.open(img.src, '_blank');
+  }
+}
+
+// Video Generator (Veo)
+async function generateVideo() {
+  const imageUrl = document.getElementById('video-image-url').value;
+  const prompt = document.getElementById('video-prompt').value;
+  const aspectRatio = document.getElementById('video-aspect').value;
+  const platform = document.getElementById('video-platform').value;
+
+  if (!prompt) {
+    showToast('Please enter a video prompt', 'error');
+    return;
+  }
+
+  showToast('Generating video with Veo... This may take 20-60 seconds', 'success');
+
+  // Show output area with loading
+  const output = document.getElementById('video-output');
+  output.style.display = 'block';
+  document.getElementById('video-loading').style.display = 'block';
+  document.getElementById('generated-video').style.display = 'none';
+  document.getElementById('video-url-display').style.display = 'none';
+
+  try {
+    const response = await fetch(`${N8N_BASE_URL}/eluxr-videogen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_url: imageUrl,
+        prompt: prompt,
+        aspect_ratio: aspectRatio,
+        platform: platform
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.video_url) {
+      generatedVideoUrl = data.video_url;
+      displayGeneratedVideo(data.video_url);
+      showToast('Video generated!', 'success');
+    } else if (data.retry) {
+      // Video still processing, poll for result
+      showToast('Video still processing, checking again...', 'success');
+      pollVideoStatus(data.taskId);
+    } else {
+      throw new Error(data.error || 'Failed to generate video');
+    }
+  } catch (error) {
+    // Demo fallback
+    document.getElementById('video-loading').style.display = 'none';
+    generatedVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
+    displayGeneratedVideo(generatedVideoUrl);
+    showToast('Demo video loaded (API unavailable)', 'success');
+  }
+}
+
+async function pollVideoStatus(taskId) {
+  // Simple polling - in production you'd implement proper polling
+  setTimeout(async () => {
+    try {
+      const response = await fetch(`${N8N_BASE_URL}/eluxr-videogen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: taskId })
+      });
+      const data = await response.json();
+
+      if (data.success && data.video_url) {
+        generatedVideoUrl = data.video_url;
+        displayGeneratedVideo(data.video_url);
+        showToast('Video generated!', 'success');
+      } else {
+        showToast('Video is still processing. Try again in a moment.', 'error');
+        document.getElementById('video-loading').style.display = 'none';
+      }
+    } catch (e) {
+      document.getElementById('video-loading').style.display = 'none';
+    }
+  }, 10000);
+}
+
+// Content Generator Functions
+function updateContentTypeUI() {
+  const contentType = document.getElementById('content-type').value;
+  const imageOptions = document.getElementById('content-image-options');
+  const videoOptions = document.getElementById('content-video-options');
+
+  imageOptions.style.display = contentType === 'image' ? 'block' : 'none';
+  videoOptions.style.display = contentType === 'video' ? 'block' : 'none';
+}
+
+let lastGeneratedContent = null;
+
+async function generateSingleContent() {
+  const topic = document.getElementById('content-topic').value;
+  const platform = document.getElementById('content-platform').value;
+  const contentType = document.getElementById('content-type').value;
+  const tone = document.getElementById('content-tone').value;
+  const length = document.getElementById('content-length').value;
+
+  if (!topic) {
+    showToast('Please enter a topic for your content', 'error');
+    return;
+  }
+
+  showToast('Generating content...', 'success');
+
+  const output = document.getElementById('content-gen-output');
+  const textOutput = document.getElementById('content-gen-text');
+  const mediaOutput = document.getElementById('content-gen-media');
+
+  textOutput.innerHTML = '<div class="spinner" style="width:24px;height:24px;margin:20px auto;"></div>';
+  mediaOutput.innerHTML = '';
+  output.style.display = 'block';
+
+  try {
+    let postText = '';
+    let imagePrompt = `Professional ${platform} social media image for: ${topic}. Style: modern, clean, photorealistic.`;
+
+    // Step 1: Trigger Phase 4 to generate content (it saves to Google Sheets)
+    try {
+      await fetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: currentSessionId,
+          date: new Date().toISOString().split('T')[0],
+          platform: platform,
+          topic: topic,
+          tone: tone
+        })
+      });
+      // Wait a moment for the content to be saved
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (phase4Error) {
+      console.log('Phase 4 trigger error:', phase4Error);
+    }
+
+    // Step 2: Fetch actual content from approval list
+    try {
+      const approvalResponse = await fetch(`${N8N_BASE_URL}/eluxr-approval-list`);
+      if (approvalResponse.ok) {
+        const approvalData = await approvalResponse.json();
+        console.log('Approval list response:', approvalData);
+
+        // Get the most recent pending content
+        let posts = [];
+
+        // The approval list returns: { pending: [], approved: [], all: [] }
+        if (approvalData.pending && approvalData.pending.length > 0) {
+          posts = approvalData.pending;
+        } else if (approvalData.all && approvalData.all.length > 0) {
+          posts = approvalData.all;
+        }
+
+        // Find a post for the selected platform (most recent first)
+        let matchingPost = null;
+        for (const post of posts) {
+          // Parse content field if it's a JSON string
+          let postData = post;
+          if (post.content && typeof post.content === 'string') {
+            try {
+              postData = JSON.parse(post.content);
+              postData.platform = post.platform || postData.platform;
+            } catch (e) {
+              postData = post;
+            }
+          }
+
+          // Check platform match
+          const postPlatform = (postData.platform || post.platform || '').toLowerCase();
+          if (postPlatform === platform.toLowerCase()) {
+            matchingPost = postData;
+            break;
+          }
+        }
+
+        // If no platform match, use the most recent post
+        if (!matchingPost && posts.length > 0) {
+          const latestPost = posts[0];
+          if (latestPost.content && typeof latestPost.content === 'string') {
+            try {
+              matchingPost = JSON.parse(latestPost.content);
+            } catch (e) {
+              matchingPost = latestPost;
+            }
+          } else {
+            matchingPost = latestPost;
+          }
+        }
+
+        if (matchingPost) {
+          postText = matchingPost.post_text || matchingPost.text || '';
+          imagePrompt = matchingPost.image_prompt || imagePrompt;
+
+          // Add hashtags if present
+          if (matchingPost.hashtags && !postText.includes(matchingPost.hashtags)) {
+            postText += '\n\n' + matchingPost.hashtags;
+          }
+        }
+      }
+    } catch (approvalError) {
+      console.log('Approval list error:', approvalError);
+    }
+
+    // Fallback if no content was found
+    if (!postText) {
+      postText = generateFallbackContent(topic, platform, tone);
+    }
+
+    lastGeneratedContent = {
+      post_text: postText,
+      platform,
+      content_type: contentType,
+      image_prompt: imagePrompt
+    };
+
+    textOutput.textContent = postText;
+
+    // Generate image if requested
+    if (contentType === 'image' && imagePrompt) {
+      const aspectRatio = document.getElementById('content-image-aspect').value;
+      const style = document.getElementById('content-image-style').value;
+
+      mediaOutput.innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner" style="width:30px;height:30px;margin:0 auto;"></div><p style="margin-top:12px;color:var(--text-muted);">Generating image...</p></div>';
+
+      try {
+        const imgResponse = await fetch(`${N8N_BASE_URL}/eluxr-imagegen`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: imagePrompt,
+            aspect_ratio: aspectRatio,
+            style: style
+          })
+        });
+
+        const imgData = await imgResponse.json();
+        if (imgData.image_url) {
+          lastGeneratedContent.image_url = imgData.image_url;
+          mediaOutput.innerHTML = `
+            <div style="position:relative;border-radius:12px;overflow:hidden;">
+              <img src="${imgData.image_url}" alt="Generated image" style="width:100%;display:block;">
+              <button onclick="downloadImage('${imgData.image_url}')" class="download-btn">Download</button>
+            </div>
+          `;
+        } else {
+          mediaOutput.innerHTML = '<p style="color:var(--text-muted);text-align:center;">Image generation failed. You can generate one manually using the Image Generator tool.</p>';
+        }
+      } catch (imgError) {
+        mediaOutput.innerHTML = '<p style="color:var(--text-muted);text-align:center;">Image generation unavailable. Try the Image Generator tool.</p>';
+      }
+    }
+
+    // Generate video if requested
+    if (contentType === 'video') {
+      const aspectRatio = document.getElementById('content-video-aspect').value;
+      const refImage = document.getElementById('content-video-ref').value;
+
+      mediaOutput.innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner" style="width:30px;height:30px;margin:0 auto;"></div><p style="margin-top:12px;color:var(--text-muted);">Generating video script...</p></div>';
+
+      try {
+        // Step 1: Generate video script using /eluxr-videoscript
+        let videoScript = null;
+        try {
+          const scriptResponse = await fetch(`${N8N_BASE_URL}/eluxr-videoscript`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              topic: topic,
+              duration: '30s',
+              style: tone,
+              platform: platform,
+              content_pillars: ''
+            })
+          });
+
+          if (scriptResponse.ok) {
+            const scriptData = await scriptResponse.json();
+            videoScript = scriptData.script || scriptData;
+            console.log('Video script generated:', videoScript);
+
+            // Update post text with script info
+            if (videoScript && videoScript.caption) {
+              postText = videoScript.caption;
+              lastGeneratedContent.post_text = postText;
+              textOutput.textContent = postText;
+            }
+          }
+        } catch (scriptError) {
+          console.log('Video script error:', scriptError);
+        }
+
+        // Step 2: Generate video using /eluxr-videogen
+        mediaOutput.innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner" style="width:30px;height:30px;margin:0 auto;"></div><p style="margin-top:12px;color:var(--text-muted);">Generating video... (20-60 seconds)</p></div>';
+
+        const vidResponse = await fetch(`${N8N_BASE_URL}/eluxr-videogen`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: `Create a ${platform} video about: ${topic}. Style: ${tone}`,
+            aspect_ratio: aspectRatio,
+            image_url: refImage || ''
+          })
+        });
+
+        const vidData = await vidResponse.json();
+        if (vidData.video_url) {
+          lastGeneratedContent.video_url = vidData.video_url;
+          lastGeneratedContent.video_script = videoScript;
+          mediaOutput.innerHTML = `
+            <video src="${vidData.video_url}" controls style="width:100%;border-radius:12px;"></video>
+            <div style="margin-top:12px;display:flex;gap:8px;">
+              <button class="btn btn-outline btn-sm" onclick="copyToClipboard('${vidData.video_url}')">Copy URL</button>
+              <button class="btn btn-outline btn-sm" onclick="downloadVideo('${vidData.video_url}')">Download</button>
+            </div>
+            ${videoScript ? `<div style="margin-top:16px;padding:12px;background:var(--bg-subtle);border-radius:8px;font-size:13px;"><strong>Video Script:</strong><br>${videoScript.title || 'Script generated'}</div>` : ''}
+          `;
+        } else if (vidData.retry) {
+          mediaOutput.innerHTML = '<p style="color:var(--text-muted);text-align:center;">Video is processing. Check the Video Creator tool in a moment for results.</p>';
+        } else {
+          mediaOutput.innerHTML = '<p style="color:var(--text-muted);text-align:center;">Video generation failed. Try the Video Creator tool.</p>';
+        }
+      } catch (vidError) {
+        mediaOutput.innerHTML = '<p style="color:var(--text-muted);text-align:center;">Video generation unavailable. Try the Video Creator tool.</p>';
+      }
+    }
+
+    showToast('Content generated!', 'success');
+
+  } catch (error) {
+    // Fallback content
+    const fallback = generateFallbackContent(topic, platform, tone);
+    textOutput.textContent = fallback;
+    lastGeneratedContent = { post_text: fallback, platform, content_type: contentType };
+    showToast('Generated with fallback (API unavailable)', 'success');
+  }
+}
+
+function generateFallbackContent(topic, platform, tone) {
+  const toneStyles = {
+    professional: `Here's an insightful perspective on ${topic}.\n\nIn today's fast-paced environment, understanding this topic is crucial for success.\n\nKey takeaways:\n• Focus on value delivery\n• Stay consistent with your message\n• Engage authentically with your audience\n\nWhat are your thoughts on this? Share below.`,
+    casual: `Hey everyone! 👋\n\nLet's talk about ${topic}!\n\nI've been thinking about this lately and wanted to share some thoughts...\n\nThe key thing I've learned? Keep it real and stay consistent.\n\nWhat do you think? Drop a comment below! 💬`,
+    inspirational: `✨ ${topic} ✨\n\nEvery journey starts with a single step.\n\nToday, I want to remind you that your efforts matter. What you're building today will shape your tomorrow.\n\nKeep pushing forward. Your breakthrough is closer than you think.\n\n🔥 Double tap if this resonates with you!`,
+    educational: `📚 Let's learn about ${topic}\n\nHere's what you need to know:\n\n1️⃣ Understanding the basics\n2️⃣ Applying the concepts\n3️⃣ Measuring your results\n\nSave this post for later reference!\n\n#Education #Learning #${platform}`,
+    humorous: `POV: You finally understand ${topic} 😅\n\nNot gonna lie, this took me way too long to figure out...\n\nBut now that I get it? Game changer.\n\nWho else has been there? 🙋‍♂️\n\n#Relatable #${platform}Life`
+  };
+
+  return toneStyles[tone] || toneStyles.casual;
+}
+
+function copyGeneratedContent() {
+  if (lastGeneratedContent && lastGeneratedContent.post_text) {
+    copyToClipboard(lastGeneratedContent.post_text);
+    showToast('Content copied to clipboard!', 'success');
+  } else {
+    showToast('No content to copy', 'error');
+  }
+}
+
+function addToCalendar() {
+  if (!lastGeneratedContent) {
+    showToast('No content to add', 'error');
+    return;
+  }
+
+  // Find the next available day
+  const existingDays = contentData.map(c => c.day_number || 0);
+  const nextDay = existingDays.length > 0 ? Math.max(...existingDays) + 1 : 1;
+
+  const newContent = {
+    id: `gen-${Date.now()}`,
+    day_number: nextDay,
+    platform: lastGeneratedContent.platform,
+    post_text: lastGeneratedContent.post_text,
+    image_url: lastGeneratedContent.image_url || '',
+    video_url: lastGeneratedContent.video_url || '',
+    status: 'pending',
+    month: currentMonth
+  };
+
+  contentData.push(newContent);
+  renderCalendar(currentMonth, contentData);
+  updateStats();
+  saveSession(currentSessionId, { contentData, month: currentMonth });
+
+  showToast(`Content added to Day ${nextDay}!`, 'success');
+}
+
+function downloadImage(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `eluxr-image-${Date.now()}.png`;
+  a.target = '_blank';
+  a.click();
+}
+
+function downloadVideo(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `eluxr-video-${Date.now()}.mp4`;
+  a.target = '_blank';
+  a.click();
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Copied to clipboard!', 'success');
+  }).catch(() => {
+    // Fallback
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showToast('Copied to clipboard!', 'success');
+  });
+}
+
+function displayGeneratedVideo(url) {
+  document.getElementById('video-loading').style.display = 'none';
+  const video = document.getElementById('generated-video');
+  video.src = url;
+  video.style.display = 'block';
+  document.getElementById('video-url-display').textContent = url;
+  document.getElementById('video-url-display').style.display = 'block';
+}
+
+function copyVideoUrl() {
+  if (generatedVideoUrl) {
+    navigator.clipboard.writeText(generatedVideoUrl);
+    showToast('Video URL copied!', 'success');
+  }
+}
+
+function downloadGeneratedVideo() {
+  if (generatedVideoUrl) {
+    window.open(generatedVideoUrl, '_blank');
+  }
+}
+
+// API Functions - FIXED to actually call backend
+async function generateContent(formData) {
+  // Generate local session ID
+  currentSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+  // Start progress simulation
+  simulateProgress();
+
+  try {
+    // PHASE 1: Call the analyzer
+    const phase1Response = await fetch(`${API_BASE}/eluxr-phase1-analyzer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+
+    if (phase1Response.ok) {
+      const phase1Data = await phase1Response.json();
+      // Use session_id from backend if provided
+      if (phase1Data.session_id) {
+        currentSessionId = phase1Data.session_id;
+      }
+      console.log('Phase 1 complete:', phase1Data);
+    }
+
+    // PHASE 2: Generate themes
+    const phase2Response = await fetch(`${API_BASE}/eluxr-phase2-themes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...formData,
+        session_id: currentSessionId,
+        icp_summary: 'Generated ICP data'
+      })
+    });
+
+    if (phase2Response.ok) {
+      const phase2Data = await phase2Response.json();
+      console.log('Phase 2 complete:', phase2Data);
+    }
+
+    // PHASE 4: Generate content (studio)
+    const phase4Response = await fetch(`${API_BASE}/eluxr-phase4-studio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: currentSessionId,
+        date: new Date().toISOString().split('T')[0]
+      })
+    });
+
+    if (phase4Response.ok) {
+      console.log('Phase 4 complete');
+    }
+
+    // Fetch calendar data from approval list
+    await fetchAndDisplayCalendar();
+  } catch (error) {
+    console.log('API call failed, generating demo data...', error);
+    generateMockData(formData);
+  }
+}
+
+async function fetchCalendarData() {
+  // FIXED: Fetch from approval-list instead of phase3-calendar
+  try {
+    const response = await fetch(`${API_BASE}/eluxr-approval-list`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      mode: 'cors'
+    });
+    if (!response.ok) throw new Error('Network response was not ok');
+    return response.json();
+  } catch (error) {
+    // Check if it's a CORS error (likely when opening from file://)
+    if (window.location.protocol === 'file:') {
+      console.warn('CORS blocked: Please run this page from a web server. Try: python -m http.server 8080');
+      showToast('Please run from a web server (not file://)', 'error');
+    }
+    throw error;
+  }
+}
+
+async function submitApproval(action, contentId, feedback = '') {
+  try {
+    const response = await fetch(`${API_BASE}/eluxr-approval-action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, content_id: contentId, feedback })
+    });
+    return response.json();
+  } catch (error) {
+    console.log('API call failed, updating locally');
+    return { success: true };
+  }
+}
+
+// Helper function to find current content
+function getCurrentContent() {
+  let content = contentData.find(c => c.day_number === currentPreviewDay);
+  if (!content && contentData[currentPreviewDay - 1]) {
+    content = contentData[currentPreviewDay - 1];
+  }
+  return content;
+}
+
+// Helper function to parse JSON content and extract clean text
+function parseContentText(content) {
+  let text = content.post_text || content.content || '';
+
+  // If text is empty, return empty
+  if (!text || typeof text !== 'string') return text || '';
+
+  // Remove markdown code blocks if present (```json ... ```)
+  let cleanedText = text.trim();
+  if (cleanedText.startsWith('```')) {
+    // Remove opening ``` and optional language identifier
+    cleanedText = cleanedText.replace(/^```(?:json)?\s*\n?/i, '');
+    // Remove closing ```
+    cleanedText = cleanedText.replace(/\n?```\s*$/i, '');
+    cleanedText = cleanedText.trim();
+  }
+
+  // Check if it's JSON (starts with { or contains JSON-like structure)
+  if (cleanedText.startsWith('{') || cleanedText.includes('"post_text"')) {
+    try {
+      // Try to extract JSON if embedded in other text
+      let jsonStr = cleanedText;
+      if (!cleanedText.startsWith('{')) {
+        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[0];
+        }
+      }
+
+      const parsed = JSON.parse(jsonStr);
+
+      // Build clean text from parsed JSON
+      let result = '';
+
+      // Get the main post text
+      if (parsed.post_text) {
+        result = parsed.post_text;
+      } else if (parsed.content) {
+        result = parsed.content;
+      }
+
+      // Add first_comment with hashtags for Instagram (separate section)
+      if (parsed.first_comment) {
+        result += '\n\n---\n📝 First Comment (copy this):\n' + parsed.first_comment;
+      } else if (parsed.hashtags && parsed.hashtags.trim()) {
+        // Add hashtags if no first_comment
+        result += '\n\n---\nHashtags:\n' + parsed.hashtags;
+      }
+
+      // Add image prompt if present
+      if (parsed.image_prompt) {
+        result += '\n\n---\n🖼️ Image Prompt:\n' + parsed.image_prompt;
+      }
+
+      // Add posting notes if present
+      if (parsed.posting_notes) {
+        result += '\n\n---\n📋 Posting Notes:\n' + parsed.posting_notes;
+      }
+
+      // Store the parsed data for other uses
+      content._parsed = parsed;
+      content._cleanText = result;
+
+      return result || text;
+    } catch (e) {
+      console.log('JSON parse error:', e.message);
+      // Not valid JSON, try to clean up anyway
+      return text;
+    }
+  }
+
+  return text;
+}
+
+// Helper to get clean hashtags
+function parseHashtags(content) {
+  let hashtags = content.hashtags || '';
+
+  // Check if content has parsed data
+  if (content._parsed) {
+    hashtags = content._parsed.hashtags || content._parsed.first_comment || '';
+  }
+
+  // If hashtags is in the content text as JSON
+  if (!hashtags && content.content && typeof content.content === 'string' && content.content.includes('"hashtags"')) {
+    try {
+      const parsed = JSON.parse(content.content);
+      hashtags = parsed.hashtags || parsed.first_comment || '';
+    } catch (e) {}
+  }
+
+  return hashtags;
+}
+
+async function refreshCalendarData() {
+  const btn = document.getElementById('refresh-btn');
+  if (btn) {
+    btn.textContent = '↻ Refreshing...';
+    btn.disabled = true;
+  }
+
+  try {
+    const data = await fetchCalendarData();
+    if (data) {
+      contentData = data.all || data.content || data.pending || [];
+      renderCalendar(currentMonth, contentData);
+      updateStats();
+      // Update content list if open
+      if (currentListFilter) {
+        showContentList(currentListFilter);
+      }
+    }
+    showToast('Calendar refreshed!', 'success');
+  } catch (error) {
+    showToast('Refresh failed', 'error');
+  }
+
+  if (btn) {
+    btn.textContent = '↻ Refresh';
+    btn.disabled = false;
+  }
+}
+
+// Auto-refresh calendar every 30 seconds when on calendar tab
+let calendarRefreshInterval = null;
+
+function startCalendarAutoRefresh() {
+  if (calendarRefreshInterval) clearInterval(calendarRefreshInterval);
+  calendarRefreshInterval = setInterval(() => {
+    if (document.getElementById('phase-3').classList.contains('active')) {
+      fetchAndDisplayCalendar(true); // silent refresh
+    }
+  }, 30000);
+}
+
+async function fetchAndDisplayCalendar(silent = false) {
+  try {
+    const data = await fetchCalendarData();
+    // Handle the response format from approval-list endpoint
+    let rawContent = data.all || data.content || data.pending || [];
+
+    // Pre-parse all JSON content when loading
+    contentData = rawContent.map((item, index) => {
+      const parsed = { ...item };
+      // Ensure day_number exists
+      if (!parsed.day_number) parsed.day_number = index + 1;
+      // Pre-parse JSON content
+      parseContentText(parsed);
+      return parsed;
+    });
+
+    saveSession(currentSessionId, { contentData, month: currentMonth });
+    if (!silent) goToPhase(3);
+    renderCalendar(currentMonth, contentData);
+    updateStats();
+  } catch (error) {
+    console.log('Fetch calendar error:', error);
+    // Generate mock data if API fails
+    if (!silent) {
+      generateMockData({ month: currentMonth, platforms: ['LinkedIn', 'Instagram'], industry: 'General' });
+    }
+  }
+}
+
+// Progress simulation
+function simulateProgress() {
+  const phases = [
+    { name: 'Analyzing your business...', duration: 30 },
+    { name: 'Creating content themes...', duration: 45 },
+    { name: 'Writing posts...', duration: 150 },
+    { name: 'Generating images...', duration: 90 },
+    { name: 'Creating videos...', duration: 150 },
+    { name: 'Syncing calendar...', duration: 30 }
+  ];
+
+  let currentStep = 0;
+  let phaseProgress = 0;
+  const speedMultiplier = 10;
+
+  const interval = setInterval(() => {
+    phaseProgress += speedMultiplier;
+
+    if (phaseProgress >= phases[currentStep].duration) {
+      phaseProgress = 0;
+      currentStep++;
+      if (currentStep >= phases.length) {
+        clearInterval(interval);
+        return;
+      }
+    }
+
+    updateProgressUI(currentStep + 1, (phaseProgress / phases[currentStep].duration) * 100, phases);
+  }, 100);
+}
+
+function updateProgressUI(step, progress, phases) {
+  const totalDuration = phases.reduce((a, b) => a + b.duration, 0);
+  const completedDuration = phases.slice(0, step - 1).reduce((a, b) => a + b.duration, 0);
+  const currentProgress = completedDuration + (phases[step - 1].duration * progress / 100);
+  const overallProgress = (currentProgress / totalDuration) * 100;
+
+  document.getElementById('progress-bar').style.width = `${overallProgress}%`;
+  document.getElementById('progress-text').textContent = `${Math.round(overallProgress)}%`;
+  document.getElementById('phase-text').textContent = phases[step - 1].name;
+
+  document.querySelectorAll('#phase-2 .phase-item').forEach((item, index) => {
+    item.classList.remove('active', 'completed');
+    if (index < step - 1) {
+      item.classList.add('completed');
+      item.querySelector('.phase-icon').textContent = '\u2713';
+    } else if (index === step - 1) {
+      item.classList.add('active');
+    }
+  });
+
+  const remainingSeconds = Math.round((totalDuration - currentProgress) / 10);
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+  document.getElementById('time-remaining').textContent = `Estimated time remaining: ~${minutes}m ${seconds}s`;
+}
+
+// Mock data
+function generateMockData(formData) {
+  const date = new Date(formData.month + '-01');
+  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const platforms = formData.platforms && formData.platforms.length > 0 ? formData.platforms : ['LinkedIn', 'Instagram'];
+
+  const themes = ['Industry Insights', 'Product Feature', 'Customer Success', 'Tips & Tricks', 'Behind the Scenes', 'Team Spotlight', 'FAQ Friday', 'Weekend Motivation'];
+  const contentTypes = ['Educational', 'Promotional', 'Engagement', 'Story', 'Tips'];
+
+  contentData = [];
+  currentSessionId = currentSessionId || 'demo-' + Date.now();
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    if (Math.random() > 0.7) continue;
+
+    const platform = platforms[Math.floor(Math.random() * platforms.length)];
+    const theme = themes[Math.floor(Math.random() * themes.length)];
+    const contentType = contentTypes[Math.floor(Math.random() * contentTypes.length)];
+    const dayOfWeek = new Date(date.getFullYear(), date.getMonth(), day).getDay();
+    const isFriday = dayOfWeek === 5;
+
+    contentData.push({
+      id: `content-${day}`,
+      day_number: day,
+      date: `${formData.month}-${String(day).padStart(2, '0')}`,
+      platform: platform,
+      theme: theme,
+      content_type: contentType,
+      post_text: `This is a sample ${contentType.toLowerCase()} post about ${theme.toLowerCase()} for ${formData.industry || 'your business'}. Your actual content will be AI-generated based on your business analysis.\n\n#${(formData.industry || 'Business').replace(/\s+/g, '')} #ContentMarketing`,
+      hashtags: `#${(formData.industry || 'Business').replace(/\s+/g, '')} #ContentMarketing #Business`,
+      image_url: `https://picsum.photos/seed/${day}/800/600`,
+      video_url: isFriday ? 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4' : null,
+      status: 'pending'
+    });
+  }
+
+  saveSession(currentSessionId, { contentData, month: currentMonth });
+
+  setTimeout(() => {
+    goToPhase(3);
+    renderCalendar(currentMonth, contentData);
+    updateStats();
+    showToast('Content calendar generated successfully!', 'success');
+  }, 1000);
+}
+
+// Calendar rendering
+// Month navigation functions
+function changeMonth(delta) {
+  // Parse currentMonth (YYYY-MM) without timezone issues
+  const [year, month] = currentMonth.split('-').map(Number);
+  // Create date using local timezone (month is 0-indexed in JS)
+  const newMonth = month - 1 + delta;
+  const date = new Date(year, newMonth, 1);
+  currentMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  renderCalendar(currentMonth, contentData);
+  updateStats();
+  closeContentList();
+  saveSession(currentSessionId, { contentData, month: currentMonth });
+}
+
+function goToCurrentMonth() {
+  const now = new Date();
+  currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  renderCalendar(currentMonth, contentData);
+  updateStats();
+  closeContentList();
+  saveSession(currentSessionId, { contentData, month: currentMonth });
+}
+
+// Make functions globally accessible for onclick handlers
+window.changeMonth = changeMonth;
+window.goToCurrentMonth = goToCurrentMonth;
+window.updateContentTypeUI = updateContentTypeUI;
+window.generateSingleContent = generateSingleContent;
+window.copyGeneratedContent = copyGeneratedContent;
+window.addToCalendar = addToCalendar;
+window.downloadImage = downloadImage;
+window.downloadVideo = downloadVideo;
+window.copyToClipboard = copyToClipboard;
+window.clearPendingContent = clearPendingContent;
+
+// =============================================
+// CONTENT SCHEDULE FUNCTIONS
+// =============================================
+
+let scheduleWeekOffset = 0;
+let scheduleThemes = [];
+let selectedScheduleItem = null;
+
+async function loadScheduleThemes() {
+  const grid = document.getElementById('schedule-grid');
+  grid.innerHTML = `
+    <div class="schedule-loading" style="grid-column: 1 / -1;">
+      <div class="spinner" style="width:30px;height:30px;margin:0 auto 12px;"></div>
+      <p>Loading weekly content and themes...</p>
+    </div>
+  `;
+
+  // Fetch themes from Google Sheets via n8n
+  try {
+    const themesResponse = await fetch(`${N8N_BASE_URL}/eluxr-themes-list`);
+    if (themesResponse.ok) {
+      const themesData = await themesResponse.json();
+      weeklyThemes = themesData.themes || themesData || [];
+      console.log('Loaded themes from backend:', weeklyThemes.length);
+    }
+  } catch (error) {
+    console.log('Themes fetch error (using local data):', error);
+  }
+
+  // Fetch from approval list - this has all generated content
+  let approvalData = { pending: [], approved: [], all: [] };
+  try {
+    const approvalResponse = await fetch(`${N8N_BASE_URL}/eluxr-approval-list`);
+    if (approvalResponse.ok) {
+      approvalData = await approvalResponse.json();
+    }
+  } catch (error) {
+    console.log('Approval list fetch error:', error);
+  }
+
+  // Combine backend themes with local contentData
+  // Backend themes take priority
+  const backendThemesByDate = {};
+  weeklyThemes.forEach(t => {
+    if (t.date) backendThemesByDate[t.date] = t;
+  });
+
+  scheduleThemes = contentData.map(c => {
+    const backendTheme = backendThemesByDate[c.date];
+    return {
+      date: c.date,
+      theme: backendTheme?.theme || c.theme || c.post_text?.substring(0, 50) || 'Content',
+      platform: backendTheme?.platform || c.platform,
+      content_type: backendTheme?.content_type || c.content_type || 'Post',
+      week_number: backendTheme?.week_number,
+      weekly_show_name: backendTheme?.weekly_show_name,
+      hook: backendTheme?.hook
+    };
+  });
+
+  // Add any backend themes that aren't in contentData
+  weeklyThemes.forEach(t => {
+    if (t.date && !scheduleThemes.find(s => s.date === t.date)) {
+      scheduleThemes.push(t);
+    }
+  });
+
+  renderScheduleGrid(scheduleThemes, approvalData);
+}
+
+function getWeekDates(offset = 0) {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - dayOfWeek + (offset * 7));
+
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(startOfWeek);
+    date.setDate(startOfWeek.getDate() + i);
+    dates.push(date);
+  }
+  return dates;
+}
+
+function formatDateString(date) {
+  return date.toISOString().split('T')[0];
+}
+
+function renderScheduleGrid(themes, approvalData) {
+  const grid = document.getElementById('schedule-grid');
+  const weekDates = getWeekDates(scheduleWeekOffset);
+
+  // Update week label
+  const weekStart = weekDates[0];
+  const weekEnd = weekDates[6];
+  const options = { month: 'short', day: 'numeric' };
+  document.getElementById('schedule-week-label').textContent =
+    `${weekStart.toLocaleDateString('en-US', options)} - ${weekEnd.toLocaleDateString('en-US', options)}`;
+
+  // Build lookup for existing content
+  const pendingByDate = {};
+  const approvedByDate = {};
+
+  (approvalData.pending || []).forEach(item => {
+    const date = item.date || item.scheduled_date;
+    if (date) {
+      if (!pendingByDate[date]) pendingByDate[date] = [];
+      // Parse content field if needed
+      let parsedItem = { ...item };
+      if (item.content && typeof item.content === 'string') {
+        try {
+          const parsed = JSON.parse(item.content);
+          parsedItem = { ...item, ...parsed };
+        } catch (e) {}
+      }
+      pendingByDate[date].push(parsedItem);
+    }
+  });
+
+  (approvalData.approved || []).forEach(item => {
+    const date = item.date || item.scheduled_date;
+    if (date) {
+      if (!approvedByDate[date]) approvedByDate[date] = [];
+      let parsedItem = { ...item };
+      if (item.content && typeof item.content === 'string') {
+        try {
+          const parsed = JSON.parse(item.content);
+          parsedItem = { ...item, ...parsed };
+        } catch (e) {}
+      }
+      approvedByDate[date].push(parsedItem);
+    }
+  });
+
+  // Build lookup for themes by date (from local contentData)
+  const themesByDate = {};
+  themes.forEach(theme => {
+    if (theme.date) {
+      themesByDate[theme.date] = theme;
+    }
+  });
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  let html = '';
+  let hasAnyContent = false;
+
+  weekDates.forEach(date => {
+    const dateStr = formatDateString(date);
+    const theme = themesByDate[dateStr];
+    const pending = pendingByDate[dateStr] || [];
+    const approved = approvedByDate[dateStr] || [];
+    const hasContent = pending.length > 0 || approved.length > 0;
+    const isToday = dateStr === formatDateString(new Date());
+
+    if (hasContent || theme) hasAnyContent = true;
+
+    let statusClass = 'not-generated';
+    let statusText = 'No Content';
+
+    if (approved.length > 0) {
+      statusClass = 'approved';
+      statusText = `${approved.length} Approved`;
+    } else if (pending.length > 0) {
+      statusClass = 'pending';
+      statusText = `${pending.length} Pending`;
+    } else if (theme) {
+      statusClass = 'not-generated';
+      statusText = 'Ready';
+    }
+
+    const cardClass = approved.length > 0 ? 'generated' : (pending.length > 0 ? 'pending' : '');
+
+    // Get display values from content or theme
+    const displayItem = approved[0] || pending[0] || theme || {};
+    const displayTheme = displayItem.theme || displayItem.post_text?.substring(0, 60) || 'No content';
+    const displayPlatform = displayItem.platform || '—';
+    const displayType = displayItem.content_type || '';
+
+    html += `
+      <div class="schedule-card ${cardClass}" onclick="openScheduleCard('${dateStr}')" style="${isToday ? 'border: 2px solid var(--green);' : ''}">
+        <div class="schedule-card-date">${dayNames[date.getDay()]}</div>
+        <div class="schedule-card-day">${date.getDate()}</div>
+        <div class="schedule-card-platform">${displayPlatform}</div>
+        <div class="schedule-card-theme">${displayTheme}</div>
+        <div class="schedule-card-type">${displayType}</div>
+        <span class="schedule-card-status ${statusClass}">${statusText}</span>
+        <div class="schedule-card-actions" onclick="event.stopPropagation();">
+          ${!hasContent ? `<button class="btn btn-primary btn-sm" onclick="generateScheduleContent('${dateStr}')">Generate</button>` : ''}
+          ${pending.length > 0 ? `
+            <button class="btn btn-outline btn-sm" onclick="regenerateScheduleContent('${dateStr}')">↻</button>
+            <button class="btn btn-primary btn-sm" onclick="approveScheduleContent('${dateStr}')">✓</button>
+            <button class="btn btn-outline btn-sm" style="color:#ef4444;" onclick="rejectScheduleContent('${dateStr}')">✗</button>
+          ` : ''}
+          ${approved.length > 0 && pending.length === 0 ? `<button class="btn btn-outline btn-sm" onclick="openScheduleCard('${dateStr}')">View</button>` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  if (!hasAnyContent) {
+    // Show empty state but still render the day cards
+    html = weekDates.map(date => {
+      const dateStr = formatDateString(date);
+      const isToday = dateStr === formatDateString(new Date());
+      return `
+        <div class="schedule-card" onclick="openScheduleCard('${dateStr}')" style="${isToday ? 'border: 2px solid var(--green);' : ''}">
+          <div class="schedule-card-date">${dayNames[date.getDay()]}</div>
+          <div class="schedule-card-day">${date.getDate()}</div>
+          <div class="schedule-card-platform">—</div>
+          <div class="schedule-card-theme" style="color:var(--text-muted);">No content scheduled</div>
+          <span class="schedule-card-status not-generated">Empty</span>
+          <div class="schedule-card-actions" onclick="event.stopPropagation();">
+            <button class="btn btn-outline btn-sm" onclick="generateScheduleContent('${dateStr}')">+ Add</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  grid.innerHTML = html;
+}
+
+function changeScheduleWeek(delta) {
+  scheduleWeekOffset += delta;
+  loadScheduleThemes();
+}
+
+function refreshSchedule() {
+  loadScheduleThemes();
+  showToast('Schedule refreshed', 'success');
+}
+
+async function openScheduleCard(dateStr) {
+  const modal = document.getElementById('schedule-modal');
+  const body = document.getElementById('schedule-modal-body');
+  const actions = document.getElementById('schedule-modal-actions');
+  const title = document.getElementById('schedule-modal-title');
+
+  // Show loading state
+  body.innerHTML = '<div class="schedule-loading"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
+  modal.classList.add('active');
+
+  // Find theme and local content for this date
+  const theme = scheduleThemes.find(t => t.date === dateStr) || {};
+  const localContent = contentData.find(c => c.date === dateStr) || {};
+
+  // Fetch latest content from approval list
+  let pendingItems = [];
+  let approvedItems = [];
+
+  try {
+    const response = await fetch(`${N8N_BASE_URL}/eluxr-approval-list`);
+    if (response.ok) {
+      const data = await response.json();
+      pendingItems = (data.pending || []).filter(p => (p.date || p.scheduled_date) === dateStr);
+      approvedItems = (data.approved || []).filter(a => (a.date || a.scheduled_date) === dateStr);
+    }
+  } catch (e) {
+    console.log('Error fetching approval list:', e);
+  }
+
+  // Parse content from items
+  const parseItem = (item) => {
+    if (!item) return {};
+    let parsed = { ...item };
+    if (item.content && typeof item.content === 'string') {
+      try {
+        const contentParsed = JSON.parse(item.content);
+        parsed = { ...item, ...contentParsed };
+      } catch (e) {}
+    }
+    return parsed;
+  };
+
+  const pendingParsed = pendingItems.map(parseItem);
+  const approvedParsed = approvedItems.map(parseItem);
+  const allContent = [...approvedParsed, ...pendingParsed];
+
+  const displayDate = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+  });
+
+  title.textContent = displayDate;
+  selectedScheduleItem = { dateStr, theme, pendingItems, approvedItems, allContent };
+
+  // Build content display
+  let bodyHtml = '';
+
+  if (allContent.length === 0) {
+    // No content yet
+    bodyHtml = `
+      <div class="schedule-modal-field">
+        <label>Platform</label>
+        <div class="value">${theme.platform || localContent.platform || 'Not set'}</div>
+      </div>
+      <div class="schedule-modal-field">
+        <label>Theme</label>
+        <div class="value">${theme.theme || localContent.theme || 'Not set'}</div>
+      </div>
+      <p style="text-align:center; color:var(--text-muted); padding:20px;">
+        No content generated yet for this day.<br>
+        Click "Generate Content" to create a post.
+      </p>
+    `;
+  } else {
+    // Show all content for this day
+    allContent.forEach((item, idx) => {
+      const isApproved = approvedItems.some(a => a.row_number === item.row_number);
+      const statusBadge = isApproved
+        ? '<span style="color:var(--green);font-size:11px;font-weight:600;">✓ APPROVED</span>'
+        : '<span style="color:#d97706;font-size:11px;font-weight:600;">⏳ PENDING</span>';
+
+      bodyHtml += `
+        <div style="padding:16px; background:var(--bg-subtle); border-radius:8px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span class="schedule-card-platform">${item.platform || '—'}</span>
+            ${statusBadge}
+          </div>
+          <div class="schedule-modal-field">
+            <label>Post Content</label>
+            <textarea id="schedule-edit-content-${idx}" style="min-height:100px;">${item.post_text || ''}</textarea>
+          </div>
+          ${item.hashtags ? `
+            <div class="schedule-modal-field">
+              <label>Hashtags</label>
+              <div class="value" style="font-size:13px;">${item.hashtags}</div>
+            </div>
+          ` : ''}
+          ${item.image_prompt ? `
+            <div class="schedule-modal-field">
+              <label>Image Prompt</label>
+              <div class="value" style="font-size:11px; color:var(--text-muted);">${item.image_prompt}</div>
+            </div>
+          ` : ''}
+          ${!isApproved ? `
+            <div style="display:flex; gap:8px; margin-top:12px;">
+              <button class="btn btn-primary btn-sm" onclick="approveScheduleContent('${dateStr}')">Approve</button>
+              <button class="btn btn-outline btn-sm" style="color:#ef4444;" onclick="rejectScheduleContent('${dateStr}')">Reject</button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    });
+  }
+
+  body.innerHTML = bodyHtml;
+
+  // Build actions
+  const hasPending = pendingItems.length > 0;
+  const hasApproved = approvedItems.length > 0;
+  const hasAnyContent = allContent.length > 0;
+
+  let actionsHtml = `
+    <button class="btn btn-outline" onclick="generateScheduleContent('${dateStr}'); closeScheduleModal();">
+      ${hasAnyContent ? 'Generate Another' : 'Generate Content'}
+    </button>
+  `;
+
+  if (hasAnyContent) {
+    actionsHtml += `<button class="btn btn-outline" onclick="regenerateScheduleContent('${dateStr}'); closeScheduleModal();">Regenerate All</button>`;
+  }
+
+  if (hasPending) {
+    actionsHtml += `
+      <button class="btn btn-primary" onclick="approveScheduleContent('${dateStr}'); closeScheduleModal();">Approve All</button>
+    `;
+  }
+
+  actions.innerHTML = actionsHtml;
+}
+
+function closeScheduleModal() {
+  document.getElementById('schedule-modal').classList.remove('active');
+  selectedScheduleItem = null;
+}
+
+async function generateScheduleContent(dateStr) {
+  showToast('Generating content for ' + dateStr + '...', 'success');
+
+  // Find theme for this date - prioritize backend themes (from Google Sheets)
+  const backendTheme = weeklyThemes.find(t => t.date === dateStr) || {};
+  const localTheme = scheduleThemes.find(t => t.date === dateStr) || {};
+  const localContent = contentData.find(c => c.date === dateStr) || {};
+
+  // Get business context
+  const context = businessContext || JSON.parse(localStorage.getItem('eluxr_business_context') || '{}');
+
+  // Calculate week number from date
+  const dateObj = new Date(dateStr);
+  const dayOfMonth = dateObj.getDate();
+  const weekNumber = Math.ceil(dayOfMonth / 7);
+
+  // Determine platform and content type - backend themes take priority
+  const platform = backendTheme.platform || localTheme.platform || localContent.platform || 'Instagram';
+  const contentType = backendTheme.content_type || localTheme.content_type || localContent.content_type || 'Value Post';
+  const themeText = backendTheme.theme || localTheme.theme || localContent.theme || context.industry || 'engaging social content';
+  const weeklyShow = backendTheme.weekly_show_name || localTheme.weekly_show_name || '';
+  const hook = backendTheme.hook || localTheme.hook || '';
+
+  try {
+    // Call Phase 4 Studio to generate content with full theme context
+    const response = await fetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: currentSessionId,
+        date: dateStr,
+        platform: platform,
+        theme: themeText,
+        content_type: contentType,
+        brand_voice: context.brand_voice || 'professional',
+        industry: context.industry || '',
+        products: context.products || '',
+        week_number: backendTheme.week_number || weekNumber,
+        weekly_show_name: weeklyShow,
+        hook: hook,
+        // Pass full business context
+        business_url: context.business_url || '',
+        icp_summary: context.icp_summary || ''
+      })
+    });
+
+    // Wait for content to be saved to Google Sheets
+    await new Promise(resolve => setTimeout(resolve, 4000));
+
+    showToast('Content generated!', 'success');
+    loadScheduleThemes();
+    refreshCalendarData();
+  } catch (error) {
+    console.error('Generate error:', error);
+    showToast('Error generating content', 'error');
+  }
+}
+
+async function regenerateScheduleContent(dateStr) {
+  showToast('Regenerating content...', 'success');
+  await generateScheduleContent(dateStr);
+}
+
+async function approveScheduleContent(dateStrOrId) {
+  try {
+    // If it looks like an ID, use it directly; otherwise fetch pending content for that date
+    let contentId = dateStrOrId;
+    if (dateStrOrId.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // It's a date, need to find the content ID
+      const response = await fetch(`${N8N_BASE_URL}/eluxr-approval-list`);
+      const data = await response.json();
+      const pending = (data.pending || []).find(p => (p.date || p.scheduled_date || '').startsWith(dateStrOrId));
+      if (pending) {
+        contentId = pending.id;
+      } else {
+        showToast('No pending content found for this date', 'error');
+        return;
+      }
+    }
+
+    await fetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: contentId,
+        action: 'approve'
+      })
+    });
+
+    showToast('Content approved!', 'success');
+    loadScheduleThemes();
+    refreshCalendarData();
+  } catch (error) {
+    showToast('Error approving content: ' + error.message, 'error');
+  }
+}
+
+async function rejectScheduleContent(dateStrOrId) {
+  try {
+    // If it looks like an ID, use it directly; otherwise fetch pending content for that date
+    let contentId = dateStrOrId;
+    if (dateStrOrId.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // It's a date, need to find the content ID
+      const response = await fetch(`${N8N_BASE_URL}/eluxr-approval-list`);
+      const data = await response.json();
+      const pending = (data.pending || []).find(p => (p.date || p.scheduled_date || '').startsWith(dateStrOrId));
+      if (pending) {
+        contentId = pending.id;
+      } else {
+        showToast('No pending content found for this date', 'error');
+        return;
+      }
+    }
+
+    await fetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: contentId,
+        action: 'reject'
+      })
+    });
+
+    showToast('Content rejected', 'success');
+    loadScheduleThemes();
+    refreshCalendarData();
+  } catch (error) {
+    showToast('Error rejecting content: ' + error.message, 'error');
+  }
+}
+
+async function saveScheduleEdit(dateStr) {
+  const editedContent = document.getElementById('schedule-edit-content')?.value;
+  if (!editedContent) {
+    showToast('No content to save', 'error');
+    return;
+  }
+
+  try {
+    await fetch(`${N8N_BASE_URL}/eluxr-approval-action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date: dateStr,
+        action: 'edit',
+        content: editedContent
+      })
+    });
+
+    showToast('Content saved!', 'success');
+    closeScheduleModal();
+    loadScheduleThemes();
+    refreshCalendarData();
+  } catch (error) {
+    showToast('Error saving content: ' + error.message, 'error');
+  }
+}
+
+// Make schedule functions globally accessible
+window.loadScheduleThemes = loadScheduleThemes;
+window.changeScheduleWeek = changeScheduleWeek;
+window.refreshSchedule = refreshSchedule;
+window.openScheduleCard = openScheduleCard;
+window.closeScheduleModal = closeScheduleModal;
+window.generateScheduleContent = generateScheduleContent;
+window.regenerateScheduleContent = regenerateScheduleContent;
+window.approveScheduleContent = approveScheduleContent;
+window.rejectScheduleContent = rejectScheduleContent;
+window.saveScheduleEdit = saveScheduleEdit;
+
+// =============================================
+// END CONTENT SCHEDULE FUNCTIONS
+// =============================================
+
+function renderCalendar(month, data) {
+  const grid = document.getElementById('calendar-grid');
+  grid.innerHTML = '';
+
+  const date = new Date(month + '-01');
+  const year = date.getFullYear();
+  const monthNum = date.getMonth();
+  const daysInMonth = new Date(year, monthNum + 1, 0).getDate();
+  const firstDayOfWeek = date.getDay();
+
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  document.getElementById('calendar-title').textContent = `${monthNames[monthNum]} ${year} Content Calendar`;
+
+  // Filter content for this specific month
+  const monthContent = data.filter(c => {
+    // Check if content has a date field that matches this month
+    if (c.date) {
+      const contentDate = new Date(c.date);
+      return contentDate.getFullYear() === year && contentDate.getMonth() === monthNum;
+    }
+    // Check month field (YYYY-MM format)
+    if (c.month) {
+      return c.month === month;
+    }
+    // If no date/month field, include it (for backwards compatibility)
+    return true;
+  });
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  dayNames.forEach(name => {
+    const header = document.createElement('div');
+    header.className = 'cal-header';
+    header.textContent = name;
+    grid.appendChild(header);
+  });
+
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-day empty';
+    grid.appendChild(empty);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    // Find content by day_number OR by date
+    let content = monthContent.find(c => c.day_number === day);
+    if (!content) {
+      // Try to find by date
+      const dateStr = `${year}-${String(monthNum + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      content = monthContent.find(c => c.date === dateStr);
+    }
+    const dayCell = document.createElement('div');
+    dayCell.className = 'cal-day';
+    dayCell.dataset.day = day;
+
+    if (content) {
+      const isSelected = selectedItems.has(content.id);
+      if (isSelected) dayCell.classList.add('selected');
+      dayCell.classList.add('has-content');
+
+      // Get platform class for dot color
+      const platformClass = (content.platform || 'linkedin').toLowerCase().replace('/', '');
+
+      dayCell.innerHTML = `
+        <input type="checkbox" style="position:absolute;top:6px;left:6px;width:14px;height:14px;accent-color:var(--green);cursor:pointer;"
+          ${isSelected ? 'checked' : ''}
+          onclick="event.stopPropagation(); toggleSelection('${content.id}')">
+        <span style="font-weight:600;">${day}</span>
+        <div class="status-badge status-${content.status || 'pending'}"></div>
+        <div class="platform-dots">
+          <div class="platform-dot ${platformClass}"></div>
+          ${content.video_url ? '<div class="platform-dot video"></div>' : ''}
+        </div>
+      `;
+      dayCell.onclick = (e) => {
+        if (e.target.type !== 'checkbox') showContentPreview(day);
+      };
+    } else {
+      dayCell.innerHTML = `<span>${day}</span>`;
+    }
+
+    grid.appendChild(dayCell);
+  }
+
+  updateBatchBar();
+}
+
+// Preview modal
+// Show content by ID (for list panel)
+function showContentById(idOrIndex) {
+  let content = contentData.find(c => c.id === idOrIndex);
+  if (!content) {
+    // Try by index
+    const index = parseInt(idOrIndex);
+    if (!isNaN(index) && contentData[index]) {
+      content = contentData[index];
+    }
+  }
+  if (!content) return;
+
+  // Find day number or use index
+  const day = content.day_number || contentData.indexOf(content) + 1;
+  showContentPreview(day);
+}
+
+function showContentPreview(day) {
+  // Try to find by day_number first, then by index
+  let content = contentData.find(c => c.day_number === day);
+  if (!content && contentData[day - 1]) {
+    content = contentData[day - 1];
+  }
+  if (!content) return;
+
+  currentPreviewDay = day;
+
+  // Handle missing fields gracefully
+  const date = content.date || content.scheduled_for || content.created_at || 'No date';
+  let platform = content.platform || 'LinkedIn';
+
+  // Extract platform from parsed JSON if available
+  if (content._parsed && content._parsed.platform) {
+    platform = content._parsed.platform;
+  }
+
+  const theme = content.theme || content.title || 'Content';
+
+  // Use pre-parsed clean text if available, otherwise parse now
+  const postText = content._cleanText || parseContentText(content);
+
+  document.getElementById('preview-date').textContent = date;
+  document.getElementById('preview-platform').textContent = platform;
+  document.getElementById('preview-platform').className = `platform-badge platform-${platform.toLowerCase().replace('/', '')}`;
+  document.getElementById('preview-theme').textContent = theme;
+
+  // Display parsed text with proper formatting
+  const previewTextEl = document.getElementById('preview-text');
+  // Convert line breaks and format sections nicely
+  let formattedText = postText
+    .replace(/---/g, '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">')
+    .replace(/\n/g, '<br>');
+  previewTextEl.innerHTML = formattedText;
+
+  // Only show separate hashtags section if not already included in parsed content
+  const hashtagsContainer = document.getElementById('preview-hashtags');
+  const hasHashtagsInContent = postText.includes('First Comment') || postText.includes('Hashtags:');
+
+  if (!hasHashtagsInContent) {
+    const hashtags = parseHashtags(content);
+    if (hashtags) {
+      const hashtagList = hashtags.split(/[\s]+/).filter(h => h && (h.startsWith('#') || h.match(/^[A-Za-z]/)));
+      hashtagsContainer.innerHTML = hashtagList
+        .map(h => `<span class="hashtag">${h.startsWith('#') ? h : '#' + h}</span>`)
+        .join('');
+    } else {
+      hashtagsContainer.innerHTML = '';
+    }
+  } else {
+    hashtagsContainer.innerHTML = '';
+  }
+
+  const imageContainer = document.getElementById('preview-image-container');
+  const videoContainer = document.getElementById('preview-video-container');
+
+  if (content.image_url) {
+    document.getElementById('preview-image').src = content.image_url;
+    imageContainer.classList.remove('hidden');
+  } else {
+    imageContainer.classList.add('hidden');
+  }
+
+  if (content.video_url) {
+    document.getElementById('preview-video').src = content.video_url;
+    videoContainer.classList.remove('hidden');
+  } else {
+    videoContainer.classList.add('hidden');
+  }
+
+  document.getElementById('content-modal').classList.remove('hidden');
+  document.getElementById('edit-section').classList.add('hidden');
+  document.getElementById('preview-actions').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('content-modal').classList.add('hidden');
+  const video = document.getElementById('preview-video');
+  video.pause();
+  video.src = '';
+}
+
+// Content actions
+async function approveContent() {
+  const content = getCurrentContent();
+  if (!content) {
+    showToast('No content selected', 'error');
+    return;
+  }
+
+  try {
+    await submitApproval('approved', content.id);
+    content.status = 'approved';
+    saveSession(currentSessionId, { contentData, month: currentMonth });
+    renderCalendar(currentMonth, contentData);
+    updateStats();
+    closeModal();
+    showToast('Content approved!', 'success');
+  } catch (error) {
+    showToast('Error approving content', 'error');
+  }
+}
+
+function editContent() {
+  const content = getCurrentContent();
+  if (!content) return;
+
+  // Get clean text for editing - use pre-parsed if available
+  const cleanText = content._cleanText || parseContentText(content);
+
+  // For editing, only show the main post text (not the extra sections)
+  let editableText = cleanText;
+  if (content._parsed && content._parsed.post_text) {
+    editableText = content._parsed.post_text;
+  }
+
+  document.getElementById('edit-textarea').value = editableText;
+  document.getElementById('edit-section').classList.remove('hidden');
+  document.getElementById('preview-actions').classList.add('hidden');
+}
+
+async function saveEdit() {
+  const content = getCurrentContent();
+  if (!content) return;
+
+  const newText = document.getElementById('edit-textarea').value;
+
+  // Update the content - store as clean text, not JSON
+  content.post_text = newText;
+  content.content = newText;
+
+  try {
+    await submitApproval('edit', content.id, newText);
+    saveSession(currentSessionId, { contentData, month: currentMonth });
+
+    document.getElementById('preview-text').innerHTML = newText.replace(/\n/g, '<br>');
+    document.getElementById('edit-section').classList.add('hidden');
+    document.getElementById('preview-actions').classList.remove('hidden');
+    showToast('Changes saved!', 'success');
+  } catch (error) {
+    showToast('Error saving changes', 'error');
+  }
+}
+
+function cancelEdit() {
+  document.getElementById('edit-section').classList.add('hidden');
+  document.getElementById('preview-actions').classList.remove('hidden');
+}
+
+async function regenerateContent() {
+  const content = getCurrentContent();
+  if (!content) {
+    showToast('No content selected', 'error');
+    return;
+  }
+
+  showToast('Regenerating content...', 'success');
+
+  try {
+    // Call the phase4 studio to regenerate
+    const response = await fetch(`${API_BASE}/eluxr-phase4-studio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        theme: content.theme || content.title,
+        platform: content.platform,
+        content_type: content.content_type
+      })
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      if (result.content) {
+        content.post_text = result.content;
+        content.content = result.content;
+        saveSession(currentSessionId, { contentData, month: currentMonth });
+        showContentPreview(currentPreviewDay); // Refresh preview
+        showToast('Content regenerated!', 'success');
+      } else {
+        showToast('Regeneration complete', 'success');
+      }
+    } else {
+      showToast('Regeneration requested', 'success');
+    }
+  } catch (error) {
+    console.log('Regenerate error:', error);
+    showToast('Regeneration requested (offline mode)', 'success');
+  }
+}
+
+async function rejectContent() {
+  const content = getCurrentContent();
+  if (!content) {
+    showToast('No content selected', 'error');
+    return;
+  }
+
+  const feedback = prompt('Reason for rejection (optional):');
+
+  try {
+    await submitApproval('rejected', content.id, feedback || '');
+    content.status = 'rejected';
+    saveSession(currentSessionId, { contentData, month: currentMonth });
+    renderCalendar(currentMonth, contentData);
+    updateStats();
+    closeModal();
+    showToast('Content rejected', 'success');
+  } catch (error) {
+    showToast('Error rejecting content', 'error');
+  }
+}
+
+// Downloads
+async function downloadImage(imageUrl, filename) {
+  try {
+    const proxyUrl = `${API_BASE}/eluxr-image-download?url=${encodeURIComponent(imageUrl)}&filename=${filename}`;
+    const response = await fetch(proxyUrl);
+    const blob = await response.blob();
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  } catch (error) {
+    window.open(imageUrl, '_blank');
+  }
+}
+
+function downloadCurrentImage() {
+  const content = contentData.find(c => c.day_number === currentPreviewDay);
+  if (content && content.image_url) {
+    const filename = `eluxr-${content.date}-${content.platform}.jpg`;
+    downloadImage(content.image_url, filename);
+  }
+}
+
+function downloadCurrentVideo() {
+  const content = contentData.find(c => c.day_number === currentPreviewDay);
+  if (content && content.video_url) {
+    window.open(content.video_url, '_blank');
+  }
+}
+
+// Batch operations
+function toggleSelection(contentId) {
+  if (selectedItems.has(contentId)) {
+    selectedItems.delete(contentId);
+  } else {
+    selectedItems.add(contentId);
+  }
+  updateBatchBar();
+  renderCalendar(currentMonth, contentData);
+}
+
+function selectAllPending() {
+  contentData.filter(c => c.status === 'pending').forEach(c => selectedItems.add(c.id));
+  updateBatchBar();
+  renderCalendar(currentMonth, contentData);
+}
+
+async function approveSelected() {
+  for (const id of selectedItems) {
+    const content = contentData.find(c => c.id === id);
+    if (content) {
+      await submitApproval('approve', id);
+      content.status = 'approved';
+    }
+  }
+  selectedItems.clear();
+  saveSession(currentSessionId, { contentData, month: currentMonth });
+  updateBatchBar();
+  renderCalendar(currentMonth, contentData);
+  updateStats();
+  showToast('Selected items approved!', 'success');
+}
+
+function updateBatchBar() {
+  const batchBar = document.getElementById('batch-bar');
+  const count = selectedItems.size;
+  if (count > 0) {
+    batchBar.classList.remove('hidden');
+    document.getElementById('selected-count').textContent = count;
+  } else {
+    batchBar.classList.add('hidden');
+  }
+}
+
+// Export
+function exportToCSV() {
+  const headers = ['Date', 'Platform', 'Theme', 'Content Type', 'Post Text', 'Hashtags', 'Image URL', 'Video URL', 'Status'];
+  const rows = contentData.map(c => [
+    c.date, c.platform, c.theme, c.content_type,
+    `"${c.post_text.replace(/"/g, '""')}"`,
+    c.hashtags, c.image_url || '', c.video_url || '', c.status
+  ]);
+
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `eluxr-content-${currentMonth}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  showToast('CSV exported successfully!', 'success');
+}
+
+async function syncToGoogleCalendar() {
+  if (!currentSessionId) {
+    showToast('No content to sync. Generate content first.', 'error');
+    return;
+  }
+
+  showToast('Syncing approved content to Google Calendar...', 'success');
+  try {
+    // FIXED: Send approved content_ids to Phase 3
+    const approvedIds = contentData.filter(c => c.status === 'approved').map(c => c.id);
+
+    if (approvedIds.length === 0) {
+      showToast('No approved content to sync. Approve some posts first.', 'error');
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/eluxr-phase3-calendar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: currentSessionId,
+        month: currentMonth,
+        content_ids: approvedIds
+      })
+    });
+    const result = await response.json();
+    if (result.success || result.events_created) {
+      showToast(`Google Calendar sync complete! ${result.events_created || approvedIds.length} events created.`, 'success');
+    } else {
+      showToast('Sync completed', 'success');
+    }
+  } catch (error) {
+    console.log('Calendar sync error:', error);
+    showToast('Calendar sync failed. Check n8n workflow.', 'error');
+  }
+}
+
+// Session
+function saveSession(sessionId, data) {
+  localStorage.setItem('eluxr_current_session', JSON.stringify({ sessionId, ...data }));
+}
+
+// Stats
+function updateStats() {
+  // Get content filtered for current month
+  const monthData = getContentForMonth(currentMonth);
+
+  document.getElementById('stat-total').textContent = monthData.length;
+  document.getElementById('stat-pending').textContent = monthData.filter(c => c.status === 'pending' || !c.status).length;
+  document.getElementById('stat-approved').textContent = monthData.filter(c => c.status === 'approved').length;
+  document.getElementById('stat-videos').textContent = monthData.filter(c => c.video_url).length;
+}
+
+// Helper to get content for a specific month
+function getContentForMonth(month) {
+  if (!month) return contentData;
+
+  const date = new Date(month + '-01');
+  const year = date.getFullYear();
+  const monthNum = date.getMonth();
+
+  return contentData.filter(c => {
+    if (c.date) {
+      const contentDate = new Date(c.date);
+      return contentDate.getFullYear() === year && contentDate.getMonth() === monthNum;
+    }
+    if (c.month) {
+      return c.month === month;
+    }
+    return true;
+  });
+}
+
+// Content List Panel Functions
+let currentListFilter = null;
+
+function showContentList(filter) {
+  const panel = document.getElementById('content-list-panel');
+  const body = document.getElementById('content-list-body');
+  const title = document.getElementById('content-list-title');
+
+  // Toggle off if clicking same filter
+  if (currentListFilter === filter && panel.classList.contains('visible')) {
+    closeContentList();
+    return;
+  }
+
+  // Update active state on stat cards
+  document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
+  document.getElementById(`stat-card-${filter}`).classList.add('active');
+
+  currentListFilter = filter;
+
+  // Get content for current month first
+  const monthData = getContentForMonth(currentMonth);
+
+  // Filter content based on selection
+  let filteredContent = [];
+  let titleText = '';
+
+  switch(filter) {
+    case 'total':
+      filteredContent = monthData;
+      titleText = `All Posts (${filteredContent.length})`;
+      break;
+    case 'pending':
+      filteredContent = monthData.filter(c => c.status === 'pending' || !c.status);
+      titleText = `Pending Posts (${filteredContent.length})`;
+      break;
+    case 'approved':
+      filteredContent = monthData.filter(c => c.status === 'approved');
+      titleText = `Approved Posts (${filteredContent.length})`;
+      break;
+    case 'videos':
+      filteredContent = monthData.filter(c => c.video_url);
+      titleText = `Video Content (${filteredContent.length})`;
+      break;
+  }
+
+  title.textContent = titleText;
+
+  // Render list items
+  if (filteredContent.length === 0) {
+    body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted);">No content found</div>';
+  } else {
+    body.innerHTML = filteredContent.map((content, index) => {
+      const dayNum = content.day_number || index + 1;
+
+      // Get clean title - handle JSON content
+      let title = content.theme || content.title || '';
+      if (!title && content.content) {
+        // Try to parse if it's JSON
+        if (typeof content.content === 'string' && content.content.trim().startsWith('{')) {
+          try {
+            const parsed = JSON.parse(content.content);
+            title = parsed.post_text || parsed.content || content.content;
+          } catch (e) {
+            title = content.content;
+          }
+        } else {
+          title = content.content;
+        }
+      }
+      if (!title) title = 'Untitled';
+
+      // Clean up the title - remove JSON artifacts and limit length
+      title = title.replace(/[\{\}"]/g, '').replace(/\\n/g, ' ').trim();
+      const displayTitle = title.length > 60 ? title.substring(0, 60) + '...' : title;
+
+      const platform = content.platform || 'LinkedIn';
+      const contentType = content.content_type || 'Post';
+      const status = content.status || 'pending';
+
+      return `
+        <div class="content-list-item" onclick="showContentById('${content.id || index}')">
+          <div class="content-list-day">${dayNum}</div>
+          <div class="content-list-info">
+            <div class="content-list-title">${displayTitle}</div>
+            <div class="content-list-meta">${platform} • ${contentType}${content.video_url ? ' • 🎬 Video' : ''}</div>
+          </div>
+          <span class="content-list-status ${status}">${status}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  panel.classList.add('visible');
+}
+
+function closeContentList() {
+  const panel = document.getElementById('content-list-panel');
+  panel.classList.remove('visible');
+  document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
+  currentListFilter = null;
+}
+
+// Clear all pending content (keeps approved)
+async function clearPendingContent(silent = false) {
+  if (!silent && !confirm('Clear all PENDING content? Approved posts will be kept.')) {
+    return false;
+  }
+
+  showToast('Clearing pending content...', 'success');
+
+  try {
+    // Call n8n endpoint to clear from Google Sheets
+    const response = await fetch(`${N8N_BASE_URL}/eluxr-clear-pending`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'clear_pending' })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Cleared from backend:', data);
+    }
+  } catch (error) {
+    console.log('Backend clear failed, clearing locally only:', error);
+  }
+
+  // Clear locally - keep only approved
+  const approvedContent = contentData.filter(c => c.status === 'approved');
+  contentData = approvedContent;
+
+  // Update UI
+  renderCalendar(currentMonth, contentData);
+  updateStats();
+  closeContentList();
+  saveSession(currentSessionId, { contentData, month: currentMonth });
+
+  if (!silent) {
+    showToast('Pending content cleared! Approved posts kept.', 'success');
+  }
+  return true;
+}
+
+function startOver() {
+  if (confirm('Are you sure you want to start over? This will clear your current session.')) {
+    localStorage.removeItem('eluxr_current_session');
+    contentData = [];
+    selectedItems.clear();
+    currentSessionId = null;
+
+    // Reset stats display
+    document.getElementById('stat-total').textContent = '0';
+    document.getElementById('stat-pending').textContent = '0';
+    document.getElementById('stat-approved').textContent = '0';
+    document.getElementById('stat-videos').textContent = '0';
+
+    // Clear calendar grid
+    const grid = document.getElementById('calendar-grid');
+    if (grid) grid.innerHTML = '';
+
+    // Close any open panels
+    closeContentList();
+
+    goToPhase(1);
+    document.getElementById('business-form').reset();
+    updateBatchBar();
+  }
+}
+
+// Toast
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${type === 'success' ? '\u2713' : '\u2717'}</span><span>${message}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.animation = 'slideIn 0.3s ease reverse';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Chat
+async function sendChat(phase, el) {
+  const text = el.value.trim();
+  if (!text) return;
+
+  const container = document.getElementById(`chat-${phase}`);
+
+  const userMsg = document.createElement('div');
+  userMsg.className = 'chat-msg user';
+  userMsg.textContent = text;
+  container.appendChild(userMsg);
+  el.value = '';
+  container.scrollTop = container.scrollHeight;
+
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg ai';
+  typing.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:1.5px;"></span> Thinking...';
+  container.appendChild(typing);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const data = await fetch(`${N8N_BASE_URL}/eluxr-chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phase, message: text, session_id: currentSessionId || `session_${Date.now()}`, context: {} })
+    }).then(r => r.json());
+
+    let responseText = '';
+    if (data.content && Array.isArray(data.content)) {
+      responseText = data.content.map(c => c.text || '').join('\n');
+    } else if (data.response) {
+      responseText = data.response;
+    } else if (typeof data === 'string') {
+      responseText = data;
+    } else {
+      responseText = JSON.stringify(data, null, 2);
+    }
+
+    responseText = responseText
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+    typing.innerHTML = responseText || 'I received your message but had trouble generating a response.';
+  } catch (err) {
+    typing.innerHTML = getFallbackResponse(phase, text);
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+function getFallbackResponse(phase, text) {
+  const fallbacks = {
+    1: "I'm here to help you get started! Fill out the form above with your business details, and I'll generate a full month of content for you.",
+    2: "While your content is generating, you can use the Video Script Builder, Image Generator, or Video Creator tools above. Ask me anything about content creation!",
+    3: "Your calendar is ready! Click on any day to preview content, approve posts, download images, or make edits. You can also export everything to CSV or sync with Google Calendar."
+  };
+  return fallbacks[phase] || "I'm here to help! What would you like to know?";
+}
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>
