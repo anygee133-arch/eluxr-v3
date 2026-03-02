@@ -38,9 +38,9 @@ The build order is driven by three hard constraints: (1) the KIE API key must be
 **Plans:** 3 plans in 2 waves
 
 Plans:
-- [ ] 01-01-PLAN.md -- Supabase schema migration (10 tables, RLS, indexes, trigger)
-- [ ] 01-02-PLAN.md -- n8n credential migration (KIE API key + Supabase service role)
-- [ ] 01-03-PLAN.md -- Tenant isolation verification (test accounts + cross-tenant queries)
+- [x] 01-01-PLAN.md -- Supabase schema migration (10 tables, RLS, indexes, trigger)
+- [x] 01-02-PLAN.md -- n8n credential migration (KIE API key + Supabase service role)
+- [x] 01-03-PLAN.md -- Tenant isolation verification (test accounts + cross-tenant queries)
 
 ---
 
@@ -299,7 +299,7 @@ Plans:
 
 | Phase | Name | Requirements | Status |
 |-------|------|-------------|--------|
-| 1 | Security Hardening + Database Foundation | INFRA-01, INFRA-02, INFRA-05 | Not Started |
+| 1 | Security Hardening + Database Foundation | INFRA-01, INFRA-02, INFRA-05 | Complete |
 | 2 | Authentication | AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, INFRA-04 | Not Started |
 | 3 | Workflow Decomposition + Backend Bug Fixes | INFRA-03, INFRA-06, PIPE-07, TOOL-05, TOOL-06 | Not Started |
 | 4 | Async Pipeline + Real-Time Progress Tracking | PROG-01, PROG-02, PROG-03, PROG-04, UI-05 | Not Started |

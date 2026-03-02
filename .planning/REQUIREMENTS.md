@@ -17,11 +17,11 @@ Requirements for this release. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Supabase database with tables for users, ICP data, themes, content queue, and chat history
-- [ ] **INFRA-02**: Row-Level Security (RLS) policies on all tables enforcing tenant isolation via user_id
+- [x] **INFRA-01**: Supabase database with tables for users, ICP data, themes, content queue, and chat history
+- [x] **INFRA-02**: Row-Level Security (RLS) policies on all tables enforcing tenant isolation via user_id
 - [ ] **INFRA-03**: All 16 Google Sheets nodes in n8n replaced with Supabase queries
 - [ ] **INFRA-04**: Every n8n webhook validates Supabase JWT before processing requests
-- [ ] **INFRA-05**: All API keys stored in n8n credential store -- zero hardcoded secrets (fix KIE key in 4 nodes)
+- [x] **INFRA-05**: All API keys stored in n8n credential store -- zero hardcoded secrets (fix KIE key in 5 nodes)
 - [ ] **INFRA-06**: n8n monolithic workflow split into separate per-phase sub-workflows
 
 ### Progress Tracking
@@ -139,11 +139,11 @@ Requirements for this release. Each maps to roadmap phases.
 | AUTH-03 | Phase 2: Authentication | Pending |
 | AUTH-04 | Phase 2: Authentication | Pending |
 | AUTH-05 | Phase 2: Authentication | Pending |
-| INFRA-01 | Phase 1: Security + DB Foundation | Pending |
-| INFRA-02 | Phase 1: Security + DB Foundation | Pending |
+| INFRA-01 | Phase 1: Security + DB Foundation | Complete |
+| INFRA-02 | Phase 1: Security + DB Foundation | Complete |
 | INFRA-03 | Phase 3: Workflow Decomposition | Pending |
 | INFRA-04 | Phase 2: Authentication | Pending |
-| INFRA-05 | Phase 1: Security + DB Foundation | Pending |
+| INFRA-05 | Phase 1: Security + DB Foundation | Complete |
 | INFRA-06 | Phase 3: Workflow Decomposition | Pending |
 | PROG-01 | Phase 4: Progress Tracking | Pending |
 | PROG-02 | Phase 4: Progress Tracking | Pending |
