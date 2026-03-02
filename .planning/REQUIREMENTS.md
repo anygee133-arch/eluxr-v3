@@ -9,18 +9,18 @@ Requirements for this release. Each maps to roadmap phases.
 
 ### Authentication
 
-- [ ] **AUTH-01**: User can sign up with email and password
-- [ ] **AUTH-02**: User can log in and access their dashboard
-- [ ] **AUTH-03**: User can reset password via email link
-- [ ] **AUTH-04**: Unauthenticated users are redirected to login page (protected routes)
-- [ ] **AUTH-05**: Each user's data is isolated -- users cannot see other tenants' content
+- [x] **AUTH-01**: User can sign up with email and password
+- [x] **AUTH-02**: User can log in and access their dashboard
+- [x] **AUTH-03**: User can reset password via email link
+- [x] **AUTH-04**: Unauthenticated users are redirected to login page (protected routes)
+- [x] **AUTH-05**: Each user's data is isolated -- users cannot see other tenants' content
 
 ### Infrastructure
 
 - [x] **INFRA-01**: Supabase database with tables for users, ICP data, themes, content queue, and chat history
 - [x] **INFRA-02**: Row-Level Security (RLS) policies on all tables enforcing tenant isolation via user_id
 - [ ] **INFRA-03**: All 16 Google Sheets nodes in n8n replaced with Supabase queries
-- [ ] **INFRA-04**: Every n8n webhook validates Supabase JWT before processing requests
+- [x] **INFRA-04**: Every n8n webhook validates Supabase JWT before processing requests
 - [x] **INFRA-05**: All API keys stored in n8n credential store -- zero hardcoded secrets (fix KIE key in 5 nodes)
 - [ ] **INFRA-06**: n8n monolithic workflow split into separate per-phase sub-workflows
 
@@ -134,15 +134,15 @@ Requirements for this release. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 2: Authentication | Pending |
-| AUTH-02 | Phase 2: Authentication | Pending |
-| AUTH-03 | Phase 2: Authentication | Pending |
-| AUTH-04 | Phase 2: Authentication | Pending |
-| AUTH-05 | Phase 2: Authentication | Pending |
+| AUTH-01 | Phase 2: Authentication | Complete |
+| AUTH-02 | Phase 2: Authentication | Complete |
+| AUTH-03 | Phase 2: Authentication | Complete |
+| AUTH-04 | Phase 2: Authentication | Complete |
+| AUTH-05 | Phase 2: Authentication | Complete |
 | INFRA-01 | Phase 1: Security + DB Foundation | Complete |
 | INFRA-02 | Phase 1: Security + DB Foundation | Complete |
 | INFRA-03 | Phase 3: Workflow Decomposition | Pending |
-| INFRA-04 | Phase 2: Authentication | Pending |
+| INFRA-04 | Phase 2: Authentication | Complete |
 | INFRA-05 | Phase 1: Security + DB Foundation | Complete |
 | INFRA-06 | Phase 3: Workflow Decomposition | Pending |
 | PROG-01 | Phase 4: Progress Tracking | Pending |
@@ -192,4 +192,4 @@ Requirements for this release. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after roadmap creation*
+*Last updated: 2026-03-01 after Phase 2 completion*
