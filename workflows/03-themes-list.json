@@ -1,0 +1,152 @@
+{
+  "name": "03-Themes-List",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-themes-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "03-list-0001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "eluxr-themes-list"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "03-list-0002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "03-list-0003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "03-list-0004",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?user_id=eq.{{ $json.user_id }}&select=*,campaigns(month,status)&order=created_at.desc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "03-list-0005",
+      "name": "Supabase -- SELECT Themes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, -200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst items = Array.isArray(input) ? input : [input];\n\nif (!items || items.length === 0 || (items.length === 1 && !items[0].id)) {\n  return {\n    json: {\n      success: true,\n      count: 0,\n      themes: []\n    }\n  };\n}\n\nconst themes = items.map(item => ({\n  id: item.id || '',\n  week_number: item.week_number || '',\n  theme_name: item.theme_name || '',\n  theme_description: item.theme_description || '',\n  show_concept: item.show_concept || '',\n  hook: item.hook || '',\n  content_types: item.content_types || [],\n  campaign: item.campaigns || null,\n  created_at: item.created_at || ''\n}));\n\nreturn {\n  json: {\n    success: true,\n    count: themes.length,\n    themes: themes\n  }\n};"
+      },
+      "id": "03-list-0006",
+      "name": "Format Themes Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "03-list-0007",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, -200]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Auth Validator", "type": "main", "index": 0 }]]
+    },
+    "Auth Validator": {
+      "main": [[{ "node": "Auth OK?", "type": "main", "index": 0 }]]
+    },
+    "Auth OK?": {
+      "main": [
+        [{ "node": "Supabase -- SELECT Themes", "type": "main", "index": 0 }],
+        [{ "node": "401 Unauthorized", "type": "main", "index": 0 }]
+      ]
+    },
+    "Supabase -- SELECT Themes": {
+      "main": [[{ "node": "Format Themes Response", "type": "main", "index": 0 }]]
+    },
+    "Format Themes Response": {
+      "main": [[{ "node": "Response", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
