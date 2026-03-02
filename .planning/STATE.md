@@ -82,6 +82,10 @@ Overall: 12/50 requirements complete (24%)
 | TOOL-05: Wait+IF polling loop replaces setTimeout(35000) | 10s initial, 5s retry, 12 max attempts; detects success/timeout/error states | 3 |
 | TOOL-06: Video Ready? IF TRUE -> Parse Video Result | Monolith had inverted wiring; swapped TRUE/FALSE connections | 3 |
 | Video Creator keeps single Wait + frontend retry | Videos take >60s; server-side loop impractical; frontend already handles retry | 3 |
+| Supabase service_role key via $env.SUPABASE_SERVICE_ROLE_KEY | Environment variable pattern for n8n Cloud; apikey uses publishable key directly | 3 |
+| Content type normalization also in 05-Content-Submit | Prevents DB CHECK constraint violations on user-submitted content with free-text values | 3 |
+| Carousel routes to text branch for generation | Carousel content generation is text-based (Claude writes multi-slide text) | 3 |
+| Switch fallback handler saves unmatched items | Prevents data loss for unexpected content_type values; saves with debug note | 3 |
 
 ### Known Issues
 
@@ -89,6 +93,7 @@ Overall: 12/50 requirements complete (24%)
 - ~~All 13 webhooks accept unauthenticated requests~~ FIXED in 02-04 -- Auth Validator integrated on all endpoints
 - ~~Image generation uses setTimeout(35000) hack~~ FIXED in 03-04 (TOOL-05) -- proper Wait+IF polling loop
 - ~~Video Ready? IF node has inverted TRUE/FALSE wiring~~ FIXED in 03-04 (TOOL-06) -- TRUE -> Parse Video Result
+- ~~Switch node routes to multiple branches per item~~ FIXED in 03-02 (PIPE-07) -- allMatchingOutputs=false + exact equality + content type normalization
 - Google Calendar multi-tenant may be infeasible (Phase 8 decision needed)
 - n8n Cloud Starter: 2.5k executions/month, 5 concurrent -- may need monitoring in Phase 4/6 for batch generation
 - KIE URL longevity unknown (test before launch)
@@ -105,19 +110,19 @@ Overall: 12/50 requirements complete (24%)
 
 ### Blockers
 
-None currently. Phase 3 Plans 01, 03, 04 complete. Ready for Plan 02 (Sub-workflows 01-05), Plan 05 (Router), or Plan 06 (Cutover).
+None currently. Phase 3 Plans 01, 02, 03, 04 complete. Ready for Plan 05 (Router) or Plan 06 (Cutover).
 
 ## Session Continuity
 
 ### Last Session
 - **Date:** 2026-03-02
-- **Activity:** Completed Phase 3 Plan 04 (Sub-workflows 11-13) -- built image generator with TOOL-05 fix, video script builder, video creator with TOOL-06 fix
-- **Outcome:** 3 standalone tool sub-workflows created. TOOL-05 (setTimeout -> polling loop) and TOOL-06 (inverted IF wiring) bugs fixed. All Code nodes updated to $input.item.json pattern.
+- **Activity:** Completed Phase 3 Plan 02 (Sub-workflows 01-05) -- built ICP Analyzer, Theme Generator, Themes List, Content Studio with PIPE-07 fix, Content Submit
+- **Outcome:** 5 domain sub-workflows created. 5 Google Sheets nodes replaced with 9 Supabase HTTP Request nodes. PIPE-07 Switch routing bug fixed with first-match mode, exact equality rules, and content type normalization.
 
 ### Next Session
-- **Expected:** Execute Phase 3 Plan 02 (Sub-workflows 01-05) or Plan 05 (Router)
-- **Prerequisites:** 03-01 SUMMARY provides SUPABASE_CREDENTIAL_PATTERN, CONTENT_TYPE_VALUES, THEME_INSERT_PATTERN
-- **Entry point:** `/gsd:execute-phase` for 03-02-PLAN.md or 03-05-PLAN.md
+- **Expected:** Execute Phase 3 Plan 05 (Router) or Plan 06 (Cutover)
+- **Prerequisites:** All 13 sub-workflows built (Plans 02, 03, 04). WEBHOOK_PATHS documented in 03-02-SUMMARY.
+- **Entry point:** `/gsd:execute-phase` for 03-05-PLAN.md or 03-06-PLAN.md
 
 ---
 *State initialized: 2026-02-27*
