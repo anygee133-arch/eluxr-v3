@@ -4,21 +4,21 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 2 complete (Authentication). Ready for Phase 3 (Workflow Decomposition + Backend Bug Fixes).
+**Current Focus:** Phase 3 in progress (Workflow Decomposition + Backend Bug Fixes). Plan 01 (Prerequisites) complete.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
-**Phase:** 2 of 11 (Authentication) -- COMPLETE
-**Plan:** 5 of 5 in phase (all complete)
-**Status:** Phase 2 complete, ready for Phase 3
-**Last activity:** 2026-03-01 - Completed Phase 2 (Authentication) -- all 6 requirements verified
+**Phase:** 3 of 11 (Workflow Decomposition + Backend Bug Fixes) -- IN PROGRESS
+**Plan:** 1 of 6 in phase (complete)
+**Status:** In progress -- Plan 01 complete, ready for Plan 02
+**Last activity:** 2026-03-02 - Completed 03-01-PLAN.md (Prerequisites)
 
 **Progress:**
 ```
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
-Phase  3: Workflow Decomposition      [ . . . . . . . . . . ] 0%
+Phase  3: Workflow Decomposition      [##                    ] 1/6 plans
 Phase  4: Progress Tracking           [ . . . . . . . . . . ] 0%
 Phase  5: Frontend Migration + UI     [ . . . . . . . . . . ] 0%
 Phase  6: Content Pipeline            [ . . . . . . . . . . ] 0%
@@ -39,7 +39,7 @@ Overall: 9/50 requirements complete (18%)
 | Requirements complete | 9 |
 | Phases total | 11 |
 | Phases complete | 2 |
-| Current streak | 12 plans |
+| Current streak | 13 plans |
 
 ## Accumulated Context
 
@@ -71,13 +71,18 @@ Overall: 9/50 requirements complete (18%)
 | authenticatedFetch() wrapper for all n8n webhook calls | JWT via Authorization: Bearer header; 401 retry with token refresh; login redirect on failure | 2 |
 | All 13 webhooks protected by Auth Validator | Every endpoint has Execute Sub-Workflow + IF + 401 Respond chain | 2 |
 | Content-Type added by authenticatedFetch() automatically | Removed redundant headers from all 21 call sites | 2 |
+| n8n Cloud Starter plan has unlimited active workflows | All Cloud plans (Starter/Pro/Enterprise) support unlimited active workflows; no upgrade needed | 3 |
+| PostgREST UPSERT requires ?on_conflict=column parameter | Without it, returns 409 Conflict on duplicate keys; must specify constraint column(s) explicitly | 3 |
+| Content type normalization before Switch node | Claude generates 7 free-text values; normalize to 4 DB values (text/image/video/carousel) in Code node | 3 |
+| Themes stored as 4 weekly rows with JSONB daily details | 30 Claude daily items map to 4 themes table rows; content_types JSONB stores per-day info | 3 |
+| Campaign/themes uses delete-before-insert for re-generation | UPSERT campaign keeps same ID; DELETE old themes then INSERT new ones prevents duplicates | 3 |
 
 ### Known Issues
 
 - ~~KIE API key hardcoded in 5 n8n nodes~~ FIXED in 01-02 -- migrated to credential store
 - ~~All 13 webhooks accept unauthenticated requests~~ FIXED in 02-04 -- Auth Validator integrated on all endpoints
 - Google Calendar multi-tenant may be infeasible (Phase 8 decision needed)
-- n8n Cloud execution limits unverified (Phase 3 research needed)
+- n8n Cloud Starter: 2.5k executions/month, 5 concurrent -- may need monitoring in Phase 4/6 for batch generation
 - KIE URL longevity unknown (test before launch)
 
 ### TODOs
@@ -92,20 +97,20 @@ Overall: 9/50 requirements complete (18%)
 
 ### Blockers
 
-None currently. Phase 2 complete, Phase 3 ready to begin.
+None currently. Phase 3 Plan 01 complete. Ready for Plan 02 (Sub-workflows 01-05).
 
 ## Session Continuity
 
 ### Last Session
-- **Date:** 2026-03-01
-- **Activity:** Completed Phase 2 (Authentication) -- finalized 02-05 verification, created summary, updated all planning docs
-- **Outcome:** All 12 automated tests passed. Human verification approved. 6 requirements verified complete (AUTH-01 through AUTH-05, INFRA-04). Phase 2 marked complete across all planning artifacts.
+- **Date:** 2026-03-02
+- **Activity:** Completed Phase 3 Plan 01 (Prerequisites) -- validated Supabase REST API patterns, traced content_type values, designed campaign/themes insert
+- **Outcome:** All 5 CRUD operations validated. UPSERT on_conflict discovery. PIPE-07 root cause documented. Campaign/themes 5-step insert designed.
 
 ### Next Session
-- **Expected:** Plan Phase 3 (Workflow Decomposition + Backend Bug Fixes)
-- **Prerequisites:** Phase 2 complete. Auth infrastructure verified. user_id flows through webhook pipeline.
-- **Entry point:** `/gsd:plan-phase` for Phase 3
+- **Expected:** Execute Phase 3 Plan 02 (Sub-workflows 01-05: ICP Analyzer through Content Submit)
+- **Prerequisites:** 03-01 SUMMARY provides SUPABASE_CREDENTIAL_PATTERN, CONTENT_TYPE_VALUES, THEME_INSERT_PATTERN
+- **Entry point:** `/gsd:execute-phase` for 03-02-PLAN.md
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-01*
+*Last updated: 2026-03-02*
