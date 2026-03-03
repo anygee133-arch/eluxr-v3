@@ -4,15 +4,15 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 4 complete. Ready for Phase 5 (Frontend Migration + UI Polish).
+**Current Focus:** Phase 5 in progress (Frontend Migration + UI Polish). Plan 01 complete.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
-**Phase:** 4 of 11 (Async Pipeline + Real-Time Progress Tracking) -- COMPLETE
-**Plan:** 3 of 3 in phase (complete)
-**Status:** Complete -- All 3 plans executed, all 5 requirements verified (9/9 must-haves passed)
-**Last activity:** 2026-03-03 - Phase 4 complete. Pipeline Orchestrator deployed, Realtime progress UI live, E2E verified by user.
+**Phase:** 5 of 11 (Frontend Migration + UI Polish)
+**Plan:** 1 of 4 in phase
+**Status:** In progress -- Plan 05-01 complete (premium CSS + config + deployment files)
+**Last activity:** 2026-03-03 - Completed 05-01-PLAN.md (premium CSS animations, config.js, vercel.json, .gitignore)
 
 **Progress:**
 ```
@@ -20,7 +20,7 @@ Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
 Phase  3: Workflow Decomposition      [### COMPLETE ######## ] 6/6 plans
 Phase  4: Progress Tracking           [### COMPLETE ######## ] 3/3 plans
-Phase  5: Frontend Migration + UI     [ . . . . . . . . . . ] 0%
+Phase  5: Frontend Migration + UI     [##                    ] 1/4 plans
 Phase  6: Content Pipeline            [ . . . . . . . . . . ] 0%
 Phase  7: Approval Queue              [ . . . . . . . . . . ] 0%
 Phase  8: Calendar + Scheduling       [ . . . . . . . . . . ] 0%
@@ -28,7 +28,7 @@ Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
 Phase 10: Standalone Tools            [ . . . . . . . . . . ] 0%
 Phase 11: Trend Intelligence          [ . . . . . . . . . . ] 0%
 
-Overall: 22/50 requirements complete (44%)
+Overall: 23/50 requirements complete (46%)
 ```
 
 ## Performance Metrics
@@ -36,10 +36,10 @@ Overall: 22/50 requirements complete (44%)
 | Metric | Value |
 |--------|-------|
 | Requirements total | 50 |
-| Requirements complete | 22 |
+| Requirements complete | 23 |
 | Phases total | 11 |
 | Phases complete | 4 |
-| Current streak | 26 plans |
+| Current streak | 27 plans |
 
 ## Accumulated Context
 
@@ -95,6 +95,9 @@ Overall: 22/50 requirements complete (44%)
 | checkActivePipeline() in SIGNED_IN handler (no setTimeout) | Avoids race condition where session may not be available on slow connections | 4 |
 | 15-minute stale run detection threshold | Runs older than 15 min with "running" status show error instead of restoring progress | 4 |
 | Dedup returns existing run_id with resumed: true | Graceful handling; frontend can re-subscribe to existing pipeline progress | 4 |
+| config.js loaded as first script, before Supabase module | Ensures window.ELUXR_CONFIG available to all scripts (module and non-module) | 5 |
+| Hostname-based environment detection for config | localhost/127.0.0.1 = development, everything else = production | 5 |
+| Directional tab slides in goToPhase() | Forward nav slides right, backward slides left -- tracks previousPhase for direction | 5 |
 
 ### Known Issues
 
@@ -130,13 +133,13 @@ Overall: 22/50 requirements complete (44%)
 
 ### Last Session
 - **Date:** 2026-03-03
-- **Activity:** Completed Phase 4 (Async Pipeline + Real-Time Progress Tracking) -- 3 plans executed, 9/9 must-haves verified, user visual confirmation passed
-- **Outcome:** Phase 4 COMPLETE. Pipeline Orchestrator active on n8n Cloud. Frontend Realtime progress UI live. All fake timers removed. Step checkmarks working. Page refresh recovery implemented.
+- **Activity:** Completed 05-01-PLAN.md -- Premium CSS animations (stagger 5-10, glassmorphism, button micro-animations, progress bar glow, skeleton loading, directional tab slides), config.js, vercel.json, .gitignore
+- **Outcome:** Plan 05-01 COMPLETE. 10/10 must-haves verified. All hardcoded URLs replaced with config references. Deployment infrastructure ready.
 
 ### Next Session
-- **Expected:** Plan and execute Phase 5 (Frontend Migration + UI Polish)
-- **Prerequisites:** Phase 4 complete. Async pipeline operational. Realtime subscriptions working.
-- **Entry point:** `/gsd:discuss-phase 5` or `/gsd:plan-phase 5`
+- **Expected:** Execute Plan 05-02 (next plan in Phase 5)
+- **Prerequisites:** 05-01 complete. CSS animations defined. config.js wired. Deployment files created.
+- **Entry point:** `/gsd:execute-phase 05-02`
 
 ---
 *State initialized: 2026-02-27*
