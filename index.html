@@ -2044,13 +2044,16 @@ details .details-content { padding: 20px; }
 
 </div><!-- /dashboard-container -->
 
+<!-- ENVIRONMENT CONFIG (must load first) -->
+<script src="config.js"></script>
+
 <!-- SUPABASE AUTH MODULE -->
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-  // Supabase client
-  const SUPABASE_URL = 'https://llpnwaoxisfwptxvdfed.supabase.co'
-  const SUPABASE_ANON_KEY = 'sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ'
+  // Supabase client (from config.js)
+  const SUPABASE_URL = window.ELUXR_CONFIG.SUPABASE_URL;
+  const SUPABASE_ANON_KEY = window.ELUXR_CONFIG.SUPABASE_ANON_KEY;
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   window.supabase = supabase  // Expose for non-module scripts
 
@@ -2382,9 +2385,9 @@ details .details-content { padding: 20px; }
 </script>
 
 <script>
-// Configuration - Production n8n instance
-const API_BASE = 'https://flowbound.app.n8n.cloud/webhook';
-const N8N_BASE_URL = 'https://flowbound.app.n8n.cloud/webhook';
+// Configuration - from config.js
+const API_BASE = window.ELUXR_CONFIG.N8N_WEBHOOK_BASE;
+const N8N_BASE_URL = window.ELUXR_CONFIG.N8N_WEBHOOK_BASE;
 
 // Themes from Google Sheets (loaded from backend)
 let weeklyThemes = [];
@@ -2445,20 +2448,37 @@ function toggleTool(toolId) {
 
 // Phase Navigation
 function goToPhase(n) {
+  const previousPhase = currentPhase;
   currentPhase = n;
 
+  // Update nav items
   document.querySelectorAll('.phase-nav-item').forEach((item, index) => {
     item.classList.remove('active', 'completed');
     if (index + 1 < n) item.classList.add('completed');
     if (index + 1 === n) item.classList.add('active');
   });
 
+  // Hide all sections, remove old animation classes
   document.querySelectorAll('.page-section').forEach(s => {
-    s.classList.remove('active', 'visible');
+    s.classList.remove('active', 'visible', 'slide-in-left', 'slide-in-right');
+    s.style.display = 'none';
   });
+
+  // Show target section with directional slide
   const target = document.getElementById(`phase-${n}`);
-  target.classList.add('active');
-  requestAnimationFrame(() => requestAnimationFrame(() => target.classList.add('visible')));
+  if (target) {
+    target.style.display = 'block';
+    target.classList.add('active');
+
+    // Determine slide direction
+    const slideClass = n > previousPhase ? 'slide-in-right' : 'slide-in-left';
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        target.classList.add('visible', slideClass);
+      });
+    });
+  }
 
   // Start auto-refresh when on calendar tab
   if (n === 3) {
