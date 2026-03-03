@@ -149,7 +149,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Reference Auth Validator output by name (HTTP Request replaced $json)\nconst authData = $('Auth Validator').item.json;\nconst userId = authData.user_id;\nconst email = authData.email || '';\nconst body = authData.body || {};\nreturn {\n  json: {\n    user_id: userId,\n    pipeline_type: 'full_pipeline',\n    status: 'running',\n    current_step: 0,\n    total_steps: 6,\n    step_label: 'Starting...',\n    step_progress: 0,\n    started_at: new Date().toISOString(),\n    metadata: {\n      business_url: body.business_url || '',\n      industry: body.industry || '',\n      month: body.month || '',\n      products: body.products || '',\n      brand_voice: body.brand_voice || '',\n      platforms: body.platforms || []\n    },\n    body: body,\n    email: email\n  }\n};"
+        "jsCode": "// Reference Auth Validator output by name (HTTP Request replaced $json)\nconst authData = $('Auth Validator').item.json;\nconst userId = authData.user_id;\nconst email = authData.email || '';\nconst body = authData.body || {};\n\n// Capture the original Authorization header for passing to sub-workflows\nconst webhookData = $('Webhook').item.json;\nconst authHeader = (webhookData.headers || {}).authorization || (webhookData.headers || {}).Authorization || '';\n\nreturn {\n  json: {\n    user_id: userId,\n    pipeline_type: 'full_pipeline',\n    status: 'running',\n    current_step: 0,\n    total_steps: 6,\n    step_label: 'Starting...',\n    step_progress: 0,\n    started_at: new Date().toISOString(),\n    metadata: {\n      business_url: body.business_url || '',\n      industry: body.industry || '',\n      month: body.month || '',\n      products: body.products || '',\n      brand_voice: body.brand_voice || '',\n      platforms: body.platforms || []\n    },\n    body: body,\n    email: email,\n    auth_header: authHeader\n  }\n};"
       },
       "id": "orch-0001-4000-8000-000000000008",
       "name": "Create Pipeline Run",
@@ -195,7 +195,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const insertResult = $input.item.json;\n// PostgREST returns array with Prefer: return=representation\nconst row = Array.isArray(insertResult) ? insertResult[0] : insertResult;\nconst runId = row.id;\nconst metadata = row.metadata || {};\n\n// Recover email and body from the Create Pipeline Run node\nconst createNode = $('Create Pipeline Run').item.json;\n\nreturn {\n  json: {\n    pipeline_run_id: runId,\n    user_id: row.user_id,\n    body: createNode.body || metadata,\n    email: createNode.email || metadata.email || ''\n  }\n};"
+        "jsCode": "const insertResult = $input.item.json;\n// PostgREST returns array with Prefer: return=representation\nconst row = Array.isArray(insertResult) ? insertResult[0] : insertResult;\nconst runId = row.id;\nconst metadata = row.metadata || {};\n\n// Recover email, body, and auth header from the Create Pipeline Run node\nconst createNode = $('Create Pipeline Run').item.json;\n\nreturn {\n  json: {\n    pipeline_run_id: runId,\n    user_id: row.user_id,\n    body: createNode.body || metadata,\n    email: createNode.email || metadata.email || '',\n    auth_header: createNode.auth_header || ''\n  }\n};"
       },
       "id": "orch-0001-4000-8000-000000000010",
       "name": "Extract Run ID",
@@ -255,12 +255,37 @@
     },
     {
       "parameters": {
-        "workflowId": "REPLACE_WITH_01_ICP_ANALYZER_ID"
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase1-analyzer",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [] }) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "orch-0001-4000-8000-000000000013",
-      "name": "Execute 01-ICP-Analyzer",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1,
+      "name": "Call 01-ICP-Analyzer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [2200, 200]
     },
     {
@@ -301,12 +326,37 @@
     },
     {
       "parameters": {
-        "workflowId": "REPLACE_WITH_02_THEME_GENERATOR_ID"
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase2-themes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [], icp_summary: $json.icp_summary || $json.data?.icp_summary || '', holidays: $json.holidays || '' }) }}",
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "orch-0001-4000-8000-000000000015",
-      "name": "Execute 02-Theme-Generator",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1,
+      "name": "Call 02-Theme-Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [2640, 200]
     },
     {
@@ -347,12 +397,37 @@
     },
     {
       "parameters": {
-        "workflowId": "REPLACE_WITH_04_CONTENT_STUDIO_ID"
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase4-studio",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [] }) }}",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "orch-0001-4000-8000-000000000017",
-      "name": "Execute 04-Content-Studio",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1,
+      "name": "Call 04-Content-Studio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [3080, 200]
     },
     {
@@ -393,12 +468,37 @@
     },
     {
       "parameters": {
-        "workflowId": "REPLACE_WITH_11_IMAGE_GENERATOR_ID"
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-imagegen",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prompt: 'Professional social media graphic for ' + ($('Extract Run ID').item.json.body.industry || 'business') + '. Brand: ' + ($('Extract Run ID').item.json.body.brand_voice || 'professional') + ' style.', aspect_ratio: '1:1', style: 'photorealistic' }) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "orch-0001-4000-8000-000000000019",
-      "name": "Execute 11-Image-Generator",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1,
+      "name": "Call 11-Image-Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [3520, 200]
     },
     {
@@ -439,12 +539,37 @@
     },
     {
       "parameters": {
-        "workflowId": "REPLACE_WITH_13_VIDEO_CREATOR_ID"
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-videogen",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prompt: 'Professional UGC-style promotional video for ' + ($('Extract Run ID').item.json.body.industry || 'business') + '. Brand voice: ' + ($('Extract Run ID').item.json.body.brand_voice || 'professional'), aspect_ratio: '9:16', platform: ($('Extract Run ID').item.json.body.platforms || [])[0] || 'Instagram Reels', image_url: $json.image_url || '' }) }}",
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "orch-0001-4000-8000-000000000021",
-      "name": "Execute 13-Video-Creator",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1,
+      "name": "Call 13-Video-Creator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [3960, 200]
     },
     {
@@ -485,12 +610,37 @@
     },
     {
       "parameters": {
-        "workflowId": "REPLACE_WITH_09_CALENDAR_SYNC_ID"
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase3-calendar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ month: $('Extract Run ID').item.json.body.month || '' }) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "orch-0001-4000-8000-000000000023",
-      "name": "Execute 09-Calendar-Sync",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1,
+      "name": "Call 09-Calendar-Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [4400, 200]
     },
     {
@@ -603,11 +753,11 @@
     "Update Step 1": {
       "main": [
         [
-          { "node": "Execute 01-ICP-Analyzer", "type": "main", "index": 0 }
+          { "node": "Call 01-ICP-Analyzer", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Execute 01-ICP-Analyzer": {
+    "Call 01-ICP-Analyzer": {
       "main": [
         [
           { "node": "Update Step 2", "type": "main", "index": 0 }
@@ -617,11 +767,11 @@
     "Update Step 2": {
       "main": [
         [
-          { "node": "Execute 02-Theme-Generator", "type": "main", "index": 0 }
+          { "node": "Call 02-Theme-Generator", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Execute 02-Theme-Generator": {
+    "Call 02-Theme-Generator": {
       "main": [
         [
           { "node": "Update Step 3", "type": "main", "index": 0 }
@@ -631,11 +781,11 @@
     "Update Step 3": {
       "main": [
         [
-          { "node": "Execute 04-Content-Studio", "type": "main", "index": 0 }
+          { "node": "Call 04-Content-Studio", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Execute 04-Content-Studio": {
+    "Call 04-Content-Studio": {
       "main": [
         [
           { "node": "Update Step 4", "type": "main", "index": 0 }
@@ -645,11 +795,11 @@
     "Update Step 4": {
       "main": [
         [
-          { "node": "Execute 11-Image-Generator", "type": "main", "index": 0 }
+          { "node": "Call 11-Image-Generator", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Execute 11-Image-Generator": {
+    "Call 11-Image-Generator": {
       "main": [
         [
           { "node": "Update Step 5", "type": "main", "index": 0 }
@@ -659,11 +809,11 @@
     "Update Step 5": {
       "main": [
         [
-          { "node": "Execute 13-Video-Creator", "type": "main", "index": 0 }
+          { "node": "Call 13-Video-Creator", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Execute 13-Video-Creator": {
+    "Call 13-Video-Creator": {
       "main": [
         [
           { "node": "Update Step 6", "type": "main", "index": 0 }
@@ -673,11 +823,11 @@
     "Update Step 6": {
       "main": [
         [
-          { "node": "Execute 09-Calendar-Sync", "type": "main", "index": 0 }
+          { "node": "Call 09-Calendar-Sync", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Execute 09-Calendar-Sync": {
+    "Call 09-Calendar-Sync": {
       "main": [
         [
           { "node": "Mark Complete", "type": "main", "index": 0 }
