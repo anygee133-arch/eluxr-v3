@@ -3403,8 +3403,8 @@ function renderProgress(run) {
     item.classList.remove('active', 'completed');
     const icon = item.querySelector('.phase-icon');
 
-    if (stepNum < currentStep) {
-      // Completed step
+    if (run.status === 'completed' || stepNum < currentStep) {
+      // Completed step (or all steps when pipeline is done)
       item.classList.add('completed');
       if (icon) icon.textContent = '\u2713';
     } else if (stepNum === currentStep) {
