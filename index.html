@@ -2347,6 +2347,8 @@ details .details-content { padding: 20px; }
             showDashboard()
             // Load user profile from Supabase
             if (window.loadUserProfile) window.loadUserProfile();
+            // Load existing ICP from Supabase
+            if (window.loadICP) window.loadICP();
             // Check for active pipeline run after login confirmed
             if (window.checkActivePipeline) {
               window.checkActivePipeline();
@@ -2545,6 +2547,121 @@ async function loadUserProfile() {
 }
 window.loadUserProfile = loadUserProfile;
 window.mapContentItem = mapContentItem;
+
+// === HTML ESCAPE UTILITY ===
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+// === ICP (Ideal Customer Profile) LOADER ===
+let icpLoaded = false;
+
+async function loadICP() {
+  const icpCard = document.getElementById('icp-card');
+  const icpSkeleton = document.getElementById('icp-skeleton');
+  const icpContent = document.getElementById('icp-content');
+  if (!icpCard) return;
+  try {
+    const { data: icp, error } = await window.supabase.from('icps').select('*').single();
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error loading ICP:', error);
+      return;
+    }
+    if (!icp) {
+      icpCard.style.display = 'none';
+      return;
+    }
+    icpCard.style.display = 'block';
+    if (icpSkeleton) icpSkeleton.style.display = 'none';
+    if (icpContent) icpContent.style.display = 'block';
+    renderICPCard(icp);
+    icpLoaded = true;
+  } catch (err) {
+    console.error('loadICP error:', err);
+  }
+}
+
+function showICPSkeleton() {
+  const icpCard = document.getElementById('icp-card');
+  const icpSkeleton = document.getElementById('icp-skeleton');
+  const icpContent = document.getElementById('icp-content');
+  if (icpCard) icpCard.style.display = 'block';
+  if (icpSkeleton) icpSkeleton.style.display = 'block';
+  if (icpContent) icpContent.style.display = 'none';
+}
+
+function renderICPCard(icp) {
+  const summarySection = document.getElementById('icp-summary-section');
+  const summaryText = document.getElementById('icp-summary-text');
+  if (summaryText) {
+    const summary = icp.icp_summary || '';
+    if (summary) {
+      summaryText.innerHTML = formatICPText(summary);
+      if (summarySection) summarySection.style.display = 'block';
+    }
+  }
+  renderICPSection('icp-audience-section', 'icp-audience-text', icp.demographics);
+  renderICPSection('icp-painpoints-section', 'icp-painpoints-text', icp.psychographics);
+  renderICPSection('icp-messaging-section', 'icp-messaging-text', icp.content_opportunities);
+
+  // Hashtags (special rendering as pills)
+  const hashtagsSection = document.getElementById('icp-hashtags-section');
+  const hashtagsText = document.getElementById('icp-hashtags-text');
+  if (hashtagsText && icp.recommended_hashtags) {
+    const hashtags = icp.recommended_hashtags;
+    let tags = [];
+    if (Array.isArray(hashtags)) tags = hashtags;
+    else if (typeof hashtags === 'object') tags = Object.values(hashtags).flat().filter(Boolean);
+    if (tags.length > 0) {
+      hashtagsText.innerHTML = tags.map(h =>
+        '<span style="display:inline-block;background:rgba(22,163,74,0.15);color:#16a34a;padding:2px 10px;border-radius:12px;font-size:13px;margin:2px 4px 2px 0;">' + (h.startsWith('#') ? h : '#' + h) + '</span>'
+      ).join('');
+      if (hashtagsSection) hashtagsSection.style.display = 'block';
+    }
+  }
+
+  const lastAnalyzed = document.getElementById('icp-last-analyzed');
+  if (lastAnalyzed && icp.updated_at) {
+    const date = new Date(icp.updated_at);
+    lastAnalyzed.textContent = 'Last analyzed: ' + date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+}
+
+function renderICPSection(sectionId, textId, jsonbData) {
+  const section = document.getElementById(sectionId);
+  const textEl = document.getElementById(textId);
+  if (!textEl || !jsonbData) return;
+  let html = '';
+  if (typeof jsonbData === 'string') {
+    html = formatICPText(jsonbData);
+  } else if (Array.isArray(jsonbData)) {
+    if (jsonbData.length > 0) {
+      html = '<ul>' + jsonbData.map(item => '<li>' + escapeHTML(typeof item === 'string' ? item : JSON.stringify(item)) + '</li>').join('') + '</ul>';
+    }
+  } else if (typeof jsonbData === 'object') {
+    const entries = Object.entries(jsonbData).filter(([k, v]) => v != null && v !== '');
+    if (entries.length > 0) {
+      html = entries.map(([key, value]) => {
+        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const val = Array.isArray(value) ? value.join(', ') : String(value);
+        return '<div style="margin-bottom:6px;"><strong style="color:var(--text-primary,#e2e8f0);">' + escapeHTML(label) + ':</strong> ' + escapeHTML(val) + '</div>';
+      }).join('');
+    }
+  }
+  if (html) {
+    textEl.innerHTML = html;
+    if (section) section.style.display = 'block';
+  }
+}
+
+function formatICPText(text) {
+  return escapeHTML(text).replace(/\n/g, '<br>');
+}
+
+window.loadICP = loadICP;
+window.showICPSkeleton = showICPSkeleton;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -3615,6 +3732,15 @@ function renderProgress(run) {
   document.getElementById('progress-bar').style.width = `${percentage}%`;
   document.getElementById('progress-text').textContent = `${percentage}%`;
   document.getElementById('phase-text').textContent = run.step_label || STEP_LABELS[currentStep - 1] || 'Processing...';
+
+  // ICP card integration: show skeleton when pipeline starts, refresh after step 1 (ICP analysis) completes
+  if (currentStep === 0 && window.showICPSkeleton) {
+    window.showICPSkeleton();
+    icpLoaded = false;
+  }
+  if (currentStep >= 2 && !icpLoaded && window.loadICP) {
+    window.loadICP();
+  }
 
   // Update step list checkmarks
   document.querySelectorAll('#phase-2 .phase-item').forEach((item) => {
