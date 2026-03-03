@@ -80,7 +80,7 @@ Plans:
 
 ---
 
-## Phase 3: Workflow Decomposition + Backend Bug Fixes
+## Phase 3: Workflow Decomposition + Backend Bug Fixes [COMPLETE]
 
 **Goal:** The monolithic 116KB n8n workflow is split into focused, independently testable sub-workflows -- with all known backend bugs fixed before new feature development begins.
 
@@ -103,6 +103,16 @@ Plans:
 **Research Flags:** HIGH -- Verify n8n Cloud execution limits, Supabase native node capabilities, sub-workflow data size limits.
 
 **Pitfalls:** HIGH-2 (data passing between sub-workflows), MOD-5 (Switch routing)
+
+**Plans:** 6 plans in 4 waves
+
+Plans:
+- [ ] 03-01-PLAN.md -- Prerequisites: n8n plan verification, Supabase API validation, content_type tracing, theme insert design
+- [ ] 03-02-PLAN.md -- Build sub-workflows 01-05 (ICP, Themes, Content Studio) + PIPE-07 Switch fix
+- [ ] 03-03-PLAN.md -- Build sub-workflows 06-10 (Approval, Calendar, Chat) + Sheets collapse
+- [ ] 03-04-PLAN.md -- Build sub-workflows 11-13 (Standalone Tools) + TOOL-05 polling fix + TOOL-06 video wiring fix
+- [ ] 03-05-PLAN.md -- Cutover: activate sub-workflows, deactivate monolith, update frontend URLs
+- [ ] 03-06-PLAN.md -- End-to-end verification of all 5 Phase 3 requirements
 
 ---
 

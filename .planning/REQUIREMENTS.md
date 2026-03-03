@@ -19,10 +19,10 @@ Requirements for this release. Each maps to roadmap phases.
 
 - [x] **INFRA-01**: Supabase database with tables for users, ICP data, themes, content queue, and chat history
 - [x] **INFRA-02**: Row-Level Security (RLS) policies on all tables enforcing tenant isolation via user_id
-- [ ] **INFRA-03**: All 16 Google Sheets nodes in n8n replaced with Supabase queries
+- [x] **INFRA-03**: All 16 Google Sheets nodes in n8n replaced with Supabase queries
 - [x] **INFRA-04**: Every n8n webhook validates Supabase JWT before processing requests
 - [x] **INFRA-05**: All API keys stored in n8n credential store -- zero hardcoded secrets (fix KIE key in 5 nodes)
-- [ ] **INFRA-06**: n8n monolithic workflow split into separate per-phase sub-workflows
+- [x] **INFRA-06**: n8n monolithic workflow split into separate per-phase sub-workflows
 
 ### Progress Tracking
 
@@ -39,7 +39,7 @@ Requirements for this release. Each maps to roadmap phases.
 - [ ] **PIPE-04**: AI image prompt generation for each post via Claude
 - [ ] **PIPE-05**: Video script generation (hook/setup/value/CTA structure) via Claude
 - [ ] **PIPE-06**: One post per platform per day (4 platforms = 4 posts/day max)
-- [ ] **PIPE-07**: Fix Switch node routing bug -- ensure text/image/video branches are mutually exclusive
+- [x] **PIPE-07**: Fix Switch node routing bug -- ensure text/image/video branches are mutually exclusive
 
 ### Approval Queue
 
@@ -69,8 +69,8 @@ Requirements for this release. Each maps to roadmap phases.
 - [ ] **TOOL-02**: Image Generator -- generate images via KIE Nano Banana Pro with aspect ratio and style options
 - [ ] **TOOL-03**: Video Creator -- generate videos via KIE Veo with prompt and reference image support
 - [ ] **TOOL-04**: Content Generator -- generate individual posts for any platform with tone/length options
-- [ ] **TOOL-05**: Fix image polling (replace hacky setTimeout with proper polling/wait pattern)
-- [ ] **TOOL-06**: Fix video branch wiring (true/false paths appear inverted in v1)
+- [x] **TOOL-05**: Fix image polling (replace hacky setTimeout with proper polling/wait pattern)
+- [x] **TOOL-06**: Fix video branch wiring (true/false paths appear inverted in v1)
 
 ### Trend Intelligence
 
@@ -141,10 +141,10 @@ Requirements for this release. Each maps to roadmap phases.
 | AUTH-05 | Phase 2: Authentication | Complete |
 | INFRA-01 | Phase 1: Security + DB Foundation | Complete |
 | INFRA-02 | Phase 1: Security + DB Foundation | Complete |
-| INFRA-03 | Phase 3: Workflow Decomposition | Pending |
+| INFRA-03 | Phase 3: Workflow Decomposition | Complete |
 | INFRA-04 | Phase 2: Authentication | Complete |
 | INFRA-05 | Phase 1: Security + DB Foundation | Complete |
-| INFRA-06 | Phase 3: Workflow Decomposition | Pending |
+| INFRA-06 | Phase 3: Workflow Decomposition | Complete |
 | PROG-01 | Phase 4: Progress Tracking | Pending |
 | PROG-02 | Phase 4: Progress Tracking | Pending |
 | PROG-03 | Phase 4: Progress Tracking | Pending |
@@ -155,7 +155,7 @@ Requirements for this release. Each maps to roadmap phases.
 | PIPE-04 | Phase 6: Content Pipeline | Pending |
 | PIPE-05 | Phase 6: Content Pipeline | Pending |
 | PIPE-06 | Phase 6: Content Pipeline | Pending |
-| PIPE-07 | Phase 3: Workflow Decomposition | Pending |
+| PIPE-07 | Phase 3: Workflow Decomposition | Complete |
 | APPR-01 | Phase 7: Approval Queue | Pending |
 | APPR-02 | Phase 7: Approval Queue | Pending |
 | APPR-03 | Phase 7: Approval Queue | Pending |
@@ -173,8 +173,8 @@ Requirements for this release. Each maps to roadmap phases.
 | TOOL-02 | Phase 10: Standalone Tools | Pending |
 | TOOL-03 | Phase 10: Standalone Tools | Pending |
 | TOOL-04 | Phase 10: Standalone Tools | Pending |
-| TOOL-05 | Phase 3: Workflow Decomposition | Pending |
-| TOOL-06 | Phase 3: Workflow Decomposition | Pending |
+| TOOL-05 | Phase 3: Workflow Decomposition | Complete |
+| TOOL-06 | Phase 3: Workflow Decomposition | Complete |
 | TREND-01 | Phase 11: Trend Intelligence | Pending |
 | TREND-02 | Phase 11: Trend Intelligence | Pending |
 | TREND-03 | Phase 11: Trend Intelligence | Pending |
