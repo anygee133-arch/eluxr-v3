@@ -26,10 +26,10 @@ Requirements for this release. Each maps to roadmap phases.
 
 ### Progress Tracking
 
-- [ ] **PROG-01**: Real-time progress bar that advances when each pipeline step actually completes (not simulated)
-- [ ] **PROG-02**: Each of 6 steps (analyze business, create themes, write posts, generate images, create videos, sync calendar) reports completion individually
-- [ ] **PROG-03**: Checkmark appears next to each completed step
-- [ ] **PROG-04**: Progress state persisted in Supabase via Realtime -- survives page refresh
+- [x] **PROG-01**: Real-time progress bar that advances when each pipeline step actually completes (not simulated)
+- [x] **PROG-02**: Each of 6 steps (analyze business, create themes, write posts, generate images, create videos, sync calendar) reports completion individually
+- [x] **PROG-03**: Checkmark appears next to each completed step
+- [x] **PROG-04**: Progress state persisted in Supabase via Realtime -- survives page refresh
 
 ### Content Pipeline
 
@@ -84,7 +84,7 @@ Requirements for this release. Each maps to roadmap phases.
 - [ ] **UI-02**: Keep existing color scheme (#16a34a green, #0f172a dark) and 3-tab layout
 - [ ] **UI-03**: Fix CSS stagger animation classes 5-6 (only 1-4 defined in v1)
 - [ ] **UI-04**: Store ICP summary from Phase 1 response in frontend state (currently lost)
-- [ ] **UI-05**: Remove fake "estimated time remaining" from progress bar
+- [x] **UI-05**: Remove fake "estimated time remaining" from progress bar
 - [ ] **UI-06**: Deploy frontend to Vercel or Netlify as static site
 
 ## Future Requirements (Post-v2)
@@ -145,10 +145,10 @@ Requirements for this release. Each maps to roadmap phases.
 | INFRA-04 | Phase 2: Authentication | Complete |
 | INFRA-05 | Phase 1: Security + DB Foundation | Complete |
 | INFRA-06 | Phase 3: Workflow Decomposition | Complete |
-| PROG-01 | Phase 4: Progress Tracking | Pending |
-| PROG-02 | Phase 4: Progress Tracking | Pending |
-| PROG-03 | Phase 4: Progress Tracking | Pending |
-| PROG-04 | Phase 4: Progress Tracking | Pending |
+| PROG-01 | Phase 4: Progress Tracking | Complete |
+| PROG-02 | Phase 4: Progress Tracking | Complete |
+| PROG-03 | Phase 4: Progress Tracking | Complete |
+| PROG-04 | Phase 4: Progress Tracking | Complete |
 | PIPE-01 | Phase 6: Content Pipeline | Pending |
 | PIPE-02 | Phase 6: Content Pipeline | Pending |
 | PIPE-03 | Phase 6: Content Pipeline | Pending |
@@ -182,7 +182,7 @@ Requirements for this release. Each maps to roadmap phases.
 | UI-02 | Phase 5: Frontend Migration + UI | Pending |
 | UI-03 | Phase 5: Frontend Migration + UI | Pending |
 | UI-04 | Phase 5: Frontend Migration + UI | Pending |
-| UI-05 | Phase 4: Progress Tracking | Pending |
+| UI-05 | Phase 4: Progress Tracking | Complete |
 | UI-06 | Phase 5: Frontend Migration + UI | Pending |
 
 **Coverage:**
@@ -192,4 +192,4 @@ Requirements for this release. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-03-01 after Phase 2 completion*
+*Last updated: 2026-03-03 after Phase 4 completion*

@@ -4,22 +4,22 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 4 in progress (Async Pipeline + Real-Time Progress Tracking). Plans 01 and 02 complete, Plan 03 (E2E Verification) remaining.
+**Current Focus:** Phase 4 complete. Ready for Phase 5 (Frontend Migration + UI Polish).
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
-**Phase:** 4 of 11 (Async Pipeline + Real-Time Progress Tracking) -- IN PROGRESS
-**Plan:** 2 of 3 in phase
-**Status:** In progress -- Plans 01 (Pipeline Orchestrator) and 02 (Frontend Realtime) complete
-**Last activity:** 2026-03-03 - Completed 04-01-PLAN.md (Pipeline Orchestrator workflow JSON + verification)
+**Phase:** 4 of 11 (Async Pipeline + Real-Time Progress Tracking) -- COMPLETE
+**Plan:** 3 of 3 in phase (complete)
+**Status:** Complete -- All 3 plans executed, all 5 requirements verified (9/9 must-haves passed)
+**Last activity:** 2026-03-03 - Phase 4 complete. Pipeline Orchestrator deployed, Realtime progress UI live, E2E verified by user.
 
 **Progress:**
 ```
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
 Phase  3: Workflow Decomposition      [### COMPLETE ######## ] 6/6 plans
-Phase  4: Progress Tracking           [########### . . . .  ] 2/3 plans
+Phase  4: Progress Tracking           [### COMPLETE ######## ] 3/3 plans
 Phase  5: Frontend Migration + UI     [ . . . . . . . . . . ] 0%
 Phase  6: Content Pipeline            [ . . . . . . . . . . ] 0%
 Phase  7: Approval Queue              [ . . . . . . . . . . ] 0%
@@ -28,7 +28,7 @@ Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
 Phase 10: Standalone Tools            [ . . . . . . . . . . ] 0%
 Phase 11: Trend Intelligence          [ . . . . . . . . . . ] 0%
 
-Overall: 17/50 requirements complete (34%)
+Overall: 22/50 requirements complete (44%)
 ```
 
 ## Performance Metrics
@@ -36,9 +36,9 @@ Overall: 17/50 requirements complete (34%)
 | Metric | Value |
 |--------|-------|
 | Requirements total | 50 |
-| Requirements complete | 17 |
+| Requirements complete | 22 |
 | Phases total | 11 |
-| Phases complete | 3 |
+| Phases complete | 4 |
 | Current streak | 26 plans |
 
 ## Accumulated Context
@@ -88,13 +88,12 @@ Overall: 17/50 requirements complete (34%)
 | Switch fallback handler saves unmatched items | Prevents data loss for unexpected content_type values; saves with debug note | 3 |
 | Monolith deactivated, not deleted | Kept as reference and rollback option; can reactivate in ~2 minutes | 3 |
 | Cutover performed manually via n8n Cloud dashboard | n8n Cloud API key not available; user toggled workflows in dashboard | 3 |
+| HTTP Request calls to sub-workflow webhooks (not Execute Sub-Workflow) | Sub-workflows need HTTP context for Auth Validator and respondToWebhook nodes | 4 |
+| Auth token passthrough from orchestrator to sub-workflows | Original Authorization header captured and forwarded to all 6 HTTP calls | 4 |
+| n8n Cloud Starter plan has no environment variables feature | Hardcoded Supabase URL and service_role key directly in workflow JSON | 4 |
+| Named node reference $('Extract Run ID') for all PATCH URLs | Execute Sub-Workflow output replaces $json; named ref recovers pipeline_run_id | 4 |
 | checkActivePipeline() in SIGNED_IN handler (no setTimeout) | Avoids race condition where session may not be available on slow connections | 4 |
 | 15-minute stale run detection threshold | Runs older than 15 min with "running" status show error instead of restoring progress | 4 |
-| generateMockData() fallback removed from generation flow | Errors show toast instead of fake data; mock data function kept for other code paths | 4 |
-| Supabase Realtime postgres_changes for progress tracking | No new libraries needed; supabase-js already provides channel subscriptions | 4 |
-| $env.SUPABASE_URL instead of hardcoded URL in orchestrator | Cleaner config management; requires env var set on n8n Cloud | 4 |
-| Named node reference $('Extract Run ID') for all PATCH URLs | Execute Sub-Workflow output replaces $json; named ref recovers pipeline_run_id | 4 |
-| Execute Sub-Workflow (Wait=true) for pipeline sub-steps | Shares parent timeout but conserves execution budget (1 execution per pipeline) | 4 |
 | Dedup returns existing run_id with resumed: true | Graceful handling; frontend can re-subscribe to existing pipeline progress | 4 |
 
 ### Known Issues
@@ -105,9 +104,11 @@ Overall: 17/50 requirements complete (34%)
 - ~~Video Ready? IF node has inverted TRUE/FALSE wiring~~ FIXED in 03-04 (TOOL-06) -- TRUE -> Parse Video Result
 - ~~Switch node routes to multiple branches per item~~ FIXED in 03-02 (PIPE-07) -- allMatchingOutputs=false + exact equality + content type normalization
 - ~~Monolith is single point of failure~~ FIXED in 03-05 -- decomposed into 13 independent sub-workflows
-- ~~Frontend uses fake progress simulation~~ FIXED in 04-02 -- replaced with Supabase Realtime postgres_changes subscription
+- ~~Fake progress simulation with hardcoded timers~~ FIXED in 04-02 -- Supabase Realtime-driven progress
+- Pipeline Orchestrator has no "Mark Failed" error path -- sub-workflow failures silently complete (non-blocking, noted for future gap work)
+- "Fetch calendar error: Not authenticated" on initial page load -- race condition, not Phase 4 related
 - Google Calendar multi-tenant may be infeasible (Phase 8 decision needed)
-- n8n Cloud Starter: 2.5k executions/month, 5 concurrent -- may need monitoring in Phase 4/6 for batch generation
+- n8n Cloud Starter: 2.5k executions/month, 5 concurrent -- may need monitoring in Phase 6 for batch generation
 - KIE URL longevity unknown (test before launch)
 
 ### TODOs
@@ -119,26 +120,23 @@ Overall: 17/50 requirements complete (34%)
 - [ ] Check Supabase Realtime connection limits on chosen plan tier
 - [ ] Test KIE image/video URL longevity (do they expire?)
 - [ ] Evaluate Google Calendar per-user OAuth feasibility vs .ics export
+- [ ] Add error handling path to Pipeline Orchestrator (Mark Failed on sub-workflow failure)
 
 ### Blockers
 
-- SUPABASE_SERVICE_ROLE_KEY env var must be set on n8n Cloud (Settings > Variables) for live Supabase queries to work
-- SUPABASE_URL env var must be set on n8n Cloud (value: https://llpnwaoxisfwptxvdfed.supabase.co) for Pipeline Orchestrator
-- Pipeline Orchestrator must be imported to n8n Cloud and sub-workflow IDs resolved before 04-03 E2E testing
-- Sub-workflows use Webhook triggers (not Sub-Workflow Triggers) -- Execute Sub-Workflow compatibility needs E2E testing
 - n8n Cloud SELECT nodes need `alwaysOutputData: true` for graceful empty-result handling (frontend safeJson is a workaround)
 
 ## Session Continuity
 
 ### Last Session
 - **Date:** 2026-03-03
-- **Activity:** Completed Phase 4 Plan 01 (Pipeline Orchestrator) -- built 24-node workflow JSON with async respond-then-continue pattern
-- **Outcome:** Orchestrator workflow JSON ready for cloud import. All structural verification passed. Sub-workflow IDs and deployment pending (requires n8n Cloud dashboard access).
+- **Activity:** Completed Phase 4 (Async Pipeline + Real-Time Progress Tracking) -- 3 plans executed, 9/9 must-haves verified, user visual confirmation passed
+- **Outcome:** Phase 4 COMPLETE. Pipeline Orchestrator active on n8n Cloud. Frontend Realtime progress UI live. All fake timers removed. Step checkmarks working. Page refresh recovery implemented.
 
 ### Next Session
-- **Expected:** Phase 4 Plan 03 (E2E Verification of async pipeline + realtime progress)
-- **Prerequisites:** Deploy Pipeline Orchestrator to n8n Cloud, resolve 6 sub-workflow IDs, set SUPABASE_URL env var
-- **Entry point:** Execute 04-03-PLAN.md
+- **Expected:** Plan and execute Phase 5 (Frontend Migration + UI Polish)
+- **Prerequisites:** Phase 4 complete. Async pipeline operational. Realtime subscriptions working.
+- **Entry point:** `/gsd:discuss-phase 5` or `/gsd:plan-phase 5`
 
 ---
 *State initialized: 2026-02-27*
