@@ -4,15 +4,15 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 4 in progress (Async Pipeline + Real-Time Progress Tracking). Plan 02 (Frontend Realtime Progress) complete.
+**Current Focus:** Phase 4 in progress (Async Pipeline + Real-Time Progress Tracking). Plans 01 and 02 complete, Plan 03 (E2E Verification) remaining.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 4 of 11 (Async Pipeline + Real-Time Progress Tracking) -- IN PROGRESS
 **Plan:** 2 of 3 in phase
-**Status:** In progress -- Plan 02 (Frontend Realtime Progress) complete
-**Last activity:** 2026-03-03 - Completed 04-02-PLAN.md (Frontend Realtime Progress)
+**Status:** In progress -- Plans 01 (Pipeline Orchestrator) and 02 (Frontend Realtime) complete
+**Last activity:** 2026-03-03 - Completed 04-01-PLAN.md (Pipeline Orchestrator workflow JSON + verification)
 
 **Progress:**
 ```
@@ -39,7 +39,7 @@ Overall: 17/50 requirements complete (34%)
 | Requirements complete | 17 |
 | Phases total | 11 |
 | Phases complete | 3 |
-| Current streak | 25 plans |
+| Current streak | 26 plans |
 
 ## Accumulated Context
 
@@ -92,6 +92,10 @@ Overall: 17/50 requirements complete (34%)
 | 15-minute stale run detection threshold | Runs older than 15 min with "running" status show error instead of restoring progress | 4 |
 | generateMockData() fallback removed from generation flow | Errors show toast instead of fake data; mock data function kept for other code paths | 4 |
 | Supabase Realtime postgres_changes for progress tracking | No new libraries needed; supabase-js already provides channel subscriptions | 4 |
+| $env.SUPABASE_URL instead of hardcoded URL in orchestrator | Cleaner config management; requires env var set on n8n Cloud | 4 |
+| Named node reference $('Extract Run ID') for all PATCH URLs | Execute Sub-Workflow output replaces $json; named ref recovers pipeline_run_id | 4 |
+| Execute Sub-Workflow (Wait=true) for pipeline sub-steps | Shares parent timeout but conserves execution budget (1 execution per pipeline) | 4 |
+| Dedup returns existing run_id with resumed: true | Graceful handling; frontend can re-subscribe to existing pipeline progress | 4 |
 
 ### Known Issues
 
@@ -119,18 +123,21 @@ Overall: 17/50 requirements complete (34%)
 ### Blockers
 
 - SUPABASE_SERVICE_ROLE_KEY env var must be set on n8n Cloud (Settings > Variables) for live Supabase queries to work
+- SUPABASE_URL env var must be set on n8n Cloud (value: https://llpnwaoxisfwptxvdfed.supabase.co) for Pipeline Orchestrator
+- Pipeline Orchestrator must be imported to n8n Cloud and sub-workflow IDs resolved before 04-03 E2E testing
+- Sub-workflows use Webhook triggers (not Sub-Workflow Triggers) -- Execute Sub-Workflow compatibility needs E2E testing
 - n8n Cloud SELECT nodes need `alwaysOutputData: true` for graceful empty-result handling (frontend safeJson is a workaround)
 
 ## Session Continuity
 
 ### Last Session
 - **Date:** 2026-03-03
-- **Activity:** Completed Phase 4 Plan 02 (Frontend Realtime Progress) -- replaced fake progress simulation with Supabase Realtime subscription
-- **Outcome:** Frontend progress UI is now entirely driven by Supabase Realtime postgres_changes. No fake timers, no simulated progress, no estimated time remaining. Page refresh recovery works. Generate button prevents duplicates.
+- **Activity:** Completed Phase 4 Plan 01 (Pipeline Orchestrator) -- built 24-node workflow JSON with async respond-then-continue pattern
+- **Outcome:** Orchestrator workflow JSON ready for cloud import. All structural verification passed. Sub-workflow IDs and deployment pending (requires n8n Cloud dashboard access).
 
 ### Next Session
-- **Expected:** Continue Phase 4 -- Plan 03 (E2E Verification of async pipeline + realtime progress)
-- **Prerequisites:** Plan 01 (Pipeline Orchestrator workflow) must be deployed. Plan 02 (this plan) complete.
+- **Expected:** Phase 4 Plan 03 (E2E Verification of async pipeline + realtime progress)
+- **Prerequisites:** Deploy Pipeline Orchestrator to n8n Cloud, resolve 6 sub-workflow IDs, set SUPABASE_URL env var
 - **Entry point:** Execute 04-03-PLAN.md
 
 ---
