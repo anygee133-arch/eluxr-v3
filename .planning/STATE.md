@@ -4,15 +4,15 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 5 in progress (Frontend Migration + UI Polish). Plans 01-02 complete.
+**Current Focus:** Phase 5 in progress (Frontend Migration + UI Polish). Plans 01-03 complete.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 5 of 11 (Frontend Migration + UI Polish)
-**Plan:** 2 of 4 in phase
-**Status:** In progress -- Plan 05-02 complete (Supabase data layer migration)
-**Last activity:** 2026-03-03 - Completed 05-02-PLAN.md (mapContentItem, Supabase queries, localStorage removal)
+**Plan:** 3 of 4 in phase
+**Status:** In progress -- Plan 05-03 complete (ICP card display on Setup tab)
+**Last activity:** 2026-03-03 - Completed 05-03-PLAN.md (ICP card HTML/CSS/JS, Supabase icps query, pipeline integration)
 
 **Progress:**
 ```
@@ -20,7 +20,7 @@ Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
 Phase  3: Workflow Decomposition      [### COMPLETE ######## ] 6/6 plans
 Phase  4: Progress Tracking           [### COMPLETE ######## ] 3/3 plans
-Phase  5: Frontend Migration + UI     [#####                 ] 2/4 plans
+Phase  5: Frontend Migration + UI     [############          ] 3/4 plans
 Phase  6: Content Pipeline            [ . . . . . . . . . . ] 0%
 Phase  7: Approval Queue              [ . . . . . . . . . . ] 0%
 Phase  8: Calendar + Scheduling       [ . . . . . . . . . . ] 0%
@@ -28,7 +28,7 @@ Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
 Phase 10: Standalone Tools            [ . . . . . . . . . . ] 0%
 Phase 11: Trend Intelligence          [ . . . . . . . . . . ] 0%
 
-Overall: 24/50 requirements complete (48%)
+Overall: 25/50 requirements complete (50%)
 ```
 
 ## Performance Metrics
@@ -36,10 +36,10 @@ Overall: 24/50 requirements complete (48%)
 | Metric | Value |
 |--------|-------|
 | Requirements total | 50 |
-| Requirements complete | 24 |
+| Requirements complete | 25 |
 | Phases total | 11 |
 | Phases complete | 4 |
-| Current streak | 28 plans |
+| Current streak | 29 plans |
 
 ## Accumulated Context
 
@@ -102,6 +102,10 @@ Overall: 24/50 requirements complete (48%)
 | Re-fetch from Supabase after mutations (not local state) | Approval/reject/batch re-fetch from Supabase instead of local state mutation; ensures consistency | 5 |
 | Business profile saved to Supabase profiles (not localStorage) | Upsert on form submit; load on SIGNED_IN; replaces localStorage persistence | 5 |
 | checkActivePipeline uses in-memory only (no localStorage) | Supabase query for running pipelines replaces localStorage pipeline run tracking | 5 |
+| ICP card between form and chatbox on Setup tab | Natural position -- user sees profile after entering business info | 5 |
+| ICP skeleton at step 0, refresh at step >= 2 | Step 1 is ICP analysis; current_step 2 confirms step 1 complete | 5 |
+| PGRST116 silently ignored for ICP query | Expected when user hasn't run pipeline; card stays hidden | 5 |
+| escapeHTML() via DOM createElement pattern | No existing utility; needed for safe rendering of Supabase text data | 5 |
 
 ### Known Issues
 
@@ -137,14 +141,14 @@ Overall: 24/50 requirements complete (48%)
 
 ### Last Session
 - **Date:** 2026-03-03
-- **Activity:** Completed 05-02-PLAN.md -- Supabase data layer migration: mapContentItem normalizer, direct Supabase queries for content_items/themes/profiles, removed all localStorage/saveSession/generateMockData
-- **Outcome:** Plan 05-02 COMPLETE. 9/9 must-haves verified. Zero localStorage. Zero mock data. All data flows from Supabase through mapContentItem to rendering functions.
+- **Activity:** Completed 05-03-PLAN.md -- ICP card display: loadICP from Supabase icps table, structured sections (summary/audience/pain points/messaging/hashtags), skeleton loading, pipeline step integration, escapeHTML utility
+- **Outcome:** Plan 05-03 COMPLETE. All verification criteria met. ICP card loads on login, shows skeleton during pipeline, refreshes after step 1, gracefully degrades for null JSONB.
 
 ### Next Session
-- **Expected:** Execute Plan 05-03 (next plan in Phase 5)
-- **Prerequisites:** 05-02 complete. Data layer migrated. mapContentItem normalizer active. Profiles load/save via Supabase.
-- **Entry point:** `/gsd:execute-phase 05-03`
+- **Expected:** Execute Plan 05-04 (final plan in Phase 5)
+- **Prerequisites:** 05-03 complete. ICP card active. escapeHTML() available. All Supabase data flows operational.
+- **Entry point:** `/gsd:execute-phase 05-04`
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-03*
+*Last updated: 2026-03-03 (05-03 complete)*

@@ -214,11 +214,16 @@ details .details-content { padding: 20px; }
 }
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #16a34a, #22c55e, #16a34a);
-  background-size: 200% 100%;
+  background: linear-gradient(90deg, #16a34a, #22c55e, #4ade80, #22c55e, #16a34a);
+  background-size: 300% 100%;
   border-radius: 20px; width: 0%;
   transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
-  box-shadow: 0 0 20px rgba(22, 163, 74, 0.4), 0 0 40px rgba(22, 163, 74, 0.2);
+  box-shadow: 0 0 12px rgba(22, 163, 74, 0.3), 0 0 24px rgba(22, 163, 74, 0.15);
+  animation: progressGlow 3s ease-in-out infinite;
+}
+@keyframes progressGlow {
+  0%, 100% { background-position: 0% 0; box-shadow: 0 0 12px rgba(22, 163, 74, 0.3), 0 0 24px rgba(22, 163, 74, 0.15); }
+  50% { background-position: 100% 0; box-shadow: 0 0 20px rgba(22, 163, 74, 0.5), 0 0 40px rgba(22, 163, 74, 0.25); }
 }
 .progress-bar::after {
   content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -673,19 +678,23 @@ details .details-content { padding: 20px; }
 .stagger-9 { animation-delay: 0.45s; }
 .stagger-10 { animation-delay: 0.5s; }
 
-/* GLASSMORPHISM */
+/* GLASSMORPHISM (light theme) */
 .card-glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(22, 163, 74, 0.12) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255,255,255,0.8) inset;
+}
+.card-glass:hover {
+  box-shadow: 0 12px 40px rgba(22, 163, 74, 0.12), 0 0 0 1px rgba(255,255,255,0.9) inset;
+  border-color: rgba(22, 163, 74, 0.25) !important;
 }
 
 /* SKELETON LOADING */
 .skeleton-line {
   height: 16px;
-  background: linear-gradient(90deg, var(--border, #1e293b) 25%, rgba(255,255,255,0.05) 50%, var(--border, #1e293b) 75%);
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
   background-size: 200% 100%;
   animation: skeleton-pulse 1.5s ease-in-out infinite;
   border-radius: 4px;
@@ -694,8 +703,8 @@ details .details-content { padding: 20px; }
 .skeleton-card {
   padding: 24px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #f8fafb;
+  border: 1px solid #e2e8f0;
 }
 .skeleton-card .skeleton-line:last-child {
   margin-bottom: 0;
@@ -709,7 +718,7 @@ details .details-content { padding: 20px; }
 .icp-section {
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
 }
 .icp-section:last-child {
   margin-bottom: 0;
@@ -2596,28 +2605,37 @@ function renderICPCard(icp) {
   const summarySection = document.getElementById('icp-summary-section');
   const summaryText = document.getElementById('icp-summary-text');
   if (summaryText) {
-    const summary = icp.icp_summary || '';
+    let summary = icp.icp_summary || '';
     if (summary) {
-      summaryText.innerHTML = formatICPText(summary);
+      // Detect if summary is JSON string and parse it
+      let parsed = tryParseJSON(summary);
+      if (parsed && typeof parsed === 'object') {
+        // Render as structured key-value pairs
+        summaryText.innerHTML = renderJSONAsHTML(parsed);
+      } else {
+        summaryText.innerHTML = formatICPText(summary);
+      }
       if (summarySection) summarySection.style.display = 'block';
     }
   }
-  renderICPSection('icp-audience-section', 'icp-audience-text', icp.demographics);
-  renderICPSection('icp-painpoints-section', 'icp-painpoints-text', icp.psychographics);
-  renderICPSection('icp-messaging-section', 'icp-messaging-text', icp.content_opportunities);
+  renderICPSection('icp-audience-section', 'icp-audience-text', parseIfJSON(icp.demographics));
+  renderICPSection('icp-painpoints-section', 'icp-painpoints-text', parseIfJSON(icp.psychographics));
+  renderICPSection('icp-messaging-section', 'icp-messaging-text', parseIfJSON(icp.content_opportunities));
 
   // Hashtags (special rendering as pills)
   const hashtagsSection = document.getElementById('icp-hashtags-section');
   const hashtagsText = document.getElementById('icp-hashtags-text');
   if (hashtagsText && icp.recommended_hashtags) {
-    const hashtags = icp.recommended_hashtags;
+    const hashtags = parseIfJSON(icp.recommended_hashtags);
     let tags = [];
-    if (Array.isArray(hashtags)) tags = hashtags;
-    else if (typeof hashtags === 'object') tags = Object.values(hashtags).flat().filter(Boolean);
+    if (typeof hashtags === 'string') tags = hashtags.split(/[,\s]+/).filter(t => t.length > 1);
+    else if (Array.isArray(hashtags)) tags = hashtags.map(h => String(h)).filter(Boolean);
+    else if (typeof hashtags === 'object') tags = Object.values(hashtags).flat().map(h => String(h)).filter(Boolean);
     if (tags.length > 0) {
-      hashtagsText.innerHTML = tags.map(h =>
-        '<span style="display:inline-block;background:rgba(22,163,74,0.15);color:#16a34a;padding:2px 10px;border-radius:12px;font-size:13px;margin:2px 4px 2px 0;">' + (h.startsWith('#') ? h : '#' + h) + '</span>'
-      ).join('');
+      hashtagsText.innerHTML = tags.map(h => {
+        const tag = String(h);
+        return '<span style="display:inline-block;background:rgba(22,163,74,0.15);color:#16a34a;padding:2px 10px;border-radius:12px;font-size:13px;margin:2px 4px 2px 0;">' + (tag.startsWith('#') ? tag : '#' + tag) + '</span>';
+      }).join('');
       if (hashtagsSection) hashtagsSection.style.display = 'block';
     }
   }
@@ -2641,14 +2659,7 @@ function renderICPSection(sectionId, textId, jsonbData) {
       html = '<ul>' + jsonbData.map(item => '<li>' + escapeHTML(typeof item === 'string' ? item : JSON.stringify(item)) + '</li>').join('') + '</ul>';
     }
   } else if (typeof jsonbData === 'object') {
-    const entries = Object.entries(jsonbData).filter(([k, v]) => v != null && v !== '');
-    if (entries.length > 0) {
-      html = entries.map(([key, value]) => {
-        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        const val = Array.isArray(value) ? value.join(', ') : String(value);
-        return '<div style="margin-bottom:6px;"><strong style="color:var(--text-primary,#e2e8f0);">' + escapeHTML(label) + ':</strong> ' + escapeHTML(val) + '</div>';
-      }).join('');
-    }
+    html = renderJSONAsHTML(jsonbData);
   }
   if (html) {
     textEl.innerHTML = html;
@@ -2658,6 +2669,44 @@ function renderICPSection(sectionId, textId, jsonbData) {
 
 function formatICPText(text) {
   return escapeHTML(text).replace(/\n/g, '<br>');
+}
+
+function tryParseJSON(str) {
+  if (typeof str !== 'string') return null;
+  try {
+    const parsed = JSON.parse(str);
+    return (typeof parsed === 'object' && parsed !== null) ? parsed : null;
+  } catch (e) { return null; }
+}
+
+function parseIfJSON(data) {
+  if (typeof data === 'string') {
+    const parsed = tryParseJSON(data);
+    return parsed || data;
+  }
+  return data;
+}
+
+function renderJSONAsHTML(obj) {
+  if (Array.isArray(obj)) {
+    return '<ul>' + obj.map(item => '<li>' + escapeHTML(typeof item === 'string' ? item : JSON.stringify(item)) + '</li>').join('') + '</ul>';
+  }
+  return Object.entries(obj).filter(([k, v]) => v != null && v !== '').map(([key, value]) => {
+    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    let val;
+    if (Array.isArray(value)) {
+      val = value.join(', ');
+    } else if (typeof value === 'object' && value !== null) {
+      val = Object.entries(value).filter(([k2, v2]) => v2 != null).map(([k2, v2]) => {
+        const sublabel = k2.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return escapeHTML(sublabel) + ': ' + escapeHTML(Array.isArray(v2) ? v2.join(', ') : String(v2));
+      }).join('<br>');
+      return '<div style="margin-bottom:10px;"><strong style="color:var(--text-primary,#0f172a);">' + escapeHTML(label) + '</strong><div style="margin-left:12px;margin-top:4px;color:var(--text-secondary,#475569);">' + val + '</div></div>';
+    } else {
+      val = escapeHTML(String(value));
+    }
+    return '<div style="margin-bottom:6px;"><strong style="color:var(--text-primary,#0f172a);">' + escapeHTML(label) + ':</strong> <span style="color:var(--text-secondary,#475569);">' + val + '</span></div>';
+  }).join('');
 }
 
 window.loadICP = loadICP;
@@ -3459,7 +3508,7 @@ async function fetchCalendarData() {
   try {
     const { data: items, error } = await window.supabase
       .from('content_items')
-      .select('*, themes(name)')
+      .select('*')
       .order('scheduled_date', { ascending: true });
     if (error) {
       console.error('Error fetching content from Supabase:', error);
@@ -3889,13 +3938,13 @@ async function loadScheduleThemes() {
   try {
     const { data: themes, error: themeError } = await window.supabase
       .from('themes')
-      .select('*, campaigns(month)')
+      .select('*')
       .order('week_number', { ascending: true });
     if (themeError) console.error('Error fetching themes:', themeError);
     if (themes && themes.length > 0) {
       weeklyThemes = themes.map(t => ({
         id: t.id, name: t.name || t.theme_name || '', description: t.description || '',
-        week_number: t.week_number, month: t.campaigns ? t.campaigns.month : '',
+        week_number: t.week_number, month: t.month || '',
         content_types: t.content_types || {}, daily_details: t.daily_details || {}
       }));
     } else {
