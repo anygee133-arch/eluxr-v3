@@ -2274,6 +2274,8 @@ details .details-content { padding: 20px; }
           if (session) {
             currentUser = session.user
             showDashboard()
+            // Load user profile from Supabase
+            if (window.loadUserProfile) window.loadUserProfile();
             // Check for active pipeline run after login confirmed
             if (window.checkActivePipeline) {
               window.checkActivePipeline();
@@ -2403,6 +2405,76 @@ let currentScript = null;
 let generatedVideoUrl = null;
 let businessContext = null; // Stores business info from Step 1 for use in content generation
 
+// === DATA NORMALIZER ===
+// Maps Supabase content_items rows to the frontend field format
+function mapContentItem(dbRow, themeMap) {
+  const scheduledDate = dbRow.scheduled_date || '';
+  const dayNumber = scheduledDate ? new Date(scheduledDate + 'T00:00:00').getDate() : 0;
+  let status = dbRow.status;
+  if (status === 'pending_review') status = 'pending';
+  let themeName = 'General';
+  if (dbRow.themes && dbRow.themes.name) {
+    themeName = dbRow.themes.name;
+  } else if (themeMap && dbRow.theme_id && themeMap[dbRow.theme_id]) {
+    themeName = themeMap[dbRow.theme_id];
+  }
+  let hashtags = '';
+  const contentText = dbRow.content || '';
+  const hashtagMatch = contentText.match(/((?:#\w+\s*){2,})$/);
+  if (hashtagMatch) {
+    hashtags = hashtagMatch[1].trim();
+  }
+  return {
+    id: dbRow.id,
+    day_number: dayNumber,
+    date: scheduledDate,
+    platform: dbRow.platform || '',
+    theme: themeName,
+    content_type: dbRow.content_type || 'text',
+    post_text: contentText,
+    content: contentText,
+    hashtags: hashtags,
+    image_url: dbRow.image_url || '',
+    video_url: dbRow.video_url || '',
+    status: status,
+    title: dbRow.title || '',
+    image_prompt: dbRow.image_prompt || '',
+    feedback: dbRow.feedback || '',
+    scheduled_time: dbRow.scheduled_time || '',
+    campaign_id: dbRow.campaign_id || null,
+    theme_id: dbRow.theme_id || null
+  };
+}
+
+// === EMPTY STATE ===
+function showCalendarEmptyState() {
+  const scheduleGrid = document.getElementById('schedule-grid');
+  if (scheduleGrid) {
+    scheduleGrid.innerHTML = '<div style="text-align:center;padding:60px 20px;grid-column:1/-1;"><div style="font-size:48px;margin-bottom:16px;opacity:0.5;">&#128197;</div><h3 style="color:var(--text-primary,#e2e8f0);margin-bottom:8px;">No content generated yet</h3><p style="color:var(--text-muted,#94a3b8);margin-bottom:24px;">Start by analyzing your business on the Setup tab to generate your first content campaign.</p><button class="btn btn-primary" onclick="goToPhase(1)">Go to Setup</button></div>';
+  }
+}
+
+// === PROFILE LOADER ===
+async function loadUserProfile() {
+  try {
+    const { data: profile, error } = await window.supabase
+      .from('profiles')
+      .select('business_url, industry')
+      .single();
+    if (profile && !error) {
+      businessContext = { business_url: profile.business_url || '', industry: profile.industry || '' };
+      const urlInput = document.getElementById('business-url');
+      const industryInput = document.getElementById('industry');
+      if (urlInput && profile.business_url) urlInput.value = profile.business_url;
+      if (industryInput && profile.industry) industryInput.value = profile.industry;
+    }
+  } catch (err) {
+    console.error('Error loading profile:', err);
+  }
+}
+window.loadUserProfile = loadUserProfile;
+window.mapContentItem = mapContentItem;
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   const now = new Date();
@@ -2411,30 +2483,7 @@ document.addEventListener('DOMContentLoaded', () => {
   monthInput.value = currentMonthValue;
   currentMonth = currentMonthValue; // Set global currentMonth
 
-  // Load saved business context
-  const savedBusinessContext = localStorage.getItem('eluxr_business_context');
-  if (savedBusinessContext) {
-    businessContext = JSON.parse(savedBusinessContext);
-  }
-
-  const savedSession = localStorage.getItem('eluxr_current_session');
-  if (savedSession) {
-    const session = JSON.parse(savedSession);
-    if (session.sessionId && session.contentData) {
-      const resume = confirm('You have a previous session. Would you like to resume?');
-      if (resume) {
-        currentSessionId = session.sessionId;
-        contentData = session.contentData;
-        currentMonth = session.month || currentMonthValue;
-        goToPhase(3);
-        renderCalendar(currentMonth, contentData);
-        updateStats();
-        return;
-      }
-    }
-  }
-
-  // Try to load any existing content from the backend
+  // Try to load any existing content from Supabase
   fetchAndDisplayCalendar(true).catch(() => {});
 
   document.getElementById('business-form').addEventListener('submit', handleFormSubmit);
@@ -3209,18 +3258,26 @@ async function generateContent(formData) {
 }
 
 async function fetchCalendarData() {
-  // FIXED: Fetch from approval-list instead of phase3-calendar
   try {
-    const response = await authenticatedFetch(`${API_BASE}/eluxr-approval-list`);
-    if (!response.ok) throw new Error('Network response was not ok');
-    return safeJson(response, { pending: [], approved: [], all: [] });
-  } catch (error) {
-    // Check if it's a CORS error (likely when opening from file://)
-    if (window.location.protocol === 'file:') {
-      console.warn('CORS blocked: Please run this page from a web server. Try: python -m http.server 8080');
-      showToast('Please run from a web server (not file://)', 'error');
+    const { data: items, error } = await window.supabase
+      .from('content_items')
+      .select('*, themes(name)')
+      .order('scheduled_date', { ascending: true });
+    if (error) {
+      console.error('Error fetching content from Supabase:', error);
+      return { all: [], approved: [], pending: [], rejected: [] };
     }
-    throw error;
+    if (!items || items.length === 0) {
+      return { all: [], approved: [], pending: [], rejected: [] };
+    }
+    const mapped = items.map(item => mapContentItem(item, null));
+    const approved = mapped.filter(i => i.status === 'approved');
+    const pending = mapped.filter(i => i.status === 'pending');
+    const rejected = mapped.filter(i => i.status === 'rejected');
+    return { all: mapped, approved, pending, rejected };
+  } catch (err) {
+    console.error('fetchCalendarData error:', err);
+    return { all: [], approved: [], pending: [], rejected: [] };
   }
 }
 
@@ -3384,28 +3441,27 @@ function startCalendarAutoRefresh() {
 async function fetchAndDisplayCalendar(silent = false) {
   try {
     const data = await fetchCalendarData();
-    // Handle the response format from approval-list endpoint
-    let rawContent = data.all || data.content || data.pending || [];
+    const rawContent = data.all || [];
 
-    // Pre-parse all JSON content when loading
     contentData = rawContent.map((item, index) => {
       const parsed = { ...item };
-      // Ensure day_number exists
       if (!parsed.day_number) parsed.day_number = index + 1;
-      // Pre-parse JSON content
       parseContentText(parsed);
       return parsed;
     });
 
-    saveSession(currentSessionId, { contentData, month: currentMonth });
     if (!silent) goToPhase(3);
-    renderCalendar(currentMonth, contentData);
+
+    if (contentData.length === 0) {
+      showCalendarEmptyState();
+    } else {
+      renderCalendar(currentMonth, contentData);
+    }
     updateStats();
   } catch (error) {
     console.log('Fetch calendar error:', error);
-    // Generate mock data if API fails
     if (!silent) {
-      generateMockData({ month: currentMonth, platforms: ['LinkedIn', 'Instagram'], industry: 'General' });
+      showCalendarEmptyState();
     }
   }
 }
@@ -3673,57 +3729,26 @@ async function loadScheduleThemes() {
     </div>
   `;
 
-  // Fetch themes from Google Sheets via n8n
   try {
-    const themesResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-themes-list`);
-    if (themesResponse.ok) {
-      const themesData = await safeJson(themesResponse, { themes: [], count: 0 });
-      weeklyThemes = themesData.themes || themesData || [];
-      console.log('Loaded themes from backend:', weeklyThemes.length);
+    const { data: themes, error: themeError } = await window.supabase
+      .from('themes')
+      .select('*, campaigns(month)')
+      .order('week_number', { ascending: true });
+    if (themeError) console.error('Error fetching themes:', themeError);
+    if (themes && themes.length > 0) {
+      weeklyThemes = themes.map(t => ({
+        id: t.id, name: t.name || t.theme_name || '', description: t.description || '',
+        week_number: t.week_number, month: t.campaigns ? t.campaigns.month : '',
+        content_types: t.content_types || {}, daily_details: t.daily_details || {}
+      }));
+    } else {
+      weeklyThemes = [];
     }
-  } catch (error) {
-    console.log('Themes fetch error (using local data):', error);
+    await fetchAndDisplayCalendar(true);
+  } catch (err) {
+    console.error('loadScheduleThemes error:', err);
+    weeklyThemes = [];
   }
-
-  // Fetch from approval list - this has all generated content
-  let approvalData = { pending: [], approved: [], all: [] };
-  try {
-    const approvalResponse = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
-    if (approvalResponse.ok) {
-      approvalData = await safeJson(approvalResponse, { pending: [], approved: [], all: [] });
-    }
-  } catch (error) {
-    console.log('Approval list fetch error:', error);
-  }
-
-  // Combine backend themes with local contentData
-  // Backend themes take priority
-  const backendThemesByDate = {};
-  weeklyThemes.forEach(t => {
-    if (t.date) backendThemesByDate[t.date] = t;
-  });
-
-  scheduleThemes = contentData.map(c => {
-    const backendTheme = backendThemesByDate[c.date];
-    return {
-      date: c.date,
-      theme: backendTheme?.theme || c.theme || c.post_text?.substring(0, 50) || 'Content',
-      platform: backendTheme?.platform || c.platform,
-      content_type: backendTheme?.content_type || c.content_type || 'Post',
-      week_number: backendTheme?.week_number,
-      weekly_show_name: backendTheme?.weekly_show_name,
-      hook: backendTheme?.hook
-    };
-  });
-
-  // Add any backend themes that aren't in contentData
-  weeklyThemes.forEach(t => {
-    if (t.date && !scheduleThemes.find(s => s.date === t.date)) {
-      scheduleThemes.push(t);
-    }
-  });
-
-  renderScheduleGrid(scheduleThemes, approvalData);
 }
 
 function getWeekDates(offset = 0) {
