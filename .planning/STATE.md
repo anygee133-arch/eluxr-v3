@@ -4,22 +4,22 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 3 complete. Ready for Phase 4 (Async Pipeline + Real-Time Progress Tracking).
+**Current Focus:** Phase 4 in progress (Async Pipeline + Real-Time Progress Tracking). Plan 02 (Frontend Realtime Progress) complete.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
-**Phase:** 3 of 11 (Workflow Decomposition + Backend Bug Fixes) -- COMPLETE
-**Plan:** 6 of 6 in phase (complete)
-**Status:** Complete -- All 6 plans executed, all 5 requirements verified
-**Last activity:** 2026-03-02 - Completed 03-06-PLAN.md (E2E Verification: all requirements pass)
+**Phase:** 4 of 11 (Async Pipeline + Real-Time Progress Tracking) -- IN PROGRESS
+**Plan:** 2 of 3 in phase
+**Status:** In progress -- Plan 02 (Frontend Realtime Progress) complete
+**Last activity:** 2026-03-03 - Completed 04-02-PLAN.md (Frontend Realtime Progress)
 
 **Progress:**
 ```
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
 Phase  3: Workflow Decomposition      [### COMPLETE ######## ] 6/6 plans
-Phase  4: Progress Tracking           [ . . . . . . . . . . ] 0%
+Phase  4: Progress Tracking           [########### . . . .  ] 2/3 plans
 Phase  5: Frontend Migration + UI     [ . . . . . . . . . . ] 0%
 Phase  6: Content Pipeline            [ . . . . . . . . . . ] 0%
 Phase  7: Approval Queue              [ . . . . . . . . . . ] 0%
@@ -39,7 +39,7 @@ Overall: 17/50 requirements complete (34%)
 | Requirements complete | 17 |
 | Phases total | 11 |
 | Phases complete | 3 |
-| Current streak | 23 plans |
+| Current streak | 25 plans |
 
 ## Accumulated Context
 
@@ -88,6 +88,10 @@ Overall: 17/50 requirements complete (34%)
 | Switch fallback handler saves unmatched items | Prevents data loss for unexpected content_type values; saves with debug note | 3 |
 | Monolith deactivated, not deleted | Kept as reference and rollback option; can reactivate in ~2 minutes | 3 |
 | Cutover performed manually via n8n Cloud dashboard | n8n Cloud API key not available; user toggled workflows in dashboard | 3 |
+| checkActivePipeline() in SIGNED_IN handler (no setTimeout) | Avoids race condition where session may not be available on slow connections | 4 |
+| 15-minute stale run detection threshold | Runs older than 15 min with "running" status show error instead of restoring progress | 4 |
+| generateMockData() fallback removed from generation flow | Errors show toast instead of fake data; mock data function kept for other code paths | 4 |
+| Supabase Realtime postgres_changes for progress tracking | No new libraries needed; supabase-js already provides channel subscriptions | 4 |
 
 ### Known Issues
 
@@ -97,6 +101,7 @@ Overall: 17/50 requirements complete (34%)
 - ~~Video Ready? IF node has inverted TRUE/FALSE wiring~~ FIXED in 03-04 (TOOL-06) -- TRUE -> Parse Video Result
 - ~~Switch node routes to multiple branches per item~~ FIXED in 03-02 (PIPE-07) -- allMatchingOutputs=false + exact equality + content type normalization
 - ~~Monolith is single point of failure~~ FIXED in 03-05 -- decomposed into 13 independent sub-workflows
+- ~~Frontend uses fake progress simulation~~ FIXED in 04-02 -- replaced with Supabase Realtime postgres_changes subscription
 - Google Calendar multi-tenant may be infeasible (Phase 8 decision needed)
 - n8n Cloud Starter: 2.5k executions/month, 5 concurrent -- may need monitoring in Phase 4/6 for batch generation
 - KIE URL longevity unknown (test before launch)
@@ -119,15 +124,15 @@ Overall: 17/50 requirements complete (34%)
 ## Session Continuity
 
 ### Last Session
-- **Date:** 2026-03-02
-- **Activity:** Completed Phase 3 Plan 06 (E2E Verification) -- all 5 requirements verified, CORS fix, safeJson fix, user walkthrough passed
-- **Outcome:** Phase 3 COMPLETE. 13 sub-workflows active, 0 Google Sheets nodes, PIPE-07/TOOL-05/TOOL-06 bugs fixed and verified. Known issue: SUPABASE_SERVICE_ROLE_KEY env var needs to be set on n8n Cloud for live Supabase queries.
+- **Date:** 2026-03-03
+- **Activity:** Completed Phase 4 Plan 02 (Frontend Realtime Progress) -- replaced fake progress simulation with Supabase Realtime subscription
+- **Outcome:** Frontend progress UI is now entirely driven by Supabase Realtime postgres_changes. No fake timers, no simulated progress, no estimated time remaining. Page refresh recovery works. Generate button prevents duplicates.
 
 ### Next Session
-- **Expected:** Plan and execute Phase 4 (Async Pipeline + Real-Time Progress Tracking)
-- **Prerequisites:** Phase 3 complete. All 13 sub-workflows operational.
-- **Entry point:** `/gsd:discuss-phase 4` or `/gsd:plan-phase 4`
+- **Expected:** Continue Phase 4 -- Plan 03 (E2E Verification of async pipeline + realtime progress)
+- **Prerequisites:** Plan 01 (Pipeline Orchestrator workflow) must be deployed. Plan 02 (this plan) complete.
+- **Entry point:** Execute 04-03-PLAN.md
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-02*
+*Last updated: 2026-03-03*
