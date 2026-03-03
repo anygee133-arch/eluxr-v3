@@ -159,12 +159,18 @@ body {
   font-size: 14px; font-weight: 600; cursor: pointer; border: none;
   transition: all 0.25s var(--transition);
 }
+.btn:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+.btn:active {
+  transform: translateY(0) scale(0.98);
+}
 .btn-primary { background: var(--green); color: #fff; }
-.btn-primary:hover { background: #15803d; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
+.btn-primary:hover { background: #15803d; box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
 .btn-outline { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
 .btn-outline:hover { border-color: var(--green); color: var(--green); }
 .btn-purple { background: var(--purple); color: #fff; }
-.btn-purple:hover { background: #6d28d9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.3); }
+.btn-purple:hover { background: #6d28d9; box-shadow: 0 4px 12px rgba(124,58,237,0.3); }
 .btn-sm { padding: 10px 18px; font-size: 13px; }
 .btn-lg { padding: 16px 32px; font-size: 15px; }
 .btn-block { width: 100%; }
@@ -208,9 +214,11 @@ details .details-content { padding: 20px; }
 }
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--green), var(--green-light));
+  background: linear-gradient(90deg, #16a34a, #22c55e, #16a34a);
+  background-size: 200% 100%;
   border-radius: 20px; width: 0%;
-  transition: width 0.5s ease; position: relative;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
+  box-shadow: 0 0 20px rgba(22, 163, 74, 0.4), 0 0 40px rgba(22, 163, 74, 0.2);
 }
 .progress-bar::after {
   content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -658,6 +666,60 @@ details .details-content { padding: 20px; }
 .stagger-2 { animation-delay: 0.1s; }
 .stagger-3 { animation-delay: 0.15s; }
 .stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+.stagger-9 { animation-delay: 0.45s; }
+.stagger-10 { animation-delay: 0.5s; }
+
+/* GLASSMORPHISM */
+.card-glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* SKELETON LOADING */
+.skeleton-line {
+  height: 16px;
+  background: linear-gradient(90deg, var(--border, #1e293b) 25%, rgba(255,255,255,0.05) 50%, var(--border, #1e293b) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+.skeleton-card {
+  padding: 24px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.skeleton-card .skeleton-line:last-child {
+  margin-bottom: 0;
+}
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* TAB SLIDE TRANSITIONS */
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.page-section.slide-in-left {
+  animation: slideInLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.page-section.slide-in-right {
+  animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
 
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 6px; }
@@ -1399,7 +1461,7 @@ details .details-content { padding: 20px; }
       <p>Sit back while our AI analyzes your business, creates themes, writes posts, generates images, and syncs your calendar.</p>
     </div>
 
-    <div class="card progress-card fade-in-up stagger-1">
+    <div class="card progress-card card-glass fade-in-up stagger-1">
       <div class="progress-container">
         <div id="progress-bar" class="progress-bar"></div>
       </div>

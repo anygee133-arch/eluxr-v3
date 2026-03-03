@@ -1,0 +1,30 @@
+# n8n workflow JSON files (contain sensitive data patterns)
+workflows/
+
+# Planning artifacts
+.planning/
+
+# Supabase migration files (server-side only)
+supabase/
+
+# Test results
+tests/
+
+# Scripts
+scripts/
+
+# Documentation
+*.pdf
+
+# Utility scripts
+*.py
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
