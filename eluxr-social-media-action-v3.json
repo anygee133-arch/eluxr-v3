@@ -1,0 +1,4497 @@
+{
+  "name": "ELUXR Social Media Action v3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase1-analyzer",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "01-icp-0001",
+      "name": "01-Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "eluxr-phase1-analyzer"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "01-icp-0002",
+      "name": "01-Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "01-icp-0003",
+      "name": "01-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "01-icp-0004",
+      "name": "01-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nconst businessUrl = body.business_url || '';\nconst industry = body.industry || '';\n\nreturn { json: { user_id: authData.user_id, business_url: businessUrl, industry: industry } };"
+      },
+      "id": "01-icp-0005",
+      "name": "Prepare Perplexity Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "perplexityApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a market research analyst. Provide detailed, actionable market research for social media content strategy. Include: target demographics, competitor analysis, content gaps, trending topics, and audience pain points. Return structured JSON.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Perform deep market research for this business. Business URL or description: {{ $json.business_url }}. Industry: {{ $json.industry }}. Analyze competitors, target audience demographics, content gaps in their social media presence, trending topics in this industry, and key pain points of their ideal customers. Return as structured JSON with keys: target_demographics, competitors, content_gaps, trending_topics, audience_pain_points, recommended_platforms.\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 4000\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "01-icp-0006",
+      "name": "Perplexity -- Market Research",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -200
+      ],
+      "credentials": {
+        "perplexityApi": {
+          "id": "3rYRY1C2K9o0DDXI",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const perplexityData = $input.item.json;\nconst prepData = $('Prepare Perplexity Request').item.json;\n\nconst research = perplexityData.choices ? perplexityData.choices[0].message.content : JSON.stringify(perplexityData);\n\nconst prompt = 'You are an ICP specialist for social media marketing. Based on the following market research, create a comprehensive Ideal Customer Profile.\\n\\nBusiness: ' + prepData.business_url + '\\nIndustry: ' + prepData.industry + '\\nMarket Research: ' + research + '\\n\\nReturn a JSON object with keys: icp_summary, demographics, psychographics, content_preferences, competitors, content_opportunities, recommended_hashtags.\\n\\nReturn ONLY valid JSON, no markdown.';\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  messages: [{ role: 'user', content: prompt }]\n});\n\nreturn { json: { apiBody: body, user_id: prepData.user_id, business_url: prepData.business_url, industry: prepData.industry } };"
+      },
+      "id": "01-icp-0007",
+      "name": "Prepare ICP Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.apiBody }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "01-icp-0008",
+      "name": "Claude -- ICP Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -200
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare ICP Prompt').item.json;\n\nlet icpContent = '';\ntry {\n  icpContent = input.content[0].text;\n} catch(e) {\n  icpContent = JSON.stringify(input);\n}\n\nlet icpParsed = {};\ntry {\n  icpParsed = JSON.parse(icpContent);\n} catch(e) {\n  icpParsed = { raw: icpContent };\n}\n\nreturn {\n  json: {\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    icp_summary: icpParsed.icp_summary || '',\n    demographics: icpParsed.demographics || {},\n    psychographics: icpParsed.psychographics || {},\n    content_preferences: icpParsed.content_preferences || {},\n    competitors: icpParsed.competitors || [],\n    content_opportunities: icpParsed.content_opportunities || [],\n    recommended_hashtags: icpParsed.recommended_hashtags || [],\n    raw_research: icpContent\n  }\n};"
+      },
+      "id": "01-icp-0009",
+      "name": "Parse ICP Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?on_conflict=user_id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"business_url\": {{ JSON.stringify($json.business_url) }},\n  \"industry\": {{ JSON.stringify($json.industry) }},\n  \"icp_summary\": {{ JSON.stringify($json.icp_summary) }},\n  \"demographics\": {{ JSON.stringify($json.demographics) }},\n  \"psychographics\": {{ JSON.stringify($json.psychographics) }},\n  \"content_preferences\": {{ JSON.stringify($json.content_preferences) }},\n  \"competitors\": {{ JSON.stringify($json.competitors) }},\n  \"content_opportunities\": {{ JSON.stringify($json.content_opportunities) }},\n  \"recommended_hashtags\": {{ JSON.stringify($json.recommended_hashtags) }},\n  \"raw_research\": {{ JSON.stringify($json.raw_research) }}\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "01-icp-0010",
+      "name": "Supabase -- UPSERT ICP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, phase: 1, session_id: 'session_' + Date.now(), data: $json }) }}",
+        "options": {}
+      },
+      "id": "01-icp-0011",
+      "name": "01-Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1980,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase2-themes",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "02-theme-0001",
+      "name": "02-Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        800
+      ],
+      "webhookId": "eluxr-phase2-themes"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "02-theme-0002",
+      "name": "02-Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "02-theme-0003",
+      "name": "02-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "02-theme-0004",
+      "name": "02-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 8192,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are an expert social media content strategist using the NETFLIX MODEL for content planning.\\n\\nTHE NETFLIX MODEL:\\n- Each month has 4 weekly 'shows' (seasons)\\n- Week 1: 'The Origin Story' -- Personal stories, behind-the-scenes, relatable founder moments\\n- Week 2: 'The Proof' -- Case studies, client wins, data-driven results, testimonials\\n- Week 3: 'The Method' -- How-to guides, tutorials, step-by-step processes, tips\\n- Week 4: 'The Vision' -- Industry trends, bold predictions, future-casting, cliffhangers for next month\\n\\nCYCLICITY RULES (NO content type repeats on consecutive days):\\n- Monday: Hook Post (personal story or bold statement)\\n- Tuesday: Value Post (tips, education, industry insights)\\n- Wednesday: Social Proof (case study, testimonial, client win)\\n- Thursday: Carousel/Thread (multi-slide educational content)\\n- Friday: Video/Reel (short-form video script)\\n- Saturday: Engagement (poll, question, interactive)\\n- Sunday: Cliffhanger (teaser for next week)\\n\\nGENERATE A 30-DAY THEME CALENDAR for:\\n- Month: {{ $json.body.month }}\\n- Products/Services: {{ $json.body.products }}\\n- Industry: {{ $json.body.industry }}\\n- ICP Summary: {{ $json.body.icp_summary }}\\n- Holidays/Events: {{ $json.body.holidays }}\\n\\nFor EACH of the 30 days return a JSON array of objects with:\\n- day_number (1-30)\\n- date (YYYY-MM-DD)\\n- day_of_week (Monday-Sunday)\\n- week_number (1-4)\\n- weekly_show_name (the Netflix show title for that week)\\n- theme (specific topic for this day)\\n- content_type (Hook/Value/Proof/Carousel/Video/Engagement/Cliffhanger)\\n- platform (primary: LinkedIn/Instagram/X/YouTube/Facebook)\\n- secondary_platform (for repurposing)\\n- hook (the opening line or attention-grabber)\\n- cta (call to action)\\n- hashtags (5 relevant hashtags)\\n- notes (production notes or tips)\\n\\nReturn ONLY valid JSON array, no markdown.\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "02-theme-0005",
+      "name": "Claude -- Netflix Theme Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        600
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst authData = $('Auth OK?').item.json;\n\nlet themeContent = '';\ntry {\n  themeContent = input.content[0].text;\n} catch(e) {\n  themeContent = JSON.stringify(input);\n}\n\nlet themes = [];\ntry {\n  themes = JSON.parse(themeContent);\n} catch(e) {\n  const match = themeContent.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (match) {\n    themes = JSON.parse(match[0]);\n  } else {\n    themes = [{ error: 'Could not parse themes', raw: themeContent }];\n  }\n}\n\n// Group into 4 weekly themes\nconst weeklyThemes = {};\nfor (const day of themes) {\n  const weekNum = day.week_number || 1;\n  if (!weeklyThemes[weekNum]) {\n    weeklyThemes[weekNum] = {\n      week_number: weekNum,\n      theme_name: day.weekly_show_name || 'Week ' + weekNum,\n      theme_description: '',\n      show_concept: day.weekly_show_name || '',\n      hook: day.hook || '',\n      content_types: []\n    };\n  }\n  weeklyThemes[weekNum].content_types.push({\n    day_number: day.day_number,\n    date: day.date,\n    day_of_week: day.day_of_week,\n    theme: day.theme,\n    content_type: day.content_type,\n    platform: day.platform,\n    secondary_platform: day.secondary_platform,\n    hook: day.hook,\n    cta: day.cta,\n    hashtags: Array.isArray(day.hashtags) ? day.hashtags.join(', ') : (day.hashtags || ''),\n    notes: day.notes\n  });\n}\n\nconst month = authData.body?.month || new Date().toISOString().slice(0, 7);\nconst userId = authData.user_id;\n\nreturn {\n  json: {\n    user_id: userId,\n    month: month,\n    weekly_themes: Object.values(weeklyThemes),\n    raw_themes: themes\n  }\n};"
+      },
+      "id": "02-theme-0006",
+      "name": "Parse & Group Themes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/campaigns?on_conflict=user_id,month",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"month\": {{ JSON.stringify($json.month) }},\n  \"status\": \"generating\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "02-theme-0007",
+      "name": "Supabase -- UPSERT Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?campaign_id=eq.{{ $json[0].id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "02-theme-0008",
+      "name": "Supabase -- Delete Old Themes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const deleteResult = $input.item.json;\nconst parseData = $('Parse & Group Themes').item.json;\nconst campaignData = $('Supabase -- UPSERT Campaign').item.json;\n\nconst campaignId = Array.isArray(campaignData) ? campaignData[0].id : campaignData.id;\nconst userId = parseData.user_id;\nconst weeklyThemes = parseData.weekly_themes;\n\nconst themeRows = weeklyThemes.map(wt => ({\n  user_id: userId,\n  campaign_id: campaignId,\n  week_number: wt.week_number,\n  theme_name: wt.theme_name,\n  theme_description: wt.theme_description || '',\n  show_concept: wt.show_concept || '',\n  hook: wt.hook || '',\n  content_types: wt.content_types\n}));\n\nreturn { json: { theme_rows: themeRows, campaign_id: campaignId, user_id: userId } };"
+      },
+      "id": "02-theme-0009",
+      "name": "Prepare Theme Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.theme_rows) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "02-theme-0010",
+      "name": "Supabase -- INSERT Themes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/campaigns?id=eq.{{ $('Prepare Theme Rows').item.json.campaign_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"status\": \"active\" }",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "02-theme-0011",
+      "name": "Supabase -- Activate Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, phase: 2, themes_count: $('Parse & Group Themes').item.json.weekly_themes.length, campaign_id: $('Prepare Theme Rows').item.json.campaign_id, data: $json }) }}",
+        "options": {}
+      },
+      "id": "02-theme-0012",
+      "name": "02-Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "path": "eluxr-themes-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "03-list-0001",
+      "name": "03-Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1600
+      ],
+      "webhookId": "eluxr-themes-list"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "03-list-0002",
+      "name": "03-Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "03-list-0003",
+      "name": "03-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "03-list-0004",
+      "name": "03-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        1800
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?user_id=eq.{{ $json.user_id }}&select=*,campaigns(month,status)&order=created_at.desc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "03-list-0005",
+      "name": "Supabase -- SELECT Themes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        1400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst items = Array.isArray(input) ? input : [input];\n\nif (!items || items.length === 0 || (items.length === 1 && !items[0].id)) {\n  return {\n    json: {\n      success: true,\n      count: 0,\n      themes: []\n    }\n  };\n}\n\nconst themes = items.map(item => ({\n  id: item.id || '',\n  week_number: item.week_number || '',\n  theme_name: item.theme_name || '',\n  theme_description: item.theme_description || '',\n  show_concept: item.show_concept || '',\n  hook: item.hook || '',\n  content_types: item.content_types || [],\n  campaign: item.campaigns || null,\n  created_at: item.created_at || ''\n}));\n\nreturn {\n  json: {\n    success: true,\n    count: themes.length,\n    themes: themes\n  }\n};"
+      },
+      "id": "03-list-0006",
+      "name": "Format Themes Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        1400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "03-list-0007",
+      "name": "03-Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        1400
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase4-studio",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "04-studio-0001",
+      "name": "04-Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        2600
+      ],
+      "webhookId": "eluxr-phase4-studio"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "04-studio-0002",
+      "name": "Daily Content Trigger (6 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "04-studio-0003",
+      "name": "04-Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        2600
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "04-studio-0004",
+      "name": "04-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        2600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "04-studio-0005",
+      "name": "04-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        2800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date().toISOString().split('T')[0];\nconst input = $input.item.json;\n\nreturn {\n  json: {\n    date: today,\n    trigger_source: input.body ? 'webhook' : 'cron',\n    user_id: input.user_id || '',\n    webhook_data: input.body || null\n  }\n};"
+      },
+      "id": "04-studio-0006",
+      "name": "Merge Trigger Sources",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?user_id=eq.{{ $json.user_id }}&select=*,campaigns(month,status)&order=week_number.asc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "04-studio-0007",
+      "name": "Supabase -- Read Themes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date().toISOString().split('T')[0];\nconst triggerData = $('Merge Trigger Sources').item.json;\nconst themesRaw = $input.item.json;\nconst themes = Array.isArray(themesRaw) ? themesRaw : [themesRaw];\n\n// Flatten weekly themes into daily content items\nconst dailyItems = [];\nfor (const theme of themes) {\n  if (!theme.content_types || !Array.isArray(theme.content_types)) continue;\n  for (const ct of theme.content_types) {\n    dailyItems.push({\n      ...ct,\n      theme_id: theme.id,\n      campaign_id: theme.campaign_id,\n      user_id: triggerData.user_id,\n      weekly_show_name: theme.theme_name || theme.show_concept || '',\n      week_number: theme.week_number\n    });\n  }\n}\n\n// Filter to today's content if trigger is cron, otherwise use webhook body\nlet filteredItems = dailyItems;\nif (triggerData.trigger_source === 'cron') {\n  filteredItems = dailyItems.filter(item => item.date === today);\n}\n\nif (filteredItems.length === 0) {\n  filteredItems = dailyItems.length > 0\n    ? [dailyItems[0]]\n    : [{ theme: 'General engagement post', content_type: 'Value', platform: 'LinkedIn', user_id: triggerData.user_id }];\n}\n\nreturn filteredItems.map(item => ({ json: item }));"
+      },
+      "id": "04-studio-0008",
+      "name": "Filter Today's Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// PIPE-07 FIX: Normalize content_type BEFORE the Switch node\n// Claude generates: Hook, Value, Proof, Carousel, Video, Engagement, Cliffhanger\n// Normalize to: text, image, video, carousel\nconst item = $input.item.json;\nconst ct = (item.content_type || '').toLowerCase().trim();\n\nitem.original_content_type = item.content_type;\n\nif (ct.includes('video') || ct.includes('reel')) {\n  item.content_type = 'video';\n} else if (ct.includes('carousel') || ct.includes('thread')) {\n  item.content_type = 'carousel';\n} else if (ct.includes('image')) {\n  item.content_type = 'image';\n} else {\n  item.content_type = 'text';\n}\n\nreturn { json: item };"
+      },
+      "id": "04-studio-0009",
+      "name": "Normalize Content Type",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "video",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "carousel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": false,
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "04-studio-0010",
+      "name": "Route: Text / Image / Video / Carousel",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1540,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are an elite social media copywriter. Write a {{ $json.platform || 'LinkedIn' }} post based on these details:\\n\\nWeekly Show: {{ $json.weekly_show_name || 'Value Series' }}\\nTheme: {{ $json.theme || 'Engagement post' }}\\nContent Type: {{ $json.original_content_type || $json.content_type || 'Value Post' }}\\nSuggested Hook: {{ $json.hook || 'Start with something attention-grabbing' }}\\nCTA: {{ $json.cta || 'Engage with your audience' }}\\nHashtags: {{ $json.hashtags || '' }}\\n\\nPLATFORM-SPECIFIC RULES:\\n- LinkedIn: 1300-1800 chars, personal story hook, line breaks for readability, 3-5 hashtags at end\\n- Instagram: 150-300 chars caption, 20-30 hashtags in first comment, include emoji\\n- X/Twitter: Thread format (5-7 tweets), numbered, each under 280 chars\\n- Facebook: Conversational tone, 100-300 chars, question-based engagement\\n- TikTok: Script format with [VISUAL] and [TEXT ON SCREEN] cues\\n\\nReturn JSON with keys: platform, post_text, hashtags, first_comment (for Instagram), thread (for X, array of tweet strings), image_prompt (describe ideal accompanying image), posting_notes\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "04-studio-0011",
+      "name": "Claude -- Write Post Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        2200
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"nano-banana-pro\",\n  \"input\": {\n    \"prompt\": \"Professional social media graphic for {{ $json.platform || 'LinkedIn' }}. Theme: {{ $json.theme || 'business content' }}. Style: clean, modern, photorealistic. High quality, no text overlays or watermarks.\",\n    \"aspect_ratio\": \"1:1\",\n    \"width\": 1024,\n    \"height\": 1024,\n    \"output_format\": \"png\"\n  }\n}",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "04-studio-0012",
+      "name": "KIE -- Generate Content Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        2400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are a video content strategist and scriptwriter. Create a camera-ready video script.\\n\\nTheme: {{ $json.theme || 'Engagement content' }}\\nPlatform: {{ $json.platform || 'Instagram Reels' }}\\nHook Idea: {{ $json.hook || 'Attention-grabbing opener' }}\\n\\nCreate a SHORT-FORM VIDEO SCRIPT (30-60 seconds) with this EXACT structure:\\n\\n1. HOOK (0:00-0:03): Opening line that stops the scroll. Bold, direct, creates curiosity.\\n2. SETUP (0:03-0:10): Context -- why this matters. Use a stat, personal story, or relatable pain point.\\n3. VALUE (0:10-0:25): 2-3 actionable points. Each with [ON-SCREEN TEXT] cues.\\n4. CTA (0:25-0:30): Clear call to action. Follow, comment, link in bio.\\n\\nAlso include:\\n- [CAMERA DIRECTION] notes (close-up, wide, screen share, etc.)\\n- [B-ROLL] suggestions for each section\\n- [MUSIC] mood suggestion\\n- Estimated engagement hooks (pattern interrupts)\\n\\nReturn as JSON with keys: title, duration_seconds, hook, setup, value_points (array), cta, camera_directions (array), b_roll_suggestions (array), music_mood, on_screen_text (array), thumbnail_idea\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "04-studio-0013",
+      "name": "Claude -- Video Script Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        2600
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all content from text/image/video/carousel branches\nconst item = $input.item.json;\nlet content = '';\nlet contentType = 'text';\n\ntry {\n  if (item.content && item.content[0]) {\n    content = item.content[0].text;\n  } else if (item.data && item.data.taskId) {\n    content = JSON.stringify(item);\n    contentType = 'image';\n  } else {\n    content = JSON.stringify(item);\n  }\n} catch(e) {\n  content = JSON.stringify(item);\n}\n\n// Get the original data from before the Switch\nconst normalizeData = $('Normalize Content Type').item.json;\n\nreturn {\n  json: {\n    user_id: normalizeData.user_id || '',\n    campaign_id: normalizeData.campaign_id || null,\n    theme_id: normalizeData.theme_id || null,\n    title: normalizeData.theme || normalizeData.weekly_show_name || 'Generated Content',\n    content: content,\n    content_type: normalizeData.content_type || 'text',\n    platform: (normalizeData.platform || 'linkedin').toLowerCase(),\n    scheduled_date: normalizeData.date || null,\n    status: 'pending_review',\n    image_url: null,\n    video_url: null,\n    image_prompt: normalizeData.theme || ''\n  }\n};"
+      },
+      "id": "04-studio-0014",
+      "name": "Merge All Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"campaign_id\": {{ $json.campaign_id ? '\"' + $json.campaign_id + '\"' : 'null' }},\n  \"theme_id\": {{ $json.theme_id ? '\"' + $json.theme_id + '\"' : 'null' }},\n  \"title\": {{ JSON.stringify($json.title) }},\n  \"content\": {{ JSON.stringify($json.content) }},\n  \"content_type\": {{ JSON.stringify($json.content_type) }},\n  \"platform\": {{ JSON.stringify($json.platform) }},\n  \"scheduled_date\": {{ $json.scheduled_date ? '\"' + $json.scheduled_date + '\"' : 'null' }},\n  \"status\": \"pending_review\",\n  \"image_url\": {{ $json.image_url ? JSON.stringify($json.image_url) : 'null' }},\n  \"video_url\": {{ $json.video_url ? JSON.stringify($json.video_url) : 'null' }},\n  \"image_prompt\": {{ JSON.stringify($json.image_prompt || '') }}\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "04-studio-0015",
+      "name": "04-Supabase -- INSERT Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, phase: 4, message: 'Content generated and saved', data: $json }) }}",
+        "options": {}
+      },
+      "id": "04-studio-0016",
+      "name": "04-Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fallback handler for unmatched content types\nconst item = $input.item.json;\nreturn {\n  json: {\n    user_id: item.user_id || '',\n    campaign_id: item.campaign_id || null,\n    theme_id: item.theme_id || null,\n    title: item.theme || 'Fallback Content',\n    content: JSON.stringify({ note: 'Content type not matched by Switch', original_type: item.original_content_type, normalized_type: item.content_type }),\n    content_type: item.content_type || 'text',\n    platform: (item.platform || 'linkedin').toLowerCase(),\n    scheduled_date: item.date || null,\n    status: 'pending_review',\n    image_url: null,\n    video_url: null,\n    image_prompt: ''\n  }\n};"
+      },
+      "id": "04-studio-0017",
+      "name": "Fallback Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        2800
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase5-submit",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "05-submit-0001",
+      "name": "05-Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        3200
+      ],
+      "webhookId": "eluxr-phase5-submit"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "05-submit-0002",
+      "name": "05-Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        3200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "05-submit-0003",
+      "name": "05-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        3200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "05-submit-0004",
+      "name": "05-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        3400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\n// Normalize content_type to DB CHECK constraint values\nconst rawType = (body.content_type || 'text').toLowerCase().trim();\nlet contentType = 'text';\nif (rawType.includes('video') || rawType.includes('reel')) contentType = 'video';\nelse if (rawType.includes('carousel') || rawType.includes('thread')) contentType = 'carousel';\nelse if (rawType.includes('image')) contentType = 'image';\nelse contentType = 'text';\n\n// Normalize platform to DB CHECK constraint values\nconst rawPlatform = (body.platform || 'linkedin').toLowerCase().trim();\nlet platform = 'linkedin';\nif (rawPlatform.includes('instagram')) platform = 'instagram';\nelse if (rawPlatform.includes('x') || rawPlatform.includes('twitter')) platform = 'x';\nelse if (rawPlatform.includes('youtube')) platform = 'youtube';\nelse platform = 'linkedin';\n\nreturn {\n  json: {\n    user_id: authData.user_id,\n    title: body.title || body.theme || 'Untitled Post',\n    content: body.content || body.post_text || '',\n    content_type: contentType,\n    platform: platform,\n    scheduled_date: body.scheduled_date || body.scheduled_for || null,\n    status: 'pending_review',\n    image_url: body.image_url || null,\n    video_url: body.video_url || null,\n    image_prompt: body.image_prompt || '',\n    campaign_id: body.campaign_id || null,\n    theme_id: body.theme_id || null\n  }\n};"
+      },
+      "id": "05-submit-0005",
+      "name": "Format Queue Item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        3000
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"campaign_id\": {{ $json.campaign_id ? '\"' + $json.campaign_id + '\"' : 'null' }},\n  \"theme_id\": {{ $json.theme_id ? '\"' + $json.theme_id + '\"' : 'null' }},\n  \"title\": {{ JSON.stringify($json.title) }},\n  \"content\": {{ JSON.stringify($json.content) }},\n  \"content_type\": {{ JSON.stringify($json.content_type) }},\n  \"platform\": {{ JSON.stringify($json.platform) }},\n  \"scheduled_date\": {{ $json.scheduled_date ? '\"' + $json.scheduled_date + '\"' : 'null' }},\n  \"status\": \"pending_review\",\n  \"image_url\": {{ $json.image_url ? JSON.stringify($json.image_url) : 'null' }},\n  \"video_url\": {{ $json.video_url ? JSON.stringify($json.video_url) : 'null' }},\n  \"image_prompt\": {{ JSON.stringify($json.image_prompt || '') }}\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "05-submit-0006",
+      "name": "05-Supabase -- INSERT Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        3000
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, action: 'submitted', item: Array.isArray($json) ? $json[0] : $json }) }}",
+        "options": {}
+      },
+      "id": "05-submit-0007",
+      "name": "05-Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        3000
+      ]
+    },
+    {
+      "parameters": {
+        "path": "eluxr-approval-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "al-webhook-001",
+      "name": "List Queue -- Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        4300
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-approval-list"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "al-auth-002",
+      "name": "06-Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        4300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-al",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "al-if-003",
+      "name": "06-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        4300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized', statusCode: 401 }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "al-401-004",
+      "name": "06-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        660,
+        4500
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?user_id=eq.{{ $json.user_id }}&order=created_at.desc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "al-supabase-005",
+      "name": "Supabase -- SELECT Content Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        660,
+        4100
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.item.json;\n\n// Supabase returns an array of content_items for this user\n// Handle both array response (direct) and wrapped response\nconst allItems = Array.isArray(items) ? items : (items.body || items.data || [items]);\n\n// Handle empty response\nif (!allItems || allItems.length === 0 || (allItems.length === 1 && !allItems[0].id)) {\n  return { json: {\n    success: true,\n    stats: { pending_review: 0, pending: 0, approved: 0, rejected: 0, published: 0, draft: 0, total: 0 },\n    pending_review: [],\n    pending: [],\n    approved: [],\n    rejected: [],\n    published: [],\n    draft: [],\n    all: []\n  } };\n}\n\nconst pending_review = allItems.filter(i => i.status === 'pending_review');\nconst approved = allItems.filter(i => i.status === 'approved');\nconst rejected = allItems.filter(i => i.status === 'rejected');\nconst published = allItems.filter(i => i.status === 'published');\nconst draft = allItems.filter(i => i.status === 'draft');\n\nreturn { json: {\n  success: true,\n  stats: {\n    pending_review: pending_review.length,\n    pending: pending_review.length,\n    approved: approved.length,\n    rejected: rejected.length,\n    published: published.length,\n    draft: draft.length,\n    total: allItems.length\n  },\n  pending_review: pending_review,\n  pending: pending_review,\n  approved: approved,\n  rejected: rejected,\n  published: published,\n  draft: draft,\n  all: allItems\n} };"
+      },
+      "id": "al-organize-006",
+      "name": "Organize by Status",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        880,
+        4100
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "al-response-007",
+      "name": "List -- Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1100,
+        4100
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-approval-action",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "aa-webhook-001",
+      "name": "Approval Action Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        5100
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-approval-action"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "aa-auth-002",
+      "name": "07-Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        5100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-aa",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "aa-if-003",
+      "name": "07-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        5100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized', statusCode: 401 }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "aa-401-004",
+      "name": "07-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        660,
+        5300
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "approve",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "options": {
+                  "caseSensitive": false
+                }
+              },
+              "renameOutput": "Approve"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "reject",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "options": {
+                  "caseSensitive": false
+                }
+              },
+              "renameOutput": "Reject"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "edit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "options": {
+                  "caseSensitive": false
+                }
+              },
+              "renameOutput": "Edit"
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": false,
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "aa-switch-005",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        660,
+        4900
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?id=eq.{{ $json.body.content_id }}&user_id=eq.{{ $json.user_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"approved\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "aa-patch-approve-006",
+      "name": "Supabase -- PATCH Approve",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        880,
+        4700
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?id=eq.{{ $json.body.content_id }}&user_id=eq.{{ $json.user_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"rejected\",\n  \"feedback\": {{ JSON.stringify($json.body.feedback || '') }},\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "aa-patch-reject-007",
+      "name": "Supabase -- PATCH Reject",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        880,
+        4900
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?id=eq.{{ $json.body.content_id }}&user_id=eq.{{ $json.user_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": {{ JSON.stringify($json.body.content || '') }},\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "aa-patch-edit-008",
+      "name": "Supabase -- PATCH Edit",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        880,
+        5100
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, action: $('Approval Action Webhook').item.json.body.action, content_id: $('Approval Action Webhook').item.json.body.content_id, data: $json }) }}",
+        "options": {}
+      },
+      "id": "aa-response-009",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1100,
+        4900
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unknown action: ' + ($json.body.action || 'none'), valid_actions: ['approve', 'reject', 'edit'] }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "aa-fallback-010",
+      "name": "400 Bad Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        880,
+        5300
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-clear-pending",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "cp-webhook-001",
+      "name": "Clear Pending Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        5900
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-clear-pending"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "cp-auth-002",
+      "name": "08-Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        5900
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-cp",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cp-if-003",
+      "name": "08-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        5900
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized', statusCode: 401 }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "cp-401-004",
+      "name": "08-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        660,
+        6100
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?user_id=eq.{{ $json.user_id }}&status=eq.pending_review",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "cp-delete-005",
+      "name": "Supabase -- DELETE Pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        660,
+        5700
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const deleted = $input.item.json;\n\n// Supabase DELETE with Prefer: return=representation returns array of deleted rows\nconst deletedItems = Array.isArray(deleted) ? deleted : (deleted.body || []);\nconst count = Array.isArray(deletedItems) ? deletedItems.length : 0;\n\nreturn { json: {\n  success: true,\n  message: 'Pending content cleared',\n  deleted_count: count\n} };"
+      },
+      "id": "cp-format-006",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        880,
+        5700
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "cp-response-007",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1100,
+        5700
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase3-calendar",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "cs-webhook-001",
+      "name": "Phase 3 -- Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        6700
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-phase3-calendar"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "cs-auth-002",
+      "name": "09-Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        6700
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-cs",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cs-if-003",
+      "name": "09-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        6700
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized', statusCode: 401 }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "cs-401-004",
+      "name": "09-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        660,
+        6900
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?user_id=eq.{{ $json.user_id }}&status=eq.approved&order=scheduled_date.asc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "cs-supabase-005",
+      "name": "Supabase -- SELECT Approved Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        660,
+        6500
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookData = $('Phase 3 -- Webhook Trigger').first().json;\nconst input = $input.item.json;\n\n// Supabase returns array of approved content_items\nconst items = Array.isArray(input) ? input : (input.body || input.data || [input]);\n\n// Get approved content_ids from the frontend request body (if filtering specific items)\nconst approvedIds = webhookData.body?.content_ids || [];\n\nconst platformTimes = {\n  'linkedin': { hour: 9, minute: 0 },\n  'instagram': { hour: 12, minute: 30 },\n  'x': { hour: 15, minute: 0 },\n  'youtube': { hour: 14, minute: 0 },\n  'facebook': { hour: 10, minute: 0 },\n  'tiktok': { hour: 19, minute: 0 }\n};\n\nconst platformColors = {\n  'linkedin': '9',\n  'instagram': '4',\n  'x': '7',\n  'youtube': '11',\n  'facebook': '9',\n  'tiktok': '2'\n};\n\n// Filter to specific items if content_ids provided\nlet filteredItems = items;\nif (approvedIds.length > 0) {\n  filteredItems = items.filter(item => approvedIds.includes(item.id));\n}\n\nif (!filteredItems || filteredItems.length === 0) {\n  return [{ json: { _noEvents: true, success: true, phase: 3, message: 'No approved items to sync', events_created: 0 } }];\n}\n\nconst output = filteredItems.map(item => {\n  const platform = (item.platform || 'linkedin').toLowerCase();\n  const times = platformTimes[platform] || { hour: 9, minute: 0 };\n  const dateStr = item.scheduled_date || new Date().toISOString().split('T')[0];\n\n  const startTime = dateStr + 'T' + String(times.hour).padStart(2, '0') + ':' + String(times.minute).padStart(2, '0') + ':00';\n  const endHour = times.hour + 1;\n  const endTime = dateStr + 'T' + String(endHour).padStart(2, '0') + ':' + String(times.minute).padStart(2, '0') + ':00';\n\n  const title = item.title || item.content_type || 'Post';\n\n  return {\n    json: {\n      summary: '[' + platform.charAt(0).toUpperCase() + platform.slice(1) + '] ' + title,\n      description: 'Content Type: ' + (item.content_type || '') + '\\nPlatform: ' + platform + '\\n\\nContent: ' + (item.content || '').substring(0, 500) + '\\n\\n---\\nGenerated by ELUXR Social Media Agent',\n      startTime: startTime,\n      endTime: endTime,\n      colorId: platformColors[platform] || '9',\n      content_id: item.id\n    }\n  };\n});\n\nreturn output;"
+      },
+      "id": "cs-format-006",
+      "name": "Format Calendar Events",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        880,
+        6500
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "cs-loop-007",
+      "name": "Loop Over Days",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        1100,
+        6500
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "start": "={{ $json.startTime }}",
+        "end": "={{ $json.endTime }}",
+        "additionalFields": {
+          "description": "={{ $json.description }}",
+          "summary": "={{ $json.summary }}"
+        }
+      },
+      "id": "cs-gcal-008",
+      "name": "Create Google Calendar Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "position": [
+        1320,
+        6500
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "FJBcOjKITBIaEqRV",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, phase: 3, message: 'Calendar events created', events_created: $items().length }) }}",
+        "options": {}
+      },
+      "id": "cs-response-009",
+      "name": "Phase 3 -- Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1320,
+        6700
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-chat",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "chat-webhook-001",
+      "name": "Chat -- Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        7500
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-chat"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "chat-auth-002",
+      "name": "10-Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        7500
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-chat",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "chat-if-003",
+      "name": "10-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        7500
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized', statusCode: 401 }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "chat-401-004",
+      "name": "10-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        660,
+        7700
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body;\nconst phase = body.phase || 1;\nconst message = body.message || '';\nconst context = body.context || {};\n\nconst systemPrompts = {\n  1: 'You are the ELUXR Business Analyzer AI assistant. You help users analyze their business, build ICPs (Ideal Customer Profiles), and perform market research. You have access to their business data and provide actionable insights for social media content strategy. Be specific, data-driven, and strategic.',\n  2: 'You are the ELUXR Theme Engine AI assistant. You help users create 30-day content themes using the Netflix model -- 4 weekly \"shows\" with hooks, variety, and audience retention. You understand content cyclicity, platform-specific strategies, and engagement psychology. Help them refine weekly themes and daily content plans.',\n  3: 'You are the ELUXR Content Calendar AI assistant. You help users manage their 30-day content calendar, reschedule posts, swap themes between days, add special events, and optimize posting times. You know optimal posting times for each platform and can suggest schedule adjustments based on engagement patterns.',\n  4: 'You are the ELUXR Content Studio AI assistant. You help users write social media posts, generate image prompts for Nano Banana Pro, create video scripts, and repurpose content across platforms. You write in the user\\'s brand voice and optimize for each platform\\'s algorithm and best practices.',\n  5: 'You are the ELUXR Approval Queue AI assistant. You help users review pending content, suggest edits, approve or reject posts in bulk, and manage the publishing pipeline. You can summarize pending items, flag potential issues, and recommend improvements before publishing.',\n  6: 'You are the ELUXR Image Generation AI assistant specializing in Nano Banana Pro prompts. You help users craft optimal image prompts, suggest styles, aspect ratios, and refinements. You understand composition rules, social media visual best practices, and platform-specific image requirements.',\n  7: 'You are the ELUXR Video Script AI assistant. You help users generate video ideas, create camera-ready scripts with hooks/setup/value/CTA structure, suggest B-roll, on-screen text cues, and thumbnail ideas. You understand short-form video psychology and platform algorithms.'\n};\n\nreturn { json: {\n  phase: phase,\n  message: message,\n  system_prompt: systemPrompts[phase] || systemPrompts[1],\n  context: context\n} };"
+      },
+      "id": "chat-prepare-005",
+      "name": "Prepare Chat Context",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        660,
+        7300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://api.anthropic.com/v1/messages',\n  headers: {\n    'Content-Type': 'application/json',\n    'anthropic-version': '2023-06-01',\n    'x-api-key': $env.get('ANTHROPIC_API_KEY') || ''\n  },\n  body: {\n    model: 'claude-sonnet-4-20250514',\n    max_tokens: 2048,\n    system: $input.item.json.system_prompt,\n    messages: [{role: 'user', content: $input.item.json.message}]\n  }\n});\n\nreturn {json: response};"
+      },
+      "id": "chat-claude-006",
+      "name": "Claude Chat Call",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        880,
+        7300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "chat-response-007",
+      "name": "Chat -- Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1100,
+        7300
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-imagegen",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "img-webhook-001",
+      "name": "Image Gen \u2014 Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        8300
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-imagegen"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "img-auth-exec-001",
+      "name": "Auth Validate (eluxr-imagegen)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        8300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-img",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "img-auth-if-001",
+      "name": "11-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        8300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error || 'Authentication required' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "img-401-001",
+      "name": "11-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        8500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body;\nconst prompt = body.prompt || 'Professional social media graphic';\nconst aspectRatio = body.aspect_ratio || '1:1';\nconst style = body.style || 'photorealistic';\n\nconst dimensions = {\n  '1:1': { width: 1024, height: 1024 },\n  '16:9': { width: 1920, height: 1080 },\n  '9:16': { width: 1080, height: 1920 },\n  '4:3': { width: 1024, height: 768 }\n};\n\nconst dim = dimensions[aspectRatio] || dimensions['1:1'];\n\nreturn {\n  json: {\n    prompt: `${style} style: ${prompt}`,\n    width: dim.width,\n    height: dim.height,\n    aspect_ratio: aspectRatio,\n    style: style\n  }\n};"
+      },
+      "id": "img-prepare-001",
+      "name": "Prepare Nano Banana Prompt",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        660,
+        8300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"model\": \"nano-banana-pro\",\n    \"input\": {\n      \"prompt\": {{ JSON.stringify($json.prompt || \"Professional social media image\") }},\n      \"width\": 1024,\n      \"height\": 1024,\n      \"output_format\": \"png\"\n    }\n  }",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "img-kie-create-001",
+      "name": "KIE \u2014 Create Image Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        880,
+        8300
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\nreturn {\n  json: {\n    ...item,\n    pollCount: 0,\n    taskId: item.data?.task_id || item.data?.taskId || item.task_id || item.taskId\n  }\n};"
+      },
+      "id": "img-init-poll-001",
+      "name": "Init Poll Counter",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1100,
+        8300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "id": "img-initial-wait-001",
+      "name": "Initial Wait",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        1320,
+        8300
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "img-initial-wait-webhook"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/jobs/recordInfo?taskId={{ $json.data?.taskId || $json.taskId }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "img-kie-get-001",
+      "name": "KIE \u2014 Get Image Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1540,
+        8300
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\nconst pollCount = (result.pollCount || 0) + 1;\n\nconst state = result.data?.state || result.state || 'processing';\nconst isReady = state === 'success' || state === 'completed';\nconst isTimeout = pollCount >= 12;\nconst isError = state === 'failed' || state === 'error';\n\nreturn {\n  json: {\n    ...result,\n    pollCount,\n    isComplete: isReady || isTimeout || isError,\n    isSuccess: isReady,\n    error: isTimeout ? 'Image generation timed out after 65 seconds' :\n           isError ? `Image generation failed: ${state}` : null\n  }\n};"
+      },
+      "id": "img-check-result-001",
+      "name": "Check Image Result",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1760,
+        8300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "img-complete-check",
+              "leftValue": "={{ $json.isComplete }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "img-if-complete-001",
+      "name": "Is Complete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1980,
+        8300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "img-success-check",
+              "leftValue": "={{ $json.isSuccess }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "img-if-success-001",
+      "name": "Is Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2200,
+        8200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\n\nlet imageUrl = '';\n\nif (result.data && result.data.resultJson) {\n  try {\n    const parsed = JSON.parse(result.data.resultJson);\n    if (parsed.resultUrls && parsed.resultUrls.length > 0) {\n      imageUrl = parsed.resultUrls[0];\n    }\n  } catch(e) {\n    // fallback\n  }\n}\n\nreturn {\n  json: {\n    success: !!imageUrl,\n    image_url: imageUrl,\n    taskId: result.data?.taskId || result.taskId || ''\n  }\n};"
+      },
+      "id": "img-parse-result-001",
+      "name": "Parse Image Result",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2420,
+        8100
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "img-response-001",
+      "name": "Image Gen \u2014 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        2640,
+        8100
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error || 'Image generation failed', taskId: $json.data?.taskId || $json.taskId || '' }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "img-error-response-001",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        2420,
+        8300
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "amount": 5
+      },
+      "id": "img-retry-wait-001",
+      "name": "Retry Wait",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2200,
+        8500
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "img-retry-wait-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-videoscript",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "vs-webhook-001",
+      "name": "Video Script \u2014 Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        9100
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-videoscript"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "vs-auth-exec-001",
+      "name": "Auth Validate (eluxr-videoscript)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        9100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-vs",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "vs-auth-if-001",
+      "name": "12-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        9100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error || 'Authentication required' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "vs-401-001",
+      "name": "12-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        9300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "claude-sonnet-4-20250514"
+            },
+            {
+              "name": "max_tokens",
+              "value": "4096"
+            },
+            {
+              "name": "messages[0].role",
+              "value": "user"
+            },
+            {
+              "name": "messages[0].content",
+              "value": "=You are an expert video scriptwriter. Create a 30 second script for: {{ $json.body.topic }}. Platform: {{ $json.body.platform }}. Style: {{ $json.body.style }}. Return JSON with title, sections, caption, thumbnail_idea."
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "vs-claude-001",
+      "name": "Claude \u2014 Script Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        660,
+        9100
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nlet script = '';\ntry {\n  script = input.content[0].text;\n} catch(e) {\n  script = JSON.stringify(input);\n}\n\nlet parsed = {};\ntry {\n  parsed = JSON.parse(script);\n} catch(e) {\n  const match = script.match(/\\{[\\s\\S]*\\}/);\n  if (match) parsed = JSON.parse(match[0]);\n  else parsed = { raw: script };\n}\n\nreturn { json: { success: true, tool: 'video_script', script: parsed } };"
+      },
+      "id": "vs-parse-001",
+      "name": "Parse Script Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        880,
+        9100
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "vs-response-001",
+      "name": "Video Script \u2014 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1100,
+        9100
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-videogen",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "vg-webhook-001",
+      "name": "Video Gen \u2014 Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        9900
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-videogen"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "vg-auth-exec-001",
+      "name": "Auth Validate (eluxr-videogen)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        9900
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-vg",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "vg-auth-if-001",
+      "name": "13-Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        9900
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error || 'Authentication required' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "vg-401-001",
+      "name": "13-401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        10100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body;\nconst imageUrl = body.image_url || '';\nconst prompt = body.prompt || 'Professional UGC-style promotional video';\nconst aspectRatio = body.aspect_ratio || '9:16';\nconst platform = body.platform || 'Instagram Reels';\n\nconst dimensions = {\n  '9:16': { width: 720, height: 1280 },\n  '16:9': { width: 1280, height: 720 },\n  '1:1': { width: 720, height: 720 }\n};\n\nconst dim = dimensions[aspectRatio] || dimensions['9:16'];\n\nreturn {\n  json: {\n    image_url: imageUrl,\n    prompt: prompt,\n    aspect_ratio: aspectRatio,\n    width: dim.width,\n    height: dim.height,\n    platform: platform\n  }\n};"
+      },
+      "id": "vg-prepare-001",
+      "name": "Prepare Veo Prompt",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        660,
+        9900
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/veo/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.prompt }}"
+            },
+            {
+              "name": "model",
+              "value": "veo3_fast"
+            },
+            {
+              "name": "generationType",
+              "value": "TEXT_2_VIDEO"
+            },
+            {
+              "name": "aspect_ratio",
+              "value": "={{ $json.aspect_ratio }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "vg-kie-create-001",
+      "name": "KIE \u2014 Create Video Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        880,
+        9900
+      ],
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 120
+      },
+      "id": "vg-wait-001",
+      "name": "Wait for Video",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        1100,
+        9900
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "vg-wait-video-webhook"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/veo/record-info?taskId={{ $json.data.taskId }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "vg-kie-get-001",
+      "name": "KIE \u2014 Get Video Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1320,
+        9900
+      ],
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "video-success-check",
+              "leftValue": "={{ $json.data.successFlag }}",
+              "rightValue": "1",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "vg-if-ready-001",
+      "name": "Video Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1540,
+        9900
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\n\nlet videoUrl = '';\n\nif (result.data && result.data.resultJson) {\n  try {\n    const parsed = JSON.parse(result.data.resultJson);\n    if (parsed.resultUrls && parsed.resultUrls.length > 0) {\n      videoUrl = parsed.resultUrls[0];\n    }\n  } catch(e) {}\n}\n\nreturn {\n  json: {\n    success: !!videoUrl,\n    video_url: videoUrl,\n    taskId: result.data?.taskId || result.taskId || ''\n  }\n};"
+      },
+      "id": "vg-parse-result-001",
+      "name": "Parse Video Result",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1760,
+        9800
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "vg-response-001",
+      "name": "Video Gen \u2014 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1980,
+        9800
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Video generation still processing', retry: true, taskId: $json.data?.taskId }) }}",
+        "options": {}
+      },
+      "id": "vg-processing-001",
+      "name": "Video Processing \u2014 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1760,
+        10000
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "id": "c9f6a14a-ca1d-42e0-9021-35ec8c8e1a89",
+      "name": "Master Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        -800
+      ],
+      "parameters": {
+        "color": 4,
+        "content": "# ELUXR Social Media Action v3\n## Decomposed v2 Monolith \u2014 13 Sub-Workflow Sections\n\nThis is the v2 monolith recombined into a single v3 canvas with all 13 sub-workflows laid out sequentially at 800px y-increments. Each section follows the same pattern: **Webhook \u2192 Auth Validator \u2192 IF Auth OK \u2192 Business Logic \u2192 Respond**.\n\n---\n\n### All 13 Sub-Workflows\n\n| # | Name | Webhook Path |\n|---|------|-------------|\n| 01 | ICP Analyzer | /eluxr-phase1-analyzer |\n| 02 | Theme Generator | /eluxr-phase2-themes |\n| 03 | Themes List | /eluxr-themes-list |\n| 04 | Content Studio | /eluxr-phase4-studio |\n| 05 | Content Submit | /eluxr-phase5-submit |\n| 06 | Approval List | /eluxr-approval-list |\n| 07 | Approval Action | /eluxr-approval-action |\n| 08 | Clear Pending | /eluxr-clear-pending |\n| 09 | Calendar Sync | /eluxr-phase3-calendar |\n| 10 | Chat | /eluxr-chat |\n| 11 | Image Generator | /eluxr-imagegen |\n| 12 | Video Script Builder | /eluxr-videoscript |\n| 13 | Video Creator | /eluxr-videogen |\n\n---\n\n### Setup Instructions\n\n**Auth Validator Sub-Workflow**\n- Must be a separate ACTIVE workflow\n- Workflow ID: `S4QtfIKpvhW4mQYG`\n- Validates Bearer tokens on every request\n\n**Supabase Credentials**\n- Service role key: set `SUPABASE_SERVICE_ROLE_KEY` in n8n Cloud environment (Settings \u2192 Variables)\n- All Supabase HTTP nodes use this env var for the Authorization header\n- The `apikey` header uses the publishable anon key (non-secret, safe to embed)\n\n**KIE API Credential**\n- Used by: 11-Image-Generator (Nano Banana Pro) and 13-Video-Creator (Veo)\n- API base: `api.kie.ai`\n- Set KIE API key as n8n credential\n\n**Bug Fixes Applied**\n- PIPE-07: Content Studio Switch \u2014 first-match mode + content type normalization\n- TOOL-05: Image polling \u2014 proper Wait+IF loop (replaces setTimeout hack)\n- TOOL-06: Video Creator \u2014 inverted TRUE/FALSE wiring corrected",
+        "height": 900,
+        "width": 580
+      }
+    },
+    {
+      "id": "97c40a74-ba3c-4e77-bab7-38bbf8027617",
+      "name": "01 ICP Analyzer",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        -400
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 01 \u2014 ICP Analyzer\n## Phase 1: Business Analysis & ICP Research\n\n**Webhook:** `POST /webhook/eluxr-phase1-analyzer`\n\n### Purpose\nRuns deep market research using Perplexity AI then generates a detailed Ideal Customer Profile (ICP) with Claude. Saves results to Supabase `icps` table.\n\n### Logic Flow\n1. **Webhook** \u2014 receives `business_url`, `industry`, `user_id`\n2. **Auth Validator** \u2014 validates Bearer token (sub-workflow S4QtfIKpvhW4mQYG)\n3. **IF Auth OK?** \u2014 branches on authentication result\n4. **Prepare Perplexity Request** \u2014 formats search queries\n5. **Perplexity \u2014 Market Research** \u2014 deep competitor/market analysis\n6. **Prepare ICP Prompt** \u2014 injects research into Claude prompt\n7. **Claude \u2014 ICP Generator** \u2014 produces structured ICP JSON\n8. **Parse ICP Response** \u2014 extracts and validates Claude output\n9. **Supabase \u2014 UPSERT ICP** \u2014 POST to /icps?on_conflict=user_id (merge-duplicates)\n10. **01-Response** \u2014 returns ICP data to frontend\n\n### Supabase Operation\n`POST /icps?on_conflict=user_id`\nHeader: `Prefer: resolution=merge-duplicates,return=representation`\n\n### Setup Notes\n- Perplexity API key required (HTTP Request node)\n- Claude API key required (HTTP Request node)\n- Supabase SUPABASE_SERVICE_ROLE_KEY env var required",
+        "height": 680,
+        "width": 460
+      }
+    },
+    {
+      "id": "17527826-f76e-4868-962c-69f793422ad4",
+      "name": "02 Theme Generator",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        400
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 02 \u2014 Theme Generator\n## Phase 2: Netflix-Model 30-Day Content Themes\n\n**Webhook:** `POST /webhook/eluxr-phase2-themes`\n\n### Purpose\nGenerates 4 weekly content \"shows\" using the Netflix content model (recurring formats, binge-worthy series). Saves themes to Supabase with a 5-step FK-safe insert pattern.\n\n### Logic Flow\n1. **Webhook** \u2014 receives `month`, `products`, `events`, `icp_data`, `user_id`\n2. **Auth Validator** \u2014 validates Bearer token\n3. **IF Auth OK?** \u2014 branches\n4. **Claude \u2014 Netflix Theme Generator** \u2014 generates 4 weekly themes with daily breakdowns\n5. **Parse & Group Themes** \u2014 structures Claude output into theme rows\n6. **Supabase \u2014 UPSERT Campaign** \u2014 creates/updates campaign record\n7. **Supabase \u2014 Delete Old Themes** \u2014 removes stale themes for re-generation safety\n8. **Prepare Theme Rows** \u2014 formats each theme for insert\n9. **Supabase \u2014 INSERT Themes** \u2014 bulk inserts theme rows\n10. **Supabase \u2014 Activate Campaign** \u2014 PATCH campaign status to active\n11. **02-Response** \u2014 returns theme calendar\n\n### Supabase 5-Step FK Pattern\nUPSERT campaigns \u2192 DELETE old themes \u2192 prepare rows \u2192 INSERT themes \u2192 PATCH status\n\n### Setup Notes\n- Webhook paths unchanged from v2 monolith (frontend URLs unaffected)",
+        "height": 700,
+        "width": 460
+      }
+    },
+    {
+      "id": "f58629e0-5a4f-49e6-b222-c40e143bbe65",
+      "name": "03 Themes List",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        1200
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 03 \u2014 Themes List\n## Read Weekly Themes from Supabase\n\n**Webhook:** `GET /webhook/eluxr-themes-list`\n\n### Purpose\nSimple read endpoint that returns all themes for a user's current campaign. Used by the dashboard to load the weekly content schedule. Replaces Google Sheets read node.\n\n### Logic Flow\n1. **Webhook** \u2014 receives `user_id` (query param or body)\n2. **Auth Validator** \u2014 validates Bearer token\n3. **IF Auth OK?** \u2014 branches\n4. **Supabase \u2014 SELECT Themes** \u2014 GET /themes with campaign join (PostgREST embedded resource)\n5. **Format Themes Response** \u2014 restructures for frontend consumption\n6. **03-Response** \u2014 returns themes list\n\n### Supabase Query\n`GET /themes?select=*,campaigns(name,month,status)&user_id=eq.{user_id}`\n\n### Migration Note\nReplaced: **Read Themes Sheet** (Google Sheets node)\nReplaced with: **Supabase SELECT** with PostgREST embedded resource join",
+        "height": 540,
+        "width": 460
+      }
+    },
+    {
+      "id": "fe2b2373-29bb-4d48-a4d5-58846052c4e0",
+      "name": "04 Content Studio",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        2000
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 04 \u2014 Content Studio\n## Phase 4: AI Content Generation Pipeline\n\n**Webhook:** `POST /webhook/eluxr-phase4-studio`\n**Schedule:** Daily CRON at 6 AM\n\n### Purpose\nCore content generation pipeline. Reads today's theme, determines content type, then routes to the correct AI generator (text/image/video/carousel). Bug fix PIPE-07 applied.\n\n### Logic Flow\n1. **Webhook / CRON Trigger** \u2014 dual entry points\n2. **Auth Validator** \u2014 validates token (webhook path only)\n3. **Merge Trigger Sources** \u2014 normalizes input from both triggers\n4. **Supabase \u2014 Read Themes** \u2014 fetches today's scheduled theme\n5. **Filter Today's Content** \u2014 finds items due today\n6. **Normalize Content Type** \u2014 maps Claude free-text to DB values (PIPE-07 fix)\n7. **Route: Switch** \u2014 routes to text / image / video / carousel\n8. **Claude \u2014 Write Post Content** (text + carousel branch)\n9. **KIE \u2014 Generate Content Image** (image branch)\n10. **Claude \u2014 Video Script Generator** (video branch)\n11. **Fallback Handler** \u2014 catches unmatched types (debug save)\n12. **Merge All Content** \u2014 consolidates all branches\n13. **Supabase \u2014 INSERT Content** \u2014 saves to content_items table\n14. **04-Response** \u2014 returns generated content\n\n### Bug Fix: PIPE-07\nSwitch node uses `allMatchingOutputs: false` (first-match mode)\nContent type normalization maps 7 Claude values \u2192 4 DB values:\nHook/Value/Proof/Engagement/Cliffhanger \u2192 text | Carousel \u2192 carousel | Video \u2192 video",
+        "height": 780,
+        "width": 460
+      }
+    },
+    {
+      "id": "f3272ec5-ce5b-44f2-aa24-5e24139fbc51",
+      "name": "05 Content Submit",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        2800
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 05 \u2014 Content Submit\n## Phase 5: Manual Content Submission\n\n**Webhook:** `POST /webhook/eluxr-phase5-submit`\n\n### Purpose\nAllows users to manually submit content directly from the dashboard (bypassing the Content Studio pipeline). Normalizes content_type and platform before saving to prevent DB CHECK constraint violations.\n\n### Logic Flow\n1. **Webhook** \u2014 receives content item from dashboard\n2. **Auth Validator** \u2014 validates Bearer token\n3. **IF Auth OK?** \u2014 branches\n4. **Format Queue Item** \u2014 normalizes content_type + platform to DB-valid values\n5. **Supabase \u2014 INSERT Content** \u2014 POST to /content_items\n6. **05-Response** \u2014 returns saved item\n\n### Content Type Normalization\nSame normalization as Workflow 04 applied here too \u2014 prevents CHECK constraint violations when users submit free-text values (e.g., \"Blog Post\" \u2192 \"text\").\n\n### Platform Normalization\nMaps any platform variant to one of: instagram, twitter, linkedin, tiktok, facebook\n\n### Migration Note\nReplaced: **Save to Queue Sheet** (Google Sheets append)\nReplaced with: **Supabase INSERT** to content_items",
+        "height": 600,
+        "width": 460
+      }
+    },
+    {
+      "id": "c8e241a3-6c94-41ac-a9be-2679080d5d0b",
+      "name": "06 Approval List",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        3700
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 06 \u2014 Approval List\n## Read Content Approval Queue\n\n**Webhook:** `GET /webhook/eluxr-approval-list`\n\n### Purpose\nReturns all content items grouped by status (pending_review, approved, rejected, published). Used by the dashboard approval queue view.\n\n### Logic Flow\n1. **Webhook** \u2014 receives `user_id`\n2. **Auth Validator** \u2014 validates Bearer token\n3. **IF Auth OK?** \u2014 branches\n4. **Supabase \u2014 SELECT Content Items** \u2014 GET /content_items with user_id filter\n5. **Organize by Status** \u2014 groups items by status value\n6. **List \u2014 Response** \u2014 returns grouped content queue\n\n### Supabase Query\n`GET /content_items?user_id=eq.{user_id}&order=created_at.desc`\n\n### Status Values (v2 Supabase)\n- `pending_review` (was \"pending\" in v1 Sheets)\n- `approved`\n- `rejected`\n- `published`\n\n### Migration Note\nReplaced: **Read Queue Sheet** (Google Sheets read)\nReplaced with: **Supabase SELECT** to content_items",
+        "height": 600,
+        "width": 460
+      }
+    },
+    {
+      "id": "9c34b43d-c253-4d92-9224-383e79c505d7",
+      "name": "07 Approval Action",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        4500
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 07 \u2014 Approval Action\n## Approve / Reject / Edit Content Items\n\n**Webhook:** `POST /webhook/eluxr-approval-action`\n\n### Purpose\nRoutes approval actions to the correct Supabase PATCH call. Replaced the v1 IF-cascade (Is Approve? \u2192 Is Reject? \u2192 Edit) with a single Switch node. Collapsed 6 Google Sheets nodes (3 Find + 3 Update) into 3 single PATCH calls.\n\n### Logic Flow\n1. **Webhook** \u2014 receives `action` (approve/reject/edit), `content_id`, `user_id`\n2. **Auth Validator** \u2014 validates Bearer token\n3. **IF Auth OK?** \u2014 branches\n4. **Route Action** (Switch) \u2014 routes to Approve / Reject / Edit / Fallback\n5. **Supabase \u2014 PATCH Approve** \u2014 sets status=approved\n6. **Supabase \u2014 PATCH Reject** \u2014 sets status=rejected\n7. **Supabase \u2014 PATCH Edit** \u2014 updates content fields\n8. **Respond Success** \u2014 returns updated item\n9. **400 Bad Request** \u2014 returned for unknown action values\n\n### Supabase Pattern\n`PATCH /content_items?id=eq.{id}&user_id=eq.{user_id}`\nSingle PATCH replaces Find Row + Update Row pair (3 pairs \u2192 3 calls)\n\n### Migration Note\nReplaced: 8 Google Sheets nodes (3 Find + 3 Update + 2 IF)\nReplaced with: 1 Switch + 3 Supabase PATCH nodes",
+        "height": 660,
+        "width": 460
+      }
+    },
+    {
+      "id": "1bce8594-f3ba-4059-87b2-76d002d96695",
+      "name": "08 Clear Pending",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        5300
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 08 \u2014 Clear Pending\n## Bulk Delete Pending Review Items\n\n**Webhook:** `DELETE /webhook/eluxr-clear-pending`\n\n### Purpose\nClears all `pending_review` content items for a user in a single Supabase DELETE call. Replaces the v1 two-step Get Pending + Delete Pending Google Sheets pair.\n\n### Logic Flow\n1. **Webhook** \u2014 receives `user_id`\n2. **Auth Validator** \u2014 validates Bearer token\n3. **IF Auth OK?** \u2014 branches\n4. **Supabase \u2014 DELETE Pending** \u2014 DELETE /content_items with user_id + status filter\n5. **Format Response** \u2014 computes deleted_count from returned array\n6. **Respond** \u2014 returns `{ deleted_count: N }`\n\n### Supabase Query\n`DELETE /content_items?user_id=eq.{user_id}&status=eq.pending_review`\nHeader: `Prefer: return=representation` (returns deleted rows for counting)\n\n### Migration Note\nReplaced: **Get Pending Rows + Delete Pending Rows** (2 Google Sheets nodes)\nReplaced with: Single **Supabase DELETE** with representation header\nAdded: **Format Response** Code node to compute deleted_count",
+        "height": 580,
+        "width": 460
+      }
+    },
+    {
+      "id": "3c1fa767-32af-489d-9133-1c56a7b4f576",
+      "name": "09 Calendar Sync",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        6100
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 09 \u2014 Calendar Sync\n## Phase 3: Google Calendar Event Creation\n\n**Webhook:** `POST /webhook/eluxr-phase3-calendar`\n\n### Purpose\nSyncs approved content items to Google Calendar as scheduled events. Reads approved items from Supabase (replaces Google Sheets), loops over them in batches, and creates calendar events.\n\n### Logic Flow\n1. **Webhook** \u2014 receives `user_id`\n2. **Auth Validator** \u2014 validates Bearer token\n3. **IF Auth OK?** \u2014 branches\n4. **Supabase \u2014 SELECT Approved Items** \u2014 GET /content_items?status=eq.approved\n5. **Format Calendar Events** \u2014 maps content_items fields to Google Calendar event format\n6. **Loop Over Days** (splitInBatches) \u2014 iterates events in batches\n7. **Create Google Calendar Event** \u2014 creates event in primary calendar\n8. **Phase 3 \u2014 Response** \u2014 returns sync summary\n\n### Google Calendar Credential\nOAuth credential ID: `FJBcOjKITBIaEqRV` (Google Calendar account)\nCalendar: `primary`\n\n### Migration Note\nReplaced: **Read Approval Queue for Calendar** (Google Sheets read)\nReplaced with: **Supabase SELECT** content_items with status=approved filter\nGoogle Calendar node preserved (NOT replaced \u2014 Phase 8 will decide its future)",
+        "height": 640,
+        "width": 460
+      }
+    },
+    {
+      "id": "77c701bc-bb39-4287-84eb-d7d89521e913",
+      "name": "10 Chat",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        6900
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 10 \u2014 Chat\n## AI Chat Endpoint for Dashboard\n\n**Webhook:** `POST /webhook/eluxr-chat`\n\n### Purpose\nProvides phase-aware AI chat responses for the dashboard chatbox. Claude receives context about the current dashboard phase and responds accordingly. No Google Sheets nodes (pure extraction from monolith).\n\n### Logic Flow\n1. **Webhook** \u2014 receives `message`, `phase`, `user_id`, `context`\n2. **Auth Validator** \u2014 validates Bearer token\n3. **IF Auth OK?** \u2014 branches\n4. **Prepare Chat Context** \u2014 builds system prompt based on phase (phase-1 through phase-5 prompts)\n5. **Claude Chat Call** \u2014 sends message + context to Claude API via `this.helpers.httpRequest()`\n6. **Chat \u2014 Response** \u2014 returns AI reply\n\n### Phase-Based Prompts\nThe Prepare Chat Context Code node selects a system prompt tailored to the dashboard phase the user is currently on (ICP research, theme generation, content review, etc.).\n\n### Future Enhancement (Phase 9)\nSupabase context loading is deferred to Phase 9 \u2014 will fetch ICP data, themes, and content history to enrich Claude's context for more personalized responses.",
+        "height": 600,
+        "width": 460
+      }
+    },
+    {
+      "id": "28dc7d3b-5afc-46f7-bb72-a69b381cbd8c",
+      "name": "11 Image Generator",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        7700
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 11 \u2014 Image Generator\n## KIE Nano Banana Pro AI Image Generation\n\n**Webhook:** `POST /webhook/eluxr-imagegen`\n\n### Purpose\nGenerates professional social media images using KIE Nano Banana Pro. Implements a proper Wait+IF polling loop (TOOL-05 fix) replacing the monolith's unreliable `setTimeout(35000)` hack.\n\n### Logic Flow\n1. **Webhook** \u2014 receives `prompt`, `aspect_ratio`, `user_id`\n2. **Auth Validator** \u2014 validates Bearer token\n3. **Prepare Nano Banana Prompt** \u2014 formats KIE API request body\n4. **KIE \u2014 Create Image Task** \u2014 POST to api.kie.ai to start generation\n5. **Init Poll Counter** \u2014 sets pollCount=0, extracts taskId\n6. **Initial Wait** (10s) \u2014 gives KIE time before first poll\n7. **KIE \u2014 Get Image Result** \u2014 polls task status\n8. **Check Image Result** \u2014 increments counter, sets isComplete/isSuccess/isTimeout flags\n9. **Is Complete? (IF)** \u2014 branches on completion\n10. **Is Success? (IF)** \u2014 branches success vs timeout/error\n11. **Parse Image Result** \u2014 extracts image URL\n12. **Image Gen \u2014 Response** \u2014 returns `{ image_url, taskId }`\n13. **Error Response** \u2014 returns 500 with error details\n14. **Retry Wait** (5s) \u2014 loops back to step 7\n\n### Bug Fix: TOOL-05\nPolling loop: 10s initial + 5s retry \u00d7 12 max attempts = 65s timeout\nReplaces: `Code in JavaScript { setTimeout(35000) }` \u2014 single blind wait, no retry",
+        "height": 740,
+        "width": 460
+      }
+    },
+    {
+      "id": "1bd464ce-a1a1-4b44-ae95-4a4bcfd67d45",
+      "name": "12 Video Script Builder",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        8700
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 12 \u2014 Video Script Builder\n## AI Video Script Generation with Claude\n\n**Webhook:** `POST /webhook/eluxr-videoscript`\n\n### Purpose\nGenerates full production-ready video scripts using Claude AI. Clean extraction from monolith \u2014 no bugs to fix, no Google Sheets nodes.\n\n### Logic Flow\n1. **Webhook** \u2014 receives `topic`, `duration`, `style`, `platform`, `content_pillars`, `user_id`\n2. **Auth Validator** \u2014 validates Bearer token\n3. **IF Auth OK?** \u2014 branches\n4. **Claude \u2014 Script Generator** \u2014 generates full script with timestamps, camera cues, B-roll suggestions\n5. **Parse Script Response** \u2014 extracts structured script from Claude output\n6. **Video Script \u2014 Response** \u2014 returns script JSON\n\n### Expected Input\n```json\n{\n  \"topic\": \"Why most businesses fail at social media\",\n  \"duration\": \"30s\",\n  \"style\": \"energetic\",\n  \"platform\": \"Instagram Reels\",\n  \"content_pillars\": \"tips, behind the scenes\"\n}\n```\n\n### Output\nStructured JSON with scene breakdown, timestamps, dialogue, camera directions, and B-roll notes.\n\n### Bug Fixes\nNone \u2014 this is a clean extraction from the v2 monolith.",
+        "height": 640,
+        "width": 460
+      }
+    },
+    {
+      "id": "bcb89b7b-cdf2-480e-8b88-c197d44e092c",
+      "name": "13 Video Creator",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        9500
+      ],
+      "parameters": {
+        "color": 3,
+        "content": "# Workflow 13 \u2014 Video Creator\n## KIE Veo AI Video Generation\n\n**Webhook:** `POST /webhook/eluxr-videogen`\n\n### Purpose\nGenerates AI videos using KIE Veo (veo3_fast model, ~$0.60/video). Corrects the TOOL-06 bug where the Video Ready? IF node had inverted TRUE/FALSE wiring \u2014 TRUE led to \"still processing\" and FALSE tried to parse an incomplete result.\n\n### Logic Flow\n1. **Webhook** \u2014 receives `prompt`, `reference_image` (optional), `user_id`\n2. **Auth Validator** \u2014 validates Bearer token\n3. **Prepare Veo Prompt** \u2014 formats KIE API request body\n4. **KIE \u2014 Create Video Task** \u2014 POST to api.kie.ai/api/v1/veo/generate\n5. **Wait for Video** (120s) \u2014 videos take >60s; single server-side wait\n6. **KIE \u2014 Get Video Status** \u2014 polls task status once (neverError: true)\n7. **Video Ready? (IF)** \u2014 checks successFlag === 1\n   - TRUE \u2192 **Parse Video Result** \u2192 **Video Gen Response** (200 + video URL)\n   - FALSE \u2192 **Video Processing Response** (retry=true, client retries)\n8. Frontend retries if needed (videos can take >2 min)\n\n### Bug Fix: TOOL-06\nCorrected inverted IF wiring:\n- Before: TRUE \u2192 \"still processing\", FALSE \u2192 parse (WRONG)\n- After: TRUE \u2192 parse + 200 response, FALSE \u2192 retry message (CORRECT)\n\n### Setup Note\nKIE API credential required. Cost: ~$0.60 per video generated.",
+        "height": 720,
+        "width": 460
+      }
+    }
+  ],
+  "connections": {
+    "01-Webhook": {
+      "main": [
+        [
+          {
+            "node": "01-Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01-Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "01-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Perplexity Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "01-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Perplexity Request": {
+      "main": [
+        [
+          {
+            "node": "Perplexity -- Market Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity -- Market Research": {
+      "main": [
+        [
+          {
+            "node": "Prepare ICP Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare ICP Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude -- ICP Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude -- ICP Generator": {
+      "main": [
+        [
+          {
+            "node": "Parse ICP Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse ICP Response": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- UPSERT ICP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- UPSERT ICP": {
+      "main": [
+        [
+          {
+            "node": "01-Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02-Webhook": {
+      "main": [
+        [
+          {
+            "node": "02-Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02-Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "02-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Claude -- Netflix Theme Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "02-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude -- Netflix Theme Generator": {
+      "main": [
+        [
+          {
+            "node": "Parse & Group Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Group Themes": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- UPSERT Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- UPSERT Campaign": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- Delete Old Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- Delete Old Themes": {
+      "main": [
+        [
+          {
+            "node": "Prepare Theme Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Theme Rows": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- INSERT Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- INSERT Themes": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- Activate Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- Activate Campaign": {
+      "main": [
+        [
+          {
+            "node": "02-Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03-Webhook": {
+      "main": [
+        [
+          {
+            "node": "03-Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03-Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "03-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- SELECT Themes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "03-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- SELECT Themes": {
+      "main": [
+        [
+          {
+            "node": "Format Themes Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Themes Response": {
+      "main": [
+        [
+          {
+            "node": "03-Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04-Webhook": {
+      "main": [
+        [
+          {
+            "node": "04-Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Content Trigger (6 AM)": {
+      "main": [
+        [
+          {
+            "node": "Merge Trigger Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04-Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "04-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Merge Trigger Sources",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "04-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Trigger Sources": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- Read Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- Read Themes": {
+      "main": [
+        [
+          {
+            "node": "Filter Today's Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Today's Content": {
+      "main": [
+        [
+          {
+            "node": "Normalize Content Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Content Type": {
+      "main": [
+        [
+          {
+            "node": "Route: Text / Image / Video / Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route: Text / Image / Video / Carousel": {
+      "main": [
+        [
+          {
+            "node": "Claude -- Write Post Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "KIE -- Generate Content Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude -- Video Script Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude -- Write Post Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude -- Write Post Content": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE -- Generate Content Image": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude -- Video Script Generator": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback Handler": {
+      "main": [
+        [
+          {
+            "node": "04-Supabase -- INSERT Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Content": {
+      "main": [
+        [
+          {
+            "node": "04-Supabase -- INSERT Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04-Supabase -- INSERT Content": {
+      "main": [
+        [
+          {
+            "node": "04-Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05-Webhook": {
+      "main": [
+        [
+          {
+            "node": "05-Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05-Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "05-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Format Queue Item",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "05-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Queue Item": {
+      "main": [
+        [
+          {
+            "node": "05-Supabase -- INSERT Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05-Supabase -- INSERT Content": {
+      "main": [
+        [
+          {
+            "node": "05-Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Queue -- Webhook": {
+      "main": [
+        [
+          {
+            "node": "06-Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06-Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "06-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- SELECT Content Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "06-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- SELECT Content Items": {
+      "main": [
+        [
+          {
+            "node": "Organize by Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Organize by Status": {
+      "main": [
+        [
+          {
+            "node": "List -- Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval Action Webhook": {
+      "main": [
+        [
+          {
+            "node": "07-Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07-Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "07-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "07-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- PATCH Approve",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase -- PATCH Reject",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase -- PATCH Edit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "400 Bad Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- PATCH Approve": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- PATCH Reject": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- PATCH Edit": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Pending Webhook": {
+      "main": [
+        [
+          {
+            "node": "08-Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08-Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "08-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- DELETE Pending",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "08-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- DELETE Pending": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phase 3 -- Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "09-Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09-Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "09-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- SELECT Approved Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "09-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- SELECT Approved Items": {
+      "main": [
+        [
+          {
+            "node": "Format Calendar Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Calendar Events": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Days": {
+      "main": [
+        [
+          {
+            "node": "Create Google Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Phase 3 -- Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Google Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat -- Webhook": {
+      "main": [
+        [
+          {
+            "node": "10-Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10-Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "10-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Chat Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "10-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Chat Context": {
+      "main": [
+        [
+          {
+            "node": "Claude Chat Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Chat Call": {
+      "main": [
+        [
+          {
+            "node": "Chat -- Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Gen \u2014 Webhook": {
+      "main": [
+        [
+          {
+            "node": "Auth Validate (eluxr-imagegen)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Validate (eluxr-imagegen)": {
+      "main": [
+        [
+          {
+            "node": "11-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Nano Banana Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "11-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Nano Banana Prompt": {
+      "main": [
+        [
+          {
+            "node": "KIE \u2014 Create Image Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE \u2014 Create Image Task": {
+      "main": [
+        [
+          {
+            "node": "Init Poll Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Init Poll Counter": {
+      "main": [
+        [
+          {
+            "node": "Initial Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initial Wait": {
+      "main": [
+        [
+          {
+            "node": "KIE \u2014 Get Image Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE \u2014 Get Image Result": {
+      "main": [
+        [
+          {
+            "node": "Check Image Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Image Result": {
+      "main": [
+        [
+          {
+            "node": "Is Complete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Complete?": {
+      "main": [
+        [
+          {
+            "node": "Is Success?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Success?": {
+      "main": [
+        [
+          {
+            "node": "Parse Image Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Image Result": {
+      "main": [
+        [
+          {
+            "node": "Image Gen \u2014 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Wait": {
+      "main": [
+        [
+          {
+            "node": "KIE \u2014 Get Image Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Script \u2014 Webhook": {
+      "main": [
+        [
+          {
+            "node": "Auth Validate (eluxr-videoscript)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Validate (eluxr-videoscript)": {
+      "main": [
+        [
+          {
+            "node": "12-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Claude \u2014 Script Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "12-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude \u2014 Script Generator": {
+      "main": [
+        [
+          {
+            "node": "Parse Script Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Script Response": {
+      "main": [
+        [
+          {
+            "node": "Video Script \u2014 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Gen \u2014 Webhook": {
+      "main": [
+        [
+          {
+            "node": "Auth Validate (eluxr-videogen)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Validate (eluxr-videogen)": {
+      "main": [
+        [
+          {
+            "node": "13-Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13-Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Veo Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "13-401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Veo Prompt": {
+      "main": [
+        [
+          {
+            "node": "KIE \u2014 Create Video Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE \u2014 Create Video Task": {
+      "main": [
+        [
+          {
+            "node": "Wait for Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Video": {
+      "main": [
+        [
+          {
+            "node": "KIE \u2014 Get Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE \u2014 Get Video Status": {
+      "main": [
+        [
+          {
+            "node": "Video Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Ready?": {
+      "main": [
+        [
+          {
+            "node": "Parse Video Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Video Processing \u2014 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Video Result": {
+      "main": [
+        [
+          {
+            "node": "Video Gen \u2014 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
