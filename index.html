@@ -2213,6 +2213,10 @@ details .details-content { padding: 20px; }
           if (session) {
             currentUser = session.user
             showDashboard()
+            // Check for active pipeline run after login confirmed
+            if (window.checkActivePipeline) {
+              window.checkActivePipeline();
+            }
           }
           break
         case 'SIGNED_OUT':
@@ -3077,63 +3081,52 @@ function downloadGeneratedVideo() {
   }
 }
 
-// API Functions - FIXED to actually call backend
+// API Functions - Async pipeline with Realtime progress
 async function generateContent(formData) {
-  // Generate local session ID
-  currentSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-
-  // Start progress simulation
-  simulateProgress();
+  // Disable generate button to prevent duplicate runs
+  const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
+  if (generateBtn) generateBtn.disabled = true;
 
   try {
-    // PHASE 1: Call the analyzer
-    const phase1Response = await authenticatedFetch(`${API_BASE}/eluxr-phase1-analyzer`, {
+    // Single call to orchestrator -- returns 202 immediately
+    const response = await authenticatedFetch(`${API_BASE}/eluxr-generate-content`, {
       method: 'POST',
       body: JSON.stringify(formData)
     });
 
-    if (phase1Response.ok) {
-      const phase1Data = await safeJson(phase1Response, {});
-      // Use session_id from backend if provided
-      if (phase1Data.session_id) {
-        currentSessionId = phase1Data.session_id;
+    if (response.status === 202) {
+      const data = await response.json();
+      const runId = data.pipeline_run_id;
+
+      if (!runId) {
+        showToast('Failed to start pipeline: no run ID returned', 'error');
+        if (generateBtn) generateBtn.disabled = false;
+        return;
       }
-      console.log('Phase 1 complete:', phase1Data);
+
+      // Store run ID for recovery
+      currentPipelineRunId = runId;
+      localStorage.setItem('eluxr_active_pipeline_run', runId);
+
+      // Show progress UI and navigate to phase 2
+      goToPhase(2);
+      resetProgressUI();
+
+      // Subscribe to real-time progress
+      subscribeToProgress(runId);
+
+      if (data.resumed) {
+        showToast('Resuming existing pipeline run...', 'info');
+      }
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      showToast(`Failed to start generation: ${errorData.error || response.statusText}`, 'error');
+      if (generateBtn) generateBtn.disabled = false;
     }
-
-    // PHASE 2: Generate themes
-    const phase2Response = await authenticatedFetch(`${API_BASE}/eluxr-phase2-themes`, {
-      method: 'POST',
-      body: JSON.stringify({
-        ...formData,
-        session_id: currentSessionId,
-        icp_summary: 'Generated ICP data'
-      })
-    });
-
-    if (phase2Response.ok) {
-      const phase2Data = await safeJson(phase2Response, {});
-      console.log('Phase 2 complete:', phase2Data);
-    }
-
-    // PHASE 4: Generate content (studio)
-    const phase4Response = await authenticatedFetch(`${API_BASE}/eluxr-phase4-studio`, {
-      method: 'POST',
-      body: JSON.stringify({
-        session_id: currentSessionId,
-        date: new Date().toISOString().split('T')[0]
-      })
-    });
-
-    if (phase4Response.ok) {
-      console.log('Phase 4 complete');
-    }
-
-    // Fetch calendar data from approval list
-    await fetchAndDisplayCalendar();
   } catch (error) {
-    console.log('API call failed, generating demo data...', error);
-    generateMockData(formData);
+    console.error('Pipeline trigger failed:', error);
+    showToast('Failed to start content generation. Please try again.', 'error');
+    if (generateBtn) generateBtn.disabled = false;
   }
 }
 
@@ -3339,62 +3332,169 @@ async function fetchAndDisplayCalendar(silent = false) {
   }
 }
 
-// Progress simulation
-function simulateProgress() {
-  const phases = [
-    { name: 'Analyzing your business...', duration: 30 },
-    { name: 'Creating content themes...', duration: 45 },
-    { name: 'Writing posts...', duration: 150 },
-    { name: 'Generating images...', duration: 90 },
-    { name: 'Creating videos...', duration: 150 },
-    { name: 'Syncing calendar...', duration: 30 }
-  ];
+// === REAL-TIME PROGRESS TRACKING ===
 
-  let currentStep = 0;
-  let phaseProgress = 0;
-  const speedMultiplier = 10;
+let progressChannel = null;
+let currentPipelineRunId = null;
 
-  const interval = setInterval(() => {
-    phaseProgress += speedMultiplier;
+const STEP_LABELS = [
+  'Analyzing your business...',
+  'Creating content themes...',
+  'Writing posts...',
+  'Generating images...',
+  'Creating videos...',
+  'Syncing calendar...'
+];
 
-    if (phaseProgress >= phases[currentStep].duration) {
-      phaseProgress = 0;
-      currentStep++;
-      if (currentStep >= phases.length) {
-        clearInterval(interval);
-        return;
-      }
-    }
+function resetProgressUI() {
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('progress-text').textContent = '0%';
+  document.getElementById('phase-text').textContent = 'Starting pipeline...';
 
-    updateProgressUI(currentStep + 1, (phaseProgress / phases[currentStep].duration) * 100, phases);
-  }, 100);
+  document.querySelectorAll('#phase-2 .phase-item').forEach((item) => {
+    item.classList.remove('active', 'completed');
+    const icon = item.querySelector('.phase-icon');
+    const step = item.getAttribute('data-step');
+    if (icon) icon.textContent = step;
+  });
 }
 
-function updateProgressUI(step, progress, phases) {
-  const totalDuration = phases.reduce((a, b) => a + b.duration, 0);
-  const completedDuration = phases.slice(0, step - 1).reduce((a, b) => a + b.duration, 0);
-  const currentProgress = completedDuration + (phases[step - 1].duration * progress / 100);
-  const overallProgress = (currentProgress / totalDuration) * 100;
+function subscribeToProgress(runId) {
+  // Clean up any existing subscription
+  if (progressChannel) {
+    window.supabase.removeChannel(progressChannel);
+    progressChannel = null;
+  }
 
-  document.getElementById('progress-bar').style.width = `${overallProgress}%`;
-  document.getElementById('progress-text').textContent = `${Math.round(overallProgress)}%`;
-  document.getElementById('phase-text').textContent = phases[step - 1].name;
+  progressChannel = window.supabase
+    .channel(`pipeline-${runId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'pipeline_runs',
+        filter: `id=eq.${runId}`,
+      },
+      (payload) => {
+        const run = payload.new;
+        renderProgress(run);
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Subscribed to pipeline progress:', runId);
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('Realtime subscription error for pipeline:', runId);
+        showToast('Lost connection to progress updates. Refresh to check status.', 'error');
+      }
+    });
+}
 
-  document.querySelectorAll('#phase-2 .phase-item').forEach((item, index) => {
+function renderProgress(run) {
+  const currentStep = run.current_step || 0;
+  const totalSteps = run.total_steps || 6;
+  const percentage = Math.round((currentStep / totalSteps) * 100);
+
+  // Update progress bar
+  document.getElementById('progress-bar').style.width = `${percentage}%`;
+  document.getElementById('progress-text').textContent = `${percentage}%`;
+  document.getElementById('phase-text').textContent = run.step_label || STEP_LABELS[currentStep - 1] || 'Processing...';
+
+  // Update step list checkmarks
+  document.querySelectorAll('#phase-2 .phase-item').forEach((item) => {
+    const stepNum = parseInt(item.getAttribute('data-step'));
     item.classList.remove('active', 'completed');
-    if (index < step - 1) {
+    const icon = item.querySelector('.phase-icon');
+
+    if (stepNum < currentStep) {
+      // Completed step
       item.classList.add('completed');
-      item.querySelector('.phase-icon').textContent = '\u2713';
-    } else if (index === step - 1) {
+      if (icon) icon.textContent = '\u2713';
+    } else if (stepNum === currentStep) {
+      // Active step
       item.classList.add('active');
+      if (icon) icon.textContent = stepNum;
+    } else {
+      // Future step
+      if (icon) icon.textContent = stepNum;
     }
   });
 
-  const remainingSeconds = Math.round((totalDuration - currentProgress) / 10);
-  const minutes = Math.floor(remainingSeconds / 60);
-  const seconds = remainingSeconds % 60;
-  document.getElementById('time-remaining').textContent = `Estimated time remaining: ~${minutes}m ${seconds}s`;
+  // Handle completion
+  if (run.status === 'completed') {
+    cleanupProgress();
+    showToast('Content generation complete!', 'success');
+    // Re-enable generate button
+    const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
+    if (generateBtn) generateBtn.disabled = false;
+    // Fetch and display the generated content
+    fetchAndDisplayCalendar();
+    // Navigate to calendar tab after a brief delay to show 100%
+    setTimeout(() => goToPhase(3), 1500);
+  } else if (run.status === 'failed') {
+    cleanupProgress();
+    showToast(`Generation failed: ${run.error_message || 'Unknown error'}`, 'error');
+    const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
+    if (generateBtn) generateBtn.disabled = false;
+  }
 }
+
+function cleanupProgress() {
+  if (progressChannel) {
+    window.supabase.removeChannel(progressChannel);
+    progressChannel = null;
+  }
+  currentPipelineRunId = null;
+  localStorage.removeItem('eluxr_active_pipeline_run');
+}
+
+// Page refresh recovery -- check for active pipeline runs
+async function checkActivePipeline() {
+  try {
+    const { data: runs, error } = await window.supabase
+      .from('pipeline_runs')
+      .select('*')
+      .eq('status', 'running')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error || !runs || runs.length === 0) return;
+
+    const activeRun = runs[0];
+
+    // Check if run is stale (> 15 minutes)
+    const startedAt = new Date(activeRun.started_at || activeRun.created_at);
+    const minutesElapsed = (Date.now() - startedAt.getTime()) / 60000;
+
+    if (minutesElapsed > 15) {
+      // Stale run -- don't restore, just warn
+      console.warn('Stale pipeline run detected:', activeRun.id, `(${Math.round(minutesElapsed)} min old)`);
+      showToast('A previous generation may have timed out. You can start a new one.', 'error');
+      return;
+    }
+
+    // Active run found -- restore progress UI
+    currentPipelineRunId = activeRun.id;
+    localStorage.setItem('eluxr_active_pipeline_run', activeRun.id);
+
+    // Navigate to progress view and restore state
+    goToPhase(2);
+    renderProgress(activeRun);
+    subscribeToProgress(activeRun.id);
+
+    // Disable generate button
+    const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
+    if (generateBtn) generateBtn.disabled = true;
+
+    showToast('Resuming active pipeline...', 'info');
+  } catch (err) {
+    console.error('Error checking active pipeline:', err);
+  }
+}
+
+// Expose checkActivePipeline to module script
+window.checkActivePipeline = checkActivePipeline;
 
 // Mock data
 function generateMockData(formData) {
