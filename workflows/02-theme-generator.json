@@ -1,0 +1,444 @@
+{
+  "name": "02-Theme-Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase2-themes",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "02-theme-0001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "eluxr-phase2-themes"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "02-theme-0002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "02-theme-0003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "02-theme-0004",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 8192,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are an expert social media content strategist using the NETFLIX MODEL for content planning.\\n\\nTHE NETFLIX MODEL:\\n- Each month has 4 weekly 'shows' (seasons)\\n- Week 1: 'The Origin Story' -- Personal stories, behind-the-scenes, relatable founder moments\\n- Week 2: 'The Proof' -- Case studies, client wins, data-driven results, testimonials\\n- Week 3: 'The Method' -- How-to guides, tutorials, step-by-step processes, tips\\n- Week 4: 'The Vision' -- Industry trends, bold predictions, future-casting, cliffhangers for next month\\n\\nCYCLICITY RULES (NO content type repeats on consecutive days):\\n- Monday: Hook Post (personal story or bold statement)\\n- Tuesday: Value Post (tips, education, industry insights)\\n- Wednesday: Social Proof (case study, testimonial, client win)\\n- Thursday: Carousel/Thread (multi-slide educational content)\\n- Friday: Video/Reel (short-form video script)\\n- Saturday: Engagement (poll, question, interactive)\\n- Sunday: Cliffhanger (teaser for next week)\\n\\nGENERATE A 30-DAY THEME CALENDAR for:\\n- Month: {{ $json.body.month }}\\n- Products/Services: {{ $json.body.products }}\\n- Industry: {{ $json.body.industry }}\\n- ICP Summary: {{ $json.body.icp_summary }}\\n- Holidays/Events: {{ $json.body.holidays }}\\n\\nFor EACH of the 30 days return a JSON array of objects with:\\n- day_number (1-30)\\n- date (YYYY-MM-DD)\\n- day_of_week (Monday-Sunday)\\n- week_number (1-4)\\n- weekly_show_name (the Netflix show title for that week)\\n- theme (specific topic for this day)\\n- content_type (Hook/Value/Proof/Carousel/Video/Engagement/Cliffhanger)\\n- platform (primary: LinkedIn/Instagram/X/YouTube/Facebook)\\n- secondary_platform (for repurposing)\\n- hook (the opening line or attention-grabber)\\n- cta (call to action)\\n- hashtags (5 relevant hashtags)\\n- notes (production notes or tips)\\n\\nReturn ONLY valid JSON array, no markdown.\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "02-theme-0005",
+      "name": "Claude -- Netflix Theme Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -200
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst authData = $('Auth OK?').item.json;\n\nlet themeContent = '';\ntry {\n  themeContent = input.content[0].text;\n} catch(e) {\n  themeContent = JSON.stringify(input);\n}\n\nlet themes = [];\ntry {\n  themes = JSON.parse(themeContent);\n} catch(e) {\n  const match = themeContent.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (match) {\n    themes = JSON.parse(match[0]);\n  } else {\n    themes = [{ error: 'Could not parse themes', raw: themeContent }];\n  }\n}\n\n// Group into 4 weekly themes\nconst weeklyThemes = {};\nfor (const day of themes) {\n  const weekNum = day.week_number || 1;\n  if (!weeklyThemes[weekNum]) {\n    weeklyThemes[weekNum] = {\n      week_number: weekNum,\n      theme_name: day.weekly_show_name || 'Week ' + weekNum,\n      theme_description: '',\n      show_concept: day.weekly_show_name || '',\n      hook: day.hook || '',\n      content_types: []\n    };\n  }\n  weeklyThemes[weekNum].content_types.push({\n    day_number: day.day_number,\n    date: day.date,\n    day_of_week: day.day_of_week,\n    theme: day.theme,\n    content_type: day.content_type,\n    platform: day.platform,\n    secondary_platform: day.secondary_platform,\n    hook: day.hook,\n    cta: day.cta,\n    hashtags: Array.isArray(day.hashtags) ? day.hashtags.join(', ') : (day.hashtags || ''),\n    notes: day.notes\n  });\n}\n\nconst month = authData.body?.month || new Date().toISOString().slice(0, 7);\nconst userId = authData.user_id;\n\nreturn {\n  json: {\n    user_id: userId,\n    month: month,\n    weekly_themes: Object.values(weeklyThemes),\n    raw_themes: themes\n  }\n};"
+      },
+      "id": "02-theme-0006",
+      "name": "Parse & Group Themes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/campaigns?on_conflict=user_id,month",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"month\": {{ JSON.stringify($json.month) }},\n  \"status\": \"generating\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "02-theme-0007",
+      "name": "Supabase -- UPSERT Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?campaign_id=eq.{{ $json[0].id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "02-theme-0008",
+      "name": "Supabase -- Delete Old Themes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const deleteResult = $input.item.json;\nconst parseData = $('Parse & Group Themes').item.json;\nconst campaignData = $('Supabase -- UPSERT Campaign').item.json;\n\nconst campaignId = Array.isArray(campaignData) ? campaignData[0].id : campaignData.id;\nconst userId = parseData.user_id;\nconst weeklyThemes = parseData.weekly_themes;\n\nconst themeRows = weeklyThemes.map(wt => ({\n  user_id: userId,\n  campaign_id: campaignId,\n  week_number: wt.week_number,\n  theme_name: wt.theme_name,\n  theme_description: wt.theme_description || '',\n  show_concept: wt.show_concept || '',\n  hook: wt.hook || '',\n  content_types: wt.content_types\n}));\n\nreturn { json: { theme_rows: themeRows, campaign_id: campaignId, user_id: userId } };"
+      },
+      "id": "02-theme-0009",
+      "name": "Prepare Theme Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.theme_rows) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "02-theme-0010",
+      "name": "Supabase -- INSERT Themes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/campaigns?id=eq.{{ $('Prepare Theme Rows').item.json.campaign_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"status\": \"active\" }",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "02-theme-0011",
+      "name": "Supabase -- Activate Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, phase: 2, themes_count: $('Parse & Group Themes').item.json.weekly_themes.length, campaign_id: $('Prepare Theme Rows').item.json.campaign_id, data: $json }) }}",
+        "options": {}
+      },
+      "id": "02-theme-0012",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        -200
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Claude -- Netflix Theme Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude -- Netflix Theme Generator": {
+      "main": [
+        [
+          {
+            "node": "Parse & Group Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Group Themes": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- UPSERT Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- UPSERT Campaign": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- Delete Old Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- Delete Old Themes": {
+      "main": [
+        [
+          {
+            "node": "Prepare Theme Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Theme Rows": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- INSERT Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- INSERT Themes": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- Activate Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- Activate Campaign": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

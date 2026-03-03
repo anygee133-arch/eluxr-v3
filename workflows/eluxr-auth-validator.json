@@ -1,0 +1,124 @@
+{
+  "name": "ELUXR Auth Validator",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Sub-Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const headers = $input.item.json.headers || {};\nconst authHeader = headers.authorization || headers.Authorization || '';\n\nif (!authHeader.startsWith('Bearer ')) {\n  return { json: { authenticated: false, error: 'Missing or invalid Authorization header', statusCode: 401 } };\n}\n\nconst token = authHeader.replace('Bearer ', '');\nreturn { json: { token: token, body: $input.item.json.body || {}, query: $input.item.json.query || {} } };"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000002",
+      "name": "Extract Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-token-check",
+              "leftValue": "={{ $json.token }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000003",
+      "name": "Has Token?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://llpnwaoxisfwptxvdfed.supabase.co/auth/v1/user",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000004",
+      "name": "Validate via Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, -100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.item.json;\n\nif (response.error || response.msg || !response.id) {\n  const errorMsg = response.error_description || response.error || response.msg || 'JWT validation failed';\n  return { json: { authenticated: false, error: errorMsg, statusCode: 401 } };\n}\n\nconst extractTokenData = $('Extract Token').item.json;\nreturn { json: {\n  authenticated: true,\n  user_id: response.id,\n  email: response.email || '',\n  role: response.role || '',\n  body: extractTokenData.body || {},\n  query: extractTokenData.query || {}\n} };"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000005",
+      "name": "Extract User Identity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nreturn { json: {\n  authenticated: false,\n  error: input.error || 'JWT validation failed',\n  statusCode: 401\n} };"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000006",
+      "name": "Error Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 100]
+    }
+  ],
+  "connections": {
+    "Sub-Workflow Trigger": {
+      "main": [[{"node": "Extract Token", "type": "main", "index": 0}]]
+    },
+    "Extract Token": {
+      "main": [[{"node": "Has Token?", "type": "main", "index": 0}]]
+    },
+    "Has Token?": {
+      "main": [
+        [{"node": "Validate via Supabase", "type": "main", "index": 0}],
+        [{"node": "Error Output", "type": "main", "index": 0}]
+      ]
+    },
+    "Validate via Supabase": {
+      "main": [[{"node": "Extract User Identity", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

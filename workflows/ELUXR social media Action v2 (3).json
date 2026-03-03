@@ -1,0 +1,3545 @@
+{
+  "name": "ELUXR social media Action v2",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# VIDEO SCRIPT ENDPOINT\n## Standalone Video Script Generator\n\n### Webhook for dashboard Video Scripts tool\n- Receives topic, duration, style preferences\n- Claude generates full production-ready script\n- Returns structured JSON with timestamps, camera cues, B-roll\n\n### POST Body Expected:\n```json\n{\n  \"topic\": \"Why most businesses fail at social media\",\n  \"duration\": \"30s\",\n  \"style\": \"energetic\",\n  \"platform\": \"Instagram Reels\",\n  \"content_pillars\": \"tips, behind the scenes\"\n}\n```",
+        "height": 560,
+        "width": 400,
+        "color": 3
+      },
+      "id": "445b4079-5c09-4085-89d9-c91d3dbd466d",
+      "name": "Video Script Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        21888,
+        16672
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "33c1498e-5ee7-4605-adf1-cb0adfdc883f",
+      "name": "Video Script — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        22992,
+        16816
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nlet script = '';\ntry {\n  script = input.content[0].text;\n} catch(e) {\n  script = JSON.stringify(input);\n}\n\nlet parsed = {};\ntry {\n  parsed = JSON.parse(script);\n} catch(e) {\n  const match = script.match(/\\{[\\s\\S]*\\}/);\n  if (match) parsed = JSON.parse(match[0]);\n  else parsed = { raw: script };\n}\n\nreturn [{ json: { success: true, tool: 'video_script', script: parsed } }];"
+      },
+      "id": "f3527c8b-be72-46e8-a1be-74e037030025",
+      "name": "Parse Script Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        22784,
+        16816
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "claude-sonnet-4-20250514"
+            },
+            {
+              "name": "max_tokens",
+              "value": "4096"
+            },
+            {
+              "name": "messages[0].role",
+              "value": "user"
+            },
+            {
+              "name": "messages[0].content",
+              "value": "=You are an expert video scriptwriter. Create a 30 second script for: {{ $json.body.topic }}. Platform: {{     $json.body.platform }}. Style: {{ $json.body.style }}. Return JSON with title, sections, caption, thumbnail_idea."
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "ad84bca6-d773-4891-b65b-623c6cf8736c",
+      "name": "Claude — Script Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        22560,
+        16816
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-videoscript",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "3516c172-9a6c-4d2c-95ac-9301cebbe7de",
+      "name": "Video Script — Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        22336,
+        16816
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-videoscript"
+    },
+    {
+      "parameters": {
+        "content": "# KIE NANO BANANA PRO — IMAGE GENERATION\n## High-Quality AI Image Generation\n\n### API: api.kie.ai\n### Model: nano-banana-pro\n\n### POST Body:\n```json\n{\n  \"prompt\": \"Professional social media graphic...\",\n  \"style\": \"photorealistic\",\n  \"aspect_ratio\": \"1:1\",\n  \"resolution\": \"2K\"\n}\n```\n\n### Polling: Check job status after 7 seconds\n### Cost: ~$0.02 per image",
+        "height": 544,
+        "width": 400,
+        "color": 2
+      },
+      "id": "c967753b-c32a-4b0e-87b2-e21352a2403b",
+      "name": "KIE Nano Banana Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        21920,
+        16080
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-imagegen",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "12f74a38-cc58-4485-87c3-e5f662d6fe3c",
+      "name": "Image Gen — Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        22400,
+        16272
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-imagegen"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst prompt = body.prompt || 'Professional social media graphic';\nconst aspectRatio = body.aspect_ratio || '1:1';\nconst style = body.style || 'photorealistic';\n\n// Map aspect ratios to dimensions\nconst dimensions = {\n  '1:1': { width: 1024, height: 1024 },\n  '16:9': { width: 1920, height: 1080 },\n  '9:16': { width: 1080, height: 1920 },\n  '4:3': { width: 1024, height: 768 }\n};\n\nconst dim = dimensions[aspectRatio] || dimensions['1:1'];\n\nreturn [{\n  json: {\n    prompt: `${style} style: ${prompt}`,\n    width: dim.width,\n    height: dim.height,\n    aspect_ratio: aspectRatio,\n    style: style\n  }\n}];"
+      },
+      "id": "34f7119a-341e-48fe-82d9-c63c6aef2d0d",
+      "name": "Prepare Nano Banana Prompt",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        22608,
+        16272
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 7f48c3109ae4ee6aee94ba7389bdcaa4"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"model\": \"nano-banana-pro\",\n    \"input\": {\n      \"prompt\": {{ JSON.stringify($json.prompt || \"Professional social media image\") }},\n      \"width\": 1024,\n      \"height\": 1024,\n      \"output_format\": \"png\"\n    }\n  }",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "2c44ddce-f441-499d-bc61-95e49da42316",
+      "name": "KIE — Create Image Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        22816,
+        16272
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/jobs/recordInfo?taskId={{ $json.data.taskId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 7f48c3109ae4ee6aee94ba7389bdcaa4"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4f2a54ae-b572-44e1-a39a-acdc3435f4c2",
+      "name": "KIE — Get Image Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        23232,
+        16272
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "img-success-check",
+              "leftValue": "={{ $json.data.state }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bc019b36-2a64-4dc5-a9e9-c78854efcf3a",
+      "name": "Image Ready?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        23440,
+        16272
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\n\n  let imageUrl = '';\n\n  // resultJson is a STRING that needs to be parsed\n  if (result.data && result.data.resultJson) {\n    try {\n      const parsed = JSON.parse(result.data.resultJson);\n      if (parsed.resultUrls && parsed.resultUrls.length > 0) {\n        imageUrl = parsed.resultUrls[0];\n      }\n    } catch(e) {\n      // fallback\n    }\n  }\n\n  return [{\n    json: {\n      success: !!imageUrl,\n      image_url: imageUrl,\n      taskId: result.data?.taskId || ''\n    }\n  }];"
+      },
+      "id": "1da40bf3-b8de-4f90-a216-2912b8eef680",
+      "name": "Parse Image Result",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        23648,
+        16192
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "c8cf55d0-5e5b-4f04-8661-e6e61607b6fc",
+      "name": "Image Gen — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        23856,
+        16192
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "content": "# KIE VEO — VIDEO GENERATION\n## AI Video Generation\n\n### API: api.kie.ai/api/v1/veo/generate\n### Model: veo3_fast\n### Cost: ~$0.60 per video\n\n### Flow:\n1. Receive prompt and optional reference image\n2. Create video task with KIE Veo API\n3. Poll for completion (20s intervals)\n4. Return video URL",
+        "height": 448,
+        "width": 400,
+        "color": 4
+      },
+      "id": "2b4348b9-0d0a-4e21-80f6-76999d7683df",
+      "name": "Veo Video Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        21904,
+        17360
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-videogen",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "45aab73c-a042-4ab2-9b3a-42e60a46630e",
+      "name": "Video Gen — Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        22336,
+        17440
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-videogen"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst imageUrl = body.image_url || '';\nconst prompt = body.prompt || 'Professional UGC-style promotional video';\nconst aspectRatio = body.aspect_ratio || '9:16';\nconst platform = body.platform || 'Instagram Reels';\n\n// Map aspect ratios to Veo dimensions\nconst dimensions = {\n  '9:16': { width: 720, height: 1280 },\n  '16:9': { width: 1280, height: 720 },\n  '1:1': { width: 720, height: 720 }\n};\n\nconst dim = dimensions[aspectRatio] || dimensions['9:16'];\n\nreturn [{\n  json: {\n    image_url: imageUrl,\n    prompt: prompt,\n    aspect_ratio: aspectRatio,\n    width: dim.width,\n    height: dim.height,\n    platform: platform\n  }\n}];"
+      },
+      "id": "14aba961-9701-4be7-a8dd-7f399bd73930",
+      "name": "Prepare Veo Prompt",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        22544,
+        17440
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/veo/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 7f48c3109ae4ee6aee94ba7389bdcaa4"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.prompt }}"
+            },
+            {
+              "name": "model",
+              "value": "veo3_fast"
+            },
+            {
+              "name": "generationType",
+              "value": "TEXT_2_VIDEO"
+            },
+            {
+              "name": "aspect_ratio",
+              "value": "={{ $json.aspect_ratio }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "73b04930-9d23-4205-9f05-821e6276f739",
+      "name": "KIE — Create Video Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        22752,
+        17440
+      ],
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "amount": 120
+      },
+      "id": "6bd15ee9-a594-4350-8524-3402a2fe84d8",
+      "name": "Wait for Video",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        22960,
+        17440
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "94123ccb-da5e-4439-8fa0-ef89ba21567c"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/veo/record-info?taskId={{ $json.data.taskId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 7f48c3109ae4ee6aee94ba7389bdcaa4"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "83a8020f-d588-4480-a22b-6afae6f9b5ed",
+      "name": "KIE — Get Video Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        23168,
+        17440
+      ],
+      "typeVersion": 4.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "video-success-check",
+              "leftValue": "={{ $json.data.successFlag }}",
+              "rightValue": "1",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "192b5e2e-5b27-4eae-bd2f-9e165de4db26",
+      "name": "Video Ready?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        23376,
+        17440
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\n\n  let videoUrl = '';\n\n  if (result.data && result.data.resultJson) {\n    try {\n      const parsed = JSON.parse(result.data.resultJson);\n      if (parsed.resultUrls && parsed.resultUrls.length > 0) {\n        videoUrl = parsed.resultUrls[0];\n      }\n    } catch(e) {}\n  }\n\n  return [{\n    json: {\n      success: !!videoUrl,\n      video_url: videoUrl,\n      taskId: result.data?.taskId || ''\n    }\n  }];"
+      },
+      "id": "fdb4ace1-72dc-4b93-818d-c579bdbe2266",
+      "name": "Parse Video Result",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        23600,
+        17536
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "38528701-6815-440e-9234-1fadac17f103",
+      "name": "Video Gen — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        23840,
+        17552
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Video generation still processing', retry: true, taskId: $json.data?.taskId }) }}",
+        "options": {}
+      },
+      "id": "d7a8abd8-aa19-40bb-b60e-41e399a962b9",
+      "name": "Video Processing — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        23680,
+        17312
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Image still processing', retry: true, taskId: $json.data?.taskId }) }}",
+        "options": {}
+      },
+      "id": "f8acd9be-6313-439a-9130-d2bf3e40dbe2",
+      "name": "Image Processing — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        23648,
+        16352
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "e194660c-2a1d-46a4-86a2-5032e28f1ef6",
+      "name": "Chat — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        23360,
+        15520
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst phase = body.phase || 1;\nconst message = body.message || '';\nconst context = body.context || {};\n\nconst systemPrompts = {\n  1: 'You are the ELUXR Business Analyzer AI assistant. You help users analyze their business, build ICPs (Ideal Customer Profiles), and perform market research. You have access to their business data and provide actionable insights for social media content strategy. Be specific, data-driven, and strategic.',\n  2: 'You are the ELUXR Theme Engine AI assistant. You help users create 30-day content themes using the Netflix model — 4 weekly \"shows\" with hooks, variety, and audience retention. You understand content cyclicity, platform-specific strategies, and engagement psychology. Help them refine weekly themes and daily content plans.',\n  3: 'You are the ELUXR Content Calendar AI assistant. You help users manage their 30-day content calendar, reschedule posts, swap themes between days, add special events, and optimize posting times. You know optimal posting times for each platform and can suggest schedule adjustments based on engagement patterns.',\n  4: 'You are the ELUXR Content Studio AI assistant. You help users write social media posts, generate image prompts for Nano Banana Pro, create video scripts, and repurpose content across platforms. You write in the user\\'s brand voice and optimize for each platform\\'s algorithm and best practices.',\n  5: 'You are the ELUXR Approval Queue AI assistant. You help users review pending content, suggest edits, approve or reject posts in bulk, and manage the publishing pipeline. You can summarize pending items, flag potential issues, and recommend improvements before publishing.',\n  6: 'You are the ELUXR Image Generation AI assistant specializing in Nano Banana Pro prompts. You help users craft optimal image prompts, suggest styles, aspect ratios, and refinements. You understand composition rules, social media visual best practices, and platform-specific image requirements.',\n  7: 'You are the ELUXR Video Script AI assistant. You help users generate video ideas, create camera-ready scripts with hooks/setup/value/CTA structure, suggest B-roll, on-screen text cues, and thumbnail ideas. You understand short-form video psychology and platform algorithms.'\n};\n\nreturn [{\n  json: {\n    phase: phase,\n    message: message,\n    system_prompt: systemPrompts[phase] || systemPrompts[1],\n    context: context\n  }\n}];"
+      },
+      "id": "d3da8b20-3527-45d7-85fe-abf1598a6081",
+      "name": "Prepare Chat Context",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        22848,
+        15536
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-chat",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "2d84442d-e2ad-48b2-8e6c-b8643ce6ca77",
+      "name": "Chat — Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        22640,
+        15536
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-chat"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "list",
+          "cachedResultName": "eluxr social media agent"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 708478128,
+          "mode": "list",
+          "cachedResultName": "ELUXR_Approval_Queue"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "8b01880a-fb6a-4a28-9444-e988116b2bbf",
+      "name": "Save to Approval Queue Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        21424,
+        17552
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  let content = '';\n  let contentType = 'text';\n  \n  try {\n    if (item.json.content && item.json.content[0]) {\n      content = item.json.content[0].text;\n    } else if (item.json.images) {\n      content = JSON.stringify(item.json.images);\n      contentType = 'image';\n    } else {\n      content = JSON.stringify(item.json);\n    }\n  } catch(e) {\n    content = JSON.stringify(item.json);\n  }\n\n  results.push({\n    json: {\n      id: `content_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,\n      content_type: contentType,\n      content: content,\n      status: 'pending',\n      created_at: new Date().toISOString(),\n      scheduled_for: new Date().toISOString()\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "30fa0146-eb34-4076-ae33-2da325506bac",
+      "name": "Merge All Content",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        21216,
+        17552
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, phase: 3, message: 'Calendar events created', events_created: $items().length }) }}",
+        "options": {}
+      },
+      "id": "c106b048-dd1e-4e30-a17b-ba8e4811469c",
+      "name": "Phase 3 — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        20976,
+        16864
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "start": "={{ $json.startTime }}",
+        "end": "={{ $json.endTime }}",
+        "additionalFields": {
+          "description": "={{ $json.description }}",
+          "summary": "={{ $json.summary }}"
+        }
+      },
+      "id": "e72cd6c6-9478-4c01-915c-58dec4bd2e4b",
+      "name": "Create Google Calendar Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "position": [
+        20752,
+        16864
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "FJBcOjKITBIaEqRV",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "9b46057f-5e04-4b0c-8c3a-c7136bb6945a",
+      "name": "Loop Over Days",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        20544,
+        16864
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are a video content strategist and scriptwriter. Create a camera-ready video script.\\n\\nTheme: {{ $json.theme || 'Engagement content' }}\\nPlatform: {{ $json.platform || 'Instagram Reels' }}\\nHook Idea: {{ $json.hook || 'Attention-grabbing opener' }}\\n\\nCreate a SHORT-FORM VIDEO SCRIPT (30-60 seconds) with this EXACT structure:\\n\\n1. HOOK (0:00-0:03): Opening line that stops the scroll. Bold, direct, creates curiosity.\\n2. SETUP (0:03-0:10): Context — why this matters. Use a stat, personal story, or relatable pain point.\\n3. VALUE (0:10-0:25): 2-3 actionable points. Each with [ON-SCREEN TEXT] cues.\\n4. CTA (0:25-0:30): Clear call to action. Follow, comment, link in bio.\\n\\nAlso include:\\n- [CAMERA DIRECTION] notes (close-up, wide, screen share, etc.)\\n- [B-ROLL] suggestions for each section\\n- [MUSIC] mood suggestion\\n- Estimated engagement hooks (pattern interrupts)\\n\\nReturn as JSON with keys: title, duration_seconds, hook, setup, value_points (array), cta, camera_directions (array), b_roll_suggestions (array), music_mood, on_screen_text (array), thumbnail_idea\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "0f016fbc-557d-48db-b0dd-b26cff4ffff1",
+      "name": "Claude — Video Script Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        20976,
+        17760
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are an elite social media copywriter. Write a {{ $json.platform || 'LinkedIn' }} post based on these details:\\n\\nWeekly Show: {{ $json.weekly_show_name || 'Value Series' }}\\nTheme: {{ $json.theme || 'Engagement post' }}\\nContent Type: {{ $json.content_type || 'Value Post' }}\\nSuggested Hook: {{ $json.hook || 'Start with something attention-grabbing' }}\\nCTA: {{ $json.cta || 'Engage with your audience' }}\\nHashtags: {{ $json.hashtags || '' }}\\n\\nPLATFORM-SPECIFIC RULES:\\n- LinkedIn: 1300-1800 chars, personal story hook, line breaks for readability, 3-5 hashtags at end\\n- Instagram: 150-300 chars caption, 20-30 hashtags in first comment, include emoji\\n- X/Twitter: Thread format (5-7 tweets), numbered, each under 280 chars\\n- Facebook: Conversational tone, 100-300 chars, question-based engagement\\n- TikTok: Script format with [VISUAL] and [TEXT ON SCREEN] cues\\n\\nReturn JSON with keys: platform, post_text, hashtags, first_comment (for Instagram), thread (for X, array of tweet strings), image_prompt (describe ideal accompanying image), posting_notes\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "51247025-570b-481b-9647-4a7ad5bd0e29",
+      "name": "Claude — Write Post Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        20976,
+        17360
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "Video",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notContains"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "Video",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "442dbe96-f211-467c-8f02-f1e39c54bed2",
+      "name": "Route: Text / Image / Video",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        20736,
+        17552
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// FIXED Phase 3: Accept content_ids from frontend and filter approved posts\nconst webhookData = $('Phase 3 — Webhook Trigger').first().json;\nconst items = $input.all();\n\n// Get approved content_ids from the frontend request body\nconst approvedIds = webhookData.body?.content_ids || [];\nconst month = webhookData.body?.month || '';\n\nconst platformTimes = {\n  'LinkedIn': { hour: 9, minute: 0 },\n  'Instagram': { hour: 12, minute: 30 },\n  'X': { hour: 15, minute: 0 },\n  'YouTube': { hour: 14, minute: 0 },\n  'Facebook': { hour: 10, minute: 0 },\n  'TikTok': { hour: 19, minute: 0 }\n};\n\nconst platformColors = {\n  'LinkedIn': '9',\n  'Instagram': '4',\n  'X': '7',\n  'YouTube': '11',\n  'Facebook': '9',\n  'TikTok': '2'\n};\n\n// Filter to only approved items if content_ids provided\nlet filteredItems = items;\nif (approvedIds.length > 0) {\n  filteredItems = items.filter(item => approvedIds.includes(item.json.id));\n}\n\nconst output = filteredItems.map(item => {\n  const d = item.json;\n  const platform = d.platform || 'LinkedIn';\n  const times = platformTimes[platform] || { hour: 9, minute: 0 };\n  const dateStr = d.date || new Date().toISOString().split('T')[0];\n  \n  const startTime = `${dateStr}T${String(times.hour).padStart(2,'0')}:${String(times.minute).padStart(2,'0')}:00`;\n  const endHour = times.hour + 1;\n  const endTime = `${dateStr}T${String(endHour).padStart(2,'0')}:${String(times.minute).padStart(2,'0')}:00`;\n  \n  // Format summary to show the content title/theme\n  const title = d.title || d.theme || d.content_type || 'Post';\n  \n  return {\n    json: {\n      summary: `[${platform}] ${title}`,\n      description: `Theme: ${d.theme || ''}\\nWeekly Show: ${d.weekly_show_name || ''}\\n\\nHook: ${d.hook || ''}\\n\\nContent Type: ${d.content_type || ''}\\nPlatform: ${platform}\\nAlso post on: ${d.secondary_platform || 'N/A'}\\n\\nCTA: ${d.cta || ''}\\nHashtags: ${d.hashtags || ''}\\n\\nNotes: ${d.notes || ''}\\n\\n---\\nGenerated by ELUXR Social Media Agent`,\n      startTime: startTime,\n      endTime: endTime,\n      colorId: platformColors[platform] || '9',\n      day_number: d.day_number,\n      platform: platform,\n      content_id: d.id\n    }\n  };\n});\n\nreturn output;"
+      },
+      "id": "7dd0ee92-c683-47ab-b07e-5ec0d99d2ec0",
+      "name": "Format Calendar Events",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        20320,
+        16864
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "list",
+          "cachedResultName": "eluxr social media agent"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 708478128,
+          "mode": "list",
+          "cachedResultName": "ELUXR_Approval_Queue"
+        },
+        "options": {}
+      },
+      "id": "9f9ccd58-57d4-42e8-94ac-3200dfd6b443",
+      "name": "Read Approval Queue for Calendar",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20096,
+        16864
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date().toISOString().split('T')[0];\nconst items = $input.all();\n\nconst todayContent = items.filter(item => {\n  return item.json.date === today;\n});\n\nif (todayContent.length === 0) {\n  return [items[0] || { json: { theme: 'General engagement post', content_type: 'Value Post', platform: 'LinkedIn' } }];\n}\n\nreturn todayContent;"
+      },
+      "id": "e2cb9246-bab8-4911-b121-135f8b6887c9",
+      "name": "Filter Today's Content",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        20512,
+        17552
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase3-calendar",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "ebf22b0e-ecb2-423b-8c59-a0cad6eaf121",
+      "name": "Phase 3 — Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        19872,
+        16864
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-phase3"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "list",
+          "cachedResultName": "eluxr social media agent"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1595526305,
+          "mode": "list",
+          "cachedResultName": "ELUXR_Themes"
+        },
+        "options": {}
+      },
+      "id": "5baa62c3-5af0-499e-abf9-86c3fc658ad3",
+      "name": "Read Today's Theme",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20288,
+        17552
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, phase: 2, themes_count: $items().length, data: $items().map(i => i.json) }) }}",
+        "options": {}
+      },
+      "id": "36848108-eb10-4a56-a3c6-d9bb3ea98d9e",
+      "name": "Phase 2 — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        20752,
+        16048
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "list",
+          "cachedResultName": "eluxr social media agent"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1595526305,
+          "mode": "list",
+          "cachedResultName": "ELUXR_Themes"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "bf13d888-643a-4689-80a9-b218c33a23f4",
+      "name": "Save Themes to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20544,
+        16048
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date().toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    date: today,\n    trigger_source: $input.first().json.body ? 'webhook' : 'cron',\n    webhook_data: $input.first().json.body || null\n  }\n}];"
+      },
+      "id": "b3299955-cfc8-42d5-9555-d62b98ee6cb3",
+      "name": "Merge Trigger Sources",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        20064,
+        17552
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst webhookData = $('Phase 2 — Webhook Trigger').first().json;\n\nlet themeContent = '';\ntry {\n  themeContent = input.content[0].text;\n} catch(e) {\n  themeContent = JSON.stringify(input);\n}\n\nlet themes = [];\ntry {\n  themes = JSON.parse(themeContent);\n} catch(e) {\n  const match = themeContent.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (match) {\n    themes = JSON.parse(match[0]);\n  } else {\n    themes = [{ error: 'Could not parse themes', raw: themeContent }];\n  }\n}\n\nconst output = themes.map(day => ({\n  json: {\n    month: webhookData.body.month || '',\n    ...day,\n    hashtags: Array.isArray(day.hashtags) ? day.hashtags.join(', ') : (day.hashtags || ''),\n    created_at: new Date().toISOString()\n  }\n}));\n\nreturn output;"
+      },
+      "id": "00c5cbd3-dd77-4815-8436-1197f77ca377",
+      "name": "Parse & Split Theme Days",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        20320,
+        16048
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase4-studio",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "94efa083-b101-4560-8b2a-1fc8fe497ae9",
+      "name": "Phase 4 — Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        19856,
+        17648
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-phase4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 8192,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are an expert social media content strategist using the NETFLIX MODEL for content planning.\\n\\nTHE NETFLIX MODEL:\\n- Each month has 4 weekly 'shows' (seasons)\\n- Week 1: 'The Origin Story' — Personal stories, behind-the-scenes, relatable founder moments\\n- Week 2: 'The Proof' — Case studies, client wins, data-driven results, testimonials\\n- Week 3: 'The Method' — How-to guides, tutorials, step-by-step processes, tips\\n- Week 4: 'The Vision' — Industry trends, bold predictions, future-casting, cliffhangers for next month\\n\\nCYCLICITY RULES (NO content type repeats on consecutive days):\\n- Monday: Hook Post (personal story or bold statement)\\n- Tuesday: Value Post (tips, education, industry insights)\\n- Wednesday: Social Proof (case study, testimonial, client win)\\n- Thursday: Carousel/Thread (multi-slide educational content)\\n- Friday: Video/Reel (short-form video script)\\n- Saturday: Engagement (poll, question, interactive)\\n- Sunday: Cliffhanger (teaser for next week)\\n\\nGENERATE A 30-DAY THEME CALENDAR for:\\n- Month: {{ $json.body.month }}\\n- Products/Services: {{ $json.body.products }}\\n- Industry: {{ $json.body.industry }}\\n- ICP Summary: {{ $json.body.icp_summary }}\\n- Holidays/Events: {{ $json.body.holidays }}\\n\\nFor EACH of the 30 days return a JSON array of objects with:\\n- day_number (1-30)\\n- date (YYYY-MM-DD)\\n- day_of_week (Monday-Sunday)\\n- week_number (1-4)\\n- weekly_show_name (the Netflix show title for that week)\\n- theme (specific topic for this day)\\n- content_type (Hook/Value/Proof/Carousel/Video/Engagement/Cliffhanger)\\n- platform (primary: LinkedIn/Instagram/X/YouTube/Facebook)\\n- secondary_platform (for repurposing)\\n- hook (the opening line or attention-grabber)\\n- cta (call to action)\\n- hashtags (5 relevant hashtags)\\n- notes (production notes or tips)\\n\\nReturn ONLY valid JSON array, no markdown.\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "00223fee-6c27-461d-8ca8-6946134bb8ad",
+      "name": "Claude — Netflix Theme Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        20096,
+        16048
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "a932fb41-8860-40cd-b0c7-825b917d76e3",
+      "name": "Daily Content Trigger (6 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        19856,
+        17456
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase2-themes",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "d6d01af6-0830-4d08-bb6b-5e06a9f70df1",
+      "name": "Phase 2 — Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        19872,
+        16048
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-phase2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 7f48c3109ae4ee6aee94ba7389bdcaa4"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"nano-banana-pro\",\n  \"input\": {\n    \"prompt\": \"Professional social media graphic for {{ $json.platform || 'LinkedIn' }}. Theme: {{ $json.theme || 'business content' }}. Style: clean, modern, photorealistic. High quality, no text overlays or watermarks.\",\n    \"aspect_ratio\": \"1:1\",\n    \"width\": 1024,\n    \"height\": 1024,\n    \"output_format\": \"png\"\n  }\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "c4368be5-2b98-4905-a7a9-cb091162483b",
+      "name": "KIE — Generate Content Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        20976,
+        17552
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase5-submit",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "ea97ac5e-90d5-4051-904f-b584997716b7",
+      "name": "Submit Content — Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        20080,
+        18240
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-phase5-submit"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nreturn [{\n  json: {\n    id: `content_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,\n    title: body.title || body.theme || 'Untitled Post',\n    content: body.content || body.post_text || '',\n    content_type: body.content_type || 'Post',\n    platform: body.platform || 'LinkedIn',\n    status: 'pending',\n    scheduled_for: body.scheduled_for || '',\n    created_at: new Date().toISOString(),\n    reviewed_at: '',\n    feedback: ''\n  }\n}];"
+      },
+      "id": "2ab292ed-a40d-484f-9f86-92fb93e28d9c",
+      "name": "Format Queue Item",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        20288,
+        18240
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "list",
+          "cachedResultName": "eluxr social media agent"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 708478128,
+          "mode": "list",
+          "cachedResultName": "ELUXR_Approval_Queue"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "63e8858e-90e3-4a4f-9992-fbde33e16d48",
+      "name": "Save to Queue Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20512,
+        18240
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, action: 'submitted', item: $json }) }}",
+        "options": {}
+      },
+      "id": "87ef5a0e-ad1d-446f-8e08-8c0342340a6b",
+      "name": "Submit — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        20736,
+        18240
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "path": "eluxr-approval-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "d96ca77a-033a-407e-8ed7-6022b6556771",
+      "name": "List Queue — Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        20080,
+        18512
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-approval-list"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "list",
+          "cachedResultName": "eluxr social media agent"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 708478128,
+          "mode": "list",
+          "cachedResultName": "ELUXR_Approval_Queue"
+        },
+        "options": {}
+      },
+      "id": "32f21098-30ac-40ae-9df0-4cd923fd2e4a",
+      "name": "Read Queue Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20288,
+        18512
+      ],
+      "typeVersion": 4.5,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all() || [];\n\n// Handle empty input gracefully\nif (!items || items.length === 0) {\n  return [{\n    json: {\n      success: true,\n      stats: { pending: 0, approved: 0, rejected: 0, published: 0, total: 0 },\n      pending: [],\n      approved: [],\n      rejected: [],\n      published: [],\n      all: []\n    }\n  }];\n}\n\nconst allItems = items.map(i => i.json);\nconst pending = allItems.filter(i => i.status === 'pending');\nconst approved = allItems.filter(i => i.status === 'approved');\nconst rejected = allItems.filter(i => i.status === 'rejected');\nconst published = allItems.filter(i => i.status === 'published');\n\nreturn [{\n  json: {\n    success: true,\n    stats: {\n      pending: pending.length,\n      approved: approved.length,\n      rejected: rejected.length,\n      published: published.length,\n      total: allItems.length\n    },\n    pending: pending,\n    approved: approved,\n    rejected: rejected,\n    published: published,\n    all: allItems\n  }\n}];"
+      },
+      "id": "e82a8193-8374-459a-9ff0-68374d2c1f4c",
+      "name": "Organize by Status",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        20512,
+        18512
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "17ce645e-51eb-4f82-9da9-36a60972b841",
+      "name": "List — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        20736,
+        18512
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "jsCode": "const perplexityData = $input.first().json;\nconst webhookData = $('Phase 1 — Webhook Trigger1').first().json;\n\nconst research = perplexityData.choices ? perplexityData.choices[0].message.content : JSON.stringify(perplexityData);\nconst businessUrl = webhookData.body.business_url || '';\nconst industry = webhookData.body.industry || '';\n\nconst prompt = 'You are an ICP specialist for social media marketing. Based on the following market research, create a comprehensive Ideal Customer Profile.\\n\\nBusiness: ' + businessUrl + '\\nIndustry: ' + industry + '\\nMarket Research: ' + research + '\\n\\nReturn a JSON object with keys: icp_summary, demographics, psychographics, content_preferences, competitors, content_opportunities, recommended_hashtags.\\n\\nReturn ONLY valid JSON, no markdown.';\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  messages: [{ role: 'user', content: prompt }]\n});\n\nreturn [{ json: { apiBody: body } }];"
+      },
+      "id": "b396c79a-847e-4fa9-b939-0f3d6323c853",
+      "name": "Prepare ICP Prompt",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        20464,
+        15312
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, phase: 1, session_id: 'session_' + Date.now(), data: $json }) }}",
+        "options": {}
+      },
+      "id": "1dbb936d-2c84-4fd7-ae19-680d831759dd",
+      "name": "Phase 1 — Response1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        21360,
+        15312
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "list",
+          "cachedResultName": "eluxr social media agent"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1597559418,
+          "mode": "list",
+          "cachedResultName": "ELUXR_ICP_Data"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "business_url",
+              "displayName": "business_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "industry",
+              "displayName": "industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "icp_summary",
+              "displayName": "icp_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "demographics",
+              "displayName": "demographics",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "psychographics",
+              "displayName": "psychographics",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content_preferences",
+              "displayName": "content_preferences",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "competitors",
+              "displayName": "competitors",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content_opportunities",
+              "displayName": "content_opportunities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "recommended_hashtags",
+              "displayName": "recommended_hashtags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "full_icp",
+              "displayName": "full_icp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "8cb2c52a-67ce-4742-803d-0ac287e9feea",
+      "name": "Save ICP to Google Sheets1",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        21136,
+        15312
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst webhookData = $('Phase 1 — Webhook Trigger1').first().json;\n\nlet icpContent = '';\ntry {\n  icpContent = input.content[0].text;\n} catch(e) {\n  icpContent = JSON.stringify(input);\n}\n\nlet icpParsed = {};\ntry {\n  icpParsed = JSON.parse(icpContent);\n} catch(e) {\n  icpParsed = { raw: icpContent };\n}\n\nreturn [{\n  json: {\n    business_url: webhookData.body.business_url || '',\n    industry: webhookData.body.industry || '',\n    icp_summary: icpParsed.icp_summary || '',\n    demographics: JSON.stringify(icpParsed.demographics || {}),\n    psychographics: JSON.stringify(icpParsed.psychographics || {}),\n    content_preferences: JSON.stringify(icpParsed.content_preferences || {}),\n    competitors: JSON.stringify(icpParsed.competitors || []),\n    content_opportunities: JSON.stringify(icpParsed.content_opportunities || []),\n    recommended_hashtags: JSON.stringify(icpParsed.recommended_hashtags || []),\n    full_icp: icpContent,\n    created_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "e72bb7b5-4b4f-4804-9dc5-2cd5d7d46b97",
+      "name": "Parse ICP Response1",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        20912,
+        15312
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.apiBody }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "04f9c0fc-aef1-4777-9edf-7e85b54580f5",
+      "name": "Claude — ICP Generator1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        20704,
+        15312
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "perplexityApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a market research analyst. Provide detailed, actionable market research for social media content strategy. Include: target demographics, competitor analysis, content gaps, trending topics, and audience pain points. Return structured JSON.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Perform deep market research for this business. Business URL or description: {{ $json.body.business_url }}. Industry: {{ $json.body.industry }}. Analyze competitors, target audience demographics, content gaps in their social media presence, trending topics in this industry, and key pain points of their ideal customers. Return as structured JSON with keys: target_demographics, competitors, content_gaps, trending_topics, audience_pain_points, recommended_platforms.\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 4000\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "55bb4ec3-9301-4684-b82e-0d0d84f5d7ad",
+      "name": "Perplexity — Market Research1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        20160,
+        15296
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "perplexityApi": {
+          "id": "3rYRY1C2K9o0DDXI",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase1-analyzer",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "56d83907-6e28-40b5-bbb6-f7e3dcad240e",
+      "name": "Phase 1 — Webhook Trigger1",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        19936,
+        15296
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-phase1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($input.first().json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        21632,
+        17552
+      ],
+      "id": "2711ff14-2ea0-4b75-a628-ad218bf06e0a",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "# ELUXR SOCIAL MEDIA AGENT\n## With KIE Nano Banana Pro + Veo Integration (CORRECTED)\n\n### API ENDPOINTS\n\n**Phase 1:** `/webhook/eluxr-phase1-analyzer` (POST)\n**Phase 2:** `/webhook/eluxr-phase2-themes` (POST)\n**Phase 3:** `/webhook/eluxr-phase3-calendar` (POST)\n**Phase 4:** `/webhook/eluxr-phase4-studio` (POST)\n**Phase 5:** `/webhook/eluxr-phase5-submit` (POST)\n\n**Tools:**\n- `/webhook/eluxr-chat` (POST) — Chatbox\n- `/webhook/eluxr-videoscript` (POST) — Video Scripts\n- `/webhook/eluxr-imagegen` (POST) — KIE Nano Banana Pro\n- `/webhook/eluxr-videogen` (POST) — KIE Veo\n- `/webhook/eluxr-approval-list` (GET) — List Queue\n- `/webhook/eluxr-approval-action` (POST) — Approve/Reject\n\n### REQUIRED ENV VARIABLES\n- `KIE_API_KEY` — api.kie.ai API key\n- `ANTHROPIC_API_KEY` — Claude API key\n\n### COSTS\n- Images: ~$0.02/image (Nano Banana Pro)\n- Videos: ~$0.60/video (Veo)",
+        "height": 780,
+        "width": 450
+      },
+      "id": "58397f3b-39bd-4d33-bbd7-a6404b7e224a",
+      "name": "Master Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        18896,
+        14784
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# 📌 CHATBOX API ENDPOINTS\n## Dashboard Chat Integration\n\n### How This Works:\nEach phase's chatbox in the dashboard sends messages to a unified chat webhook. Claude processes the message with context from the current phase and returns a response.\n\n### Setup:\n- Single webhook handles all phase chats\n- Phase number is passed in the request body\n- Claude has system prompts specific to each phase\n- Conversation history is maintained per session\n\n### Dashboard Integration:\nIn your frontend JavaScript, the chatbox `sendChat()` function should POST to:\n`POST /webhook/eluxr-chat`\n\nBody:\n```json\n{\n  \"phase\": 1,\n  \"message\": \"user message here\",\n  \"session_id\": \"unique-session-id\",\n  \"context\": { any relevant data from current phase }\n}\n```",
+        "height": 840,
+        "width": 588,
+        "color": 7
+      },
+      "id": "5be27074-9c55-41b1-8271-73338b6f6353",
+      "name": "Chat Integration Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        21984,
+        15136
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# 📌 PHASE 1: Business Analyzer\n## ICP + Market Research\n\n### How This Works:\n1. **Webhook** receives business URL + industry from the dashboard\n2. **Perplexity API** performs deep market research (competitors, audience, trends)\n3. **Claude AI** analyzes the research and builds an Ideal Customer Profile\n4. **Google Sheets** stores the ICP for use by later phases\n5. **Webhook Response** sends results back to the dashboard\n\n### Setup Steps:\n- Configure the Webhook node — copy the Production URL into your dashboard's Phase 1 API call\n- Add your Perplexity API key to the HTTP Request node headers\n- Add your Anthropic API key to the Claude node\n- Create a Google Sheet called `ELUXR_ICP_Data` with columns: `business_url`, `industry`, `icp_summary`, `market_analysis`, `competitors`, `content_opportunities`, `created_at`\n\n### API Endpoints Used:\n`POST https://api.perplexity.ai/chat/completions`\n`POST https://api.anthropic.com/v1/messages`",
+        "height": 692,
+        "width": 460,
+        "color": 2
+      },
+      "id": "e732eb9f-70c9-4da7-9244-64d71999efaf",
+      "name": "Phase 1 Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        19392,
+        15008
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# 📌 PHASE 2: Theme Engine\n## 30-Day Netflix-Model Content Themes\n\n### How This Works:\n1. **Webhook** receives month, products, events, and ICP data\n2. **Claude AI** generates 4 weekly \"shows\" using the Netflix model\n3. Each week has a unique theme, content types, hooks, and cliffhangers\n4. Built-in cyclicity — no content type repeats on consecutive days\n5. **Google Sheets** stores the theme calendar\n\n### Setup Steps:\n- The dashboard sends ICP data from Phase 1 + user inputs (month, products, holidays)\n- Claude uses a specialized prompt for the Netflix content model\n- Output: 30-day theme calendar with daily content types, themes, and hooks\n- Create sheet `ELUXR_Themes` with columns: `month`, `week_number`, `day`, `date`, `theme`, `content_type`, `platform`, `hook`, `notes`\n\n### Netflix Model Rules:\n- Week 1: \"The Origin Story\" — Personal, relatable\n- Week 2: \"The Proof\" — Case studies, data, results\n- Week 3: \"The Method\" — How-tos, tutorials, value\n- Week 4: \"The Vision\" — Future trends, cliffhangers\n- Each day has a different content format\n- Sunday always has a \"next week teaser\"",
+        "height": 620,
+        "width": 460,
+        "color": 3
+      },
+      "id": "d25742c9-2b05-4b5b-ae76-d41298046efc",
+      "name": "Phase 2 Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        19312,
+        15840
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# 📌 PHASE 3: Content Calendar\n## Google Calendar Sync\n\n### How This Works:\n1. **Webhook** receives the theme calendar from Phase 2 (or triggers from stored themes)\n2. **Google Sheets** reads the stored theme data for the target month\n3. **Loop** iterates over each day's theme\n4. **Google Calendar** creates an event for each content slot with full details\n5. Each event includes: theme, content type, platform, hook, CTA, hashtags\n\n### Setup Steps:\n- Connect Google Calendar OAuth credentials\n- Select the target calendar (create one called `ELUXR Content Calendar`)\n- Events are created with the content details in the description\n- Color-coding by platform: LinkedIn=Blue, Instagram=Pink, X=Cyan, YouTube=Red, Facebook=Navy\n\n### Event Format:\n- **Title**: `[Platform] Content Type — Theme`\n- **Description**: Full content brief with hook, CTA, hashtags\n- **Time**: Uses optimal posting times per platform\n- **Reminders**: 2 hours before + 30 min before",
+        "height": 728,
+        "width": 460,
+        "color": 4
+      },
+      "id": "16118caf-bc83-48f2-9368-e1cb8f46368c",
+      "name": "Phase 3 Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        19200,
+        16608
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# 📌 PHASE 4: Content Studio\n## AI Writing + Image Gen + Video Scripts\n\n### How This Works:\n1. **CRON Trigger** fires daily at 6 AM (or Webhook from dashboard)\n2. **Google Sheets** reads today's theme/content brief\n3. **Router** branches into 3 parallel tracks:\n   - **Track A — Text Content**: Claude writes platform-specific posts\n   - **Track B — Image Generation**: Nano Banna Pro creates visuals\n   - **Track C — Video Scripts**: Claude generates camera-ready scripts\n4. All outputs merge and go to the Approval Queue (Phase 5)\n\n### Setup Steps:\n- CRON: Set to run daily at 06:00 in your timezone\n- Claude prompts are customized per platform (LinkedIn long-form, Instagram caption+hashtags, X threads, etc.)\n- Nano Banna Pro: Add your API key. Supports styles: photorealistic, illustration, 3d-render, cinematic, minimalist\n- Video scripts include: hook, setup, value delivery, CTA, B-roll suggestions, on-screen text cues\n\n### API Endpoints:\n`POST https://api.anthropic.com/v1/messages` — Content writing\n`POST https://api.nanobanna.pro/v1/generate` — Image generation\n`POST https://api.anthropic.com/v1/messages` — Video scripts",
+        "height": 664,
+        "width": 500,
+        "color": 5
+      },
+      "id": "6b17349b-3582-41b3-9ded-d48473050d98",
+      "name": "Phase 4 Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        19200,
+        17424
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# 📌 PHASE 5: Approval Queue (Web App)\n## No Telegram — Dashboard Only\n\n### How This Works:\n1. Content from Phase 4 gets saved to Google Sheets with status 'pending'\n2. Dashboard calls `/webhook/eluxr-approval-list` to fetch all pending items\n3. User clicks Approve/Reject in the web app\n4. Dashboard calls `/webhook/eluxr-approval-action` with the action\n5. Google Sheet row gets updated with new status\n\n### Endpoints:\n- `GET /webhook/eluxr-approval-list` — Returns all items from the queue\n- `POST /webhook/eluxr-approval-action` — Approve/reject an item\n- `POST /webhook/eluxr-phase5-submit` — Add new content to the queue\n\n### Google Sheet: `ELUXR_Approval_Queue`\nColumns: id | title | content | content_type | platform | status | scheduled_for | created_at | reviewed_at | feedback\n\n### Status Values:\n- `pending` — Awaiting review\n- `approved` — Ready to publish\n- `rejected` — Needs revision\n- `published` — Already posted",
+        "height": 816,
+        "width": 480,
+        "color": 6
+      },
+      "id": "ddcfb065-4060-4b8a-bc69-eeb1c7aa5ade",
+      "name": "Phase 5 Instructions1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        19408,
+        18192
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsCode": "// Wait 35 seconds then pass data through\n  await new Promise(resolve => setTimeout(resolve, 35000));\n\n  return $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23024,
+        16272
+      ],
+      "id": "a1349c1e-303c-405d-9de4-251044aaf6a8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-clear-pending",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "a899965e-28a6-4e82-8948-35cfaed060cd",
+      "name": "Clear Pending Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        19920,
+        17136
+      ],
+      "typeVersion": 2,
+      "webhookId": "a1793d88-81f5-4a87-8676-85d3b247c5ab"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ELUXR_Approval_Queue",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "09a6a9fe-56f7-48fe-801f-6babcdcee2c1",
+      "name": "Get Pending Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20176,
+        17136
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ELUXR_Approval_Queue",
+          "mode": "name"
+        }
+      },
+      "id": "080ada07-481e-4a30-9157-4c0679098a51",
+      "name": "Delete Pending Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20432,
+        17136
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Pending content cleared', deleted_count: $items().length }) }}",
+        "options": {}
+      },
+      "id": "22c71578-c7ea-44f0-8bee-e4d7456836b0",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        20672,
+        17136
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://api.anthropic.com/v1/messages',\n  headers: {\n    'Content-Type': 'application/json',\n    'anthropic-version': '2023-06-01',\n    'x-api-key': $env.get('ANTHROPIC_API_KEY') || ''\n  },\n  body: {\n    model: 'claude-sonnet-4-20250514',\n    max_tokens: 2048,\n    system: $input.item.json.system_prompt,\n    messages: [{role: 'user', content: $input.item.json.message}]\n  }\n});\n\nreturn [{json: response}];"
+      },
+      "id": "0a69159f-cda2-4d1a-a414-40314602c0ab",
+      "name": "Claude Chat Call",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        23056,
+        15536
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-approval-action",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "0f8abded-27fd-4e70-843c-3a03ba95676d",
+      "name": "Approval Action Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        20048,
+        18832
+      ],
+      "typeVersion": 2,
+      "webhookId": "14565dcf-35a4-47b7-a318-a26347c60825"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "action-check",
+              "leftValue": "={{ $json.body.action }}",
+              "rightValue": "approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0ef6f8ac-089c-46a4-a610-c180b14c17b0",
+      "name": "Is Approve?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        20304,
+        18832
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ELUXR_Approval_Queue",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id",
+              "lookupValue": "={{ $('Approval Action Webhook').item.json.body.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3ad70619-d734-4ad6-aa7d-2eb4654dc105",
+      "name": "Find Content Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20688,
+        18704
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ELUXR_Approval_Queue",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "approved",
+            "row_number": 0,
+            "id": "={{ $json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content_type",
+              "displayName": "content_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "scheduled_for",
+              "displayName": "scheduled_for",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "platform",
+              "displayName": "platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reviewed_at",
+              "displayName": "reviewed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "feedback",
+              "displayName": "feedback",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "_rowNumber",
+              "displayName": "_rowNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "success",
+              "displayName": "success",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "error",
+              "displayName": "error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content_id",
+              "displayName": "content_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c5f159e3-4410-47d7-b04c-048fa0ac8735",
+      "name": "Update to Approved",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20944,
+        18704
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "reject-check",
+              "leftValue": "={{ $('Approval Action Webhook').item.json.body.action }}",
+              "rightValue": "reject",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7267d927-806e-4bfa-b537-00533b71f0d4",
+      "name": "Is Reject?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        20544,
+        18928
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ELUXR_Approval_Queue",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id",
+              "lookupValue": "={{ $('Approval Action Webhook').item.json.body.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b033d41d-42c2-48e6-83da-d8f7270466a6",
+      "name": "Find Row for Reject",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20800,
+        18880
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ELUXR_Approval_Queue",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "rejected",
+            "row_number": 0,
+            "id": "={{ $json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content_type",
+              "displayName": "content_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "scheduled_for",
+              "displayName": "scheduled_for",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "platform",
+              "displayName": "platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reviewed_at",
+              "displayName": "reviewed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "feedback",
+              "displayName": "feedback",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "_rowNumber",
+              "displayName": "_rowNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "success",
+              "displayName": "success",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "error",
+              "displayName": "error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content_id",
+              "displayName": "content_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3d1b6246-7307-4d02-ab3e-c2af6f56dbd1",
+      "name": "Update to Rejected",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        21056,
+        18880
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ELUXR_Approval_Queue",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id",
+              "lookupValue": "={{ $('Approval Action Webhook').item.json.body.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9da2e4bf-5cb9-4e38-b5e3-51ea27702752",
+      "name": "Find Row for Edit",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20800,
+        19024
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ELUXR_Approval_Queue",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "content": "={{ JSON.stringify({ post_text: $('Approval Action Webhook').item.json.body.content }) }}",
+            "row_number": 0,
+            "id": "={{ $json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content_type",
+              "displayName": "content_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "scheduled_for",
+              "displayName": "scheduled_for",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "platform",
+              "displayName": "platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reviewed_at",
+              "displayName": "reviewed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "feedback",
+              "displayName": "feedback",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "_rowNumber",
+              "displayName": "_rowNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "success",
+              "displayName": "success",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "error",
+              "displayName": "error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content_id",
+              "displayName": "content_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "198faa75-7b17-4b5a-88d0-5b4da8dceb74",
+      "name": "Update Content",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        21056,
+        19024
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, action: $('Approval Action Webhook').item.json.body.action, date: $('Approval Action Webhook').item.json.body.date }) }}",
+        "options": {}
+      },
+      "id": "1e2adc7b-fa09-4e01-91fa-e7947b9d3661",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        21296,
+        18832
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "path": "eluxr-themes-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "42719ccd-fb44-425d-89cc-7c5b51ab7850",
+      "name": "Themes List — Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        20096,
+        19264
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-themes-list"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zlIBLhRt_5VSe3Aw8qTp-9p5hpA8j_1ItUrvUBbULjU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ELUXR_Themes",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "14d20961-59d1-4214-9f9d-5ebd4832a27b",
+      "name": "Read Themes Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        20336,
+        19264
+      ],
+      "typeVersion": 4.5,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DfLuGqHDJkGpiO8P",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all() || [];\n\n// Handle empty input gracefully\nif (!items || items.length === 0) {\n  return [{\n    json: {\n      success: true,\n      count: 0,\n      themes: []\n    }\n  }];\n}\n\nconst themes = items.map(item => ({\n  date: item.json.date || '',\n  day_number: item.json.day_number || '',\n  week_number: item.json.week_number || '',\n  weekly_show_name: item.json.weekly_show_name || '',\n  theme: item.json.theme || '',\n  content_type: item.json.content_type || '',\n  platform: item.json.platform || '',\n  hook: item.json.hook || '',\n  cta: item.json.cta || '',\n  hashtags: item.json.hashtags || '',\n  notes: item.json.notes || ''\n}));\n\nreturn [{\n  json: {\n    success: true,\n    count: themes.length,\n    themes: themes\n  }\n}];"
+      },
+      "id": "383a7e50-cbc1-46c3-ad75-a3ee101f119a",
+      "name": "Format Themes Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        20576,
+        19264
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "a7c573bb-b51b-4f82-b2f3-0308758a6467",
+      "name": "Themes List — Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        20816,
+        19264
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "content": "# 📌 THEMES LIST ENDPOINT\n## Read Weekly Themes from Google Sheets\n\n### GET /webhook/eluxr-themes-list\n\nReturns all themes from ELUXR_Themes sheet.\nUsed by dashboard to load weekly content schedule.\n\n### Response:\n```json\n{\n  \"success\": true,\n  \"count\": 30,\n  \"themes\": [\n    {\n      \"date\": \"2025-01-01\",\n      \"week_number\": 1,\n      \"weekly_show_name\": \"The Origin Story\",\n      \"theme\": \"Company founding story\",\n      \"content_type\": \"Hook Post\",\n      \"platform\": \"LinkedIn\",\n      \"hook\": \"The day everything changed...\"\n    }\n  ]\n}\n```",
+        "height": 500,
+        "width": 400,
+        "color": 4
+      },
+      "id": "c978338d-efff-49cf-bd53-3e959a937409",
+      "name": "Themes List Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        19568,
+        18672
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Parse Script Response": {
+      "main": [
+        [
+          {
+            "node": "Video Script — Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude — Script Generator": {
+      "main": [
+        [
+          {
+            "node": "Parse Script Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Script — Webhook": {
+      "main": [
+        [
+          {
+            "node": "Claude — Script Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Gen — Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Nano Banana Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Nano Banana Prompt": {
+      "main": [
+        [
+          {
+            "node": "KIE — Create Image Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE — Create Image Task": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE — Get Image Result": {
+      "main": [
+        [
+          {
+            "node": "Image Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Ready?": {
+      "main": [
+        [
+          {
+            "node": "Parse Image Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Image Processing — Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Image Result": {
+      "main": [
+        [
+          {
+            "node": "Image Gen — Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Gen — Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Veo Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Veo Prompt": {
+      "main": [
+        [
+          {
+            "node": "KIE — Create Video Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE — Create Video Task": {
+      "main": [
+        [
+          {
+            "node": "Wait for Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Video": {
+      "main": [
+        [
+          {
+            "node": "KIE — Get Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE — Get Video Status": {
+      "main": [
+        [
+          {
+            "node": "Video Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Ready?": {
+      "main": [
+        [
+          {
+            "node": "Video Processing — Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Video Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Video Result": {
+      "main": [
+        [
+          {
+            "node": "Video Gen — Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Chat Context": {
+      "main": [
+        [
+          {
+            "node": "Claude Chat Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat — Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Chat Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Content": {
+      "main": [
+        [
+          {
+            "node": "Save to Approval Queue Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude — Video Script Generator": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Google Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude — Write Post Content": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Days": {
+      "main": [
+        [
+          {
+            "node": "Create Google Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Phase 3 — Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route: Text / Image / Video": {
+      "main": [
+        [
+          {
+            "node": "Claude — Write Post Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "KIE — Generate Content Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude — Video Script Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Calendar Events": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Approval Queue for Calendar": {
+      "main": [
+        [
+          {
+            "node": "Format Calendar Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Today's Content": {
+      "main": [
+        [
+          {
+            "node": "Route: Text / Image / Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phase 3 — Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Approval Queue for Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Today's Theme": {
+      "main": [
+        [
+          {
+            "node": "Filter Today's Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Themes to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Phase 2 — Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Trigger Sources": {
+      "main": [
+        [
+          {
+            "node": "Read Today's Theme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Split Theme Days": {
+      "main": [
+        [
+          {
+            "node": "Save Themes to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phase 4 — Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Merge Trigger Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude — Netflix Theme Generator": {
+      "main": [
+        [
+          {
+            "node": "Parse & Split Theme Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Content Trigger (6 AM)": {
+      "main": [
+        [
+          {
+            "node": "Merge Trigger Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phase 2 — Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Claude — Netflix Theme Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE — Generate Content Image": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Content — Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Queue Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Queue Item": {
+      "main": [
+        [
+          {
+            "node": "Save to Queue Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Queue Sheet": {
+      "main": [
+        [
+          {
+            "node": "Submit — Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Queue — Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Queue Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Queue Sheet": {
+      "main": [
+        [
+          {
+            "node": "Organize by Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Organize by Status": {
+      "main": [
+        [
+          {
+            "node": "List — Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare ICP Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude — ICP Generator1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save ICP to Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "Phase 1 — Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse ICP Response1": {
+      "main": [
+        [
+          {
+            "node": "Save ICP to Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude — ICP Generator1": {
+      "main": [
+        [
+          {
+            "node": "Parse ICP Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity — Market Research1": {
+      "main": [
+        [
+          {
+            "node": "Prepare ICP Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phase 1 — Webhook Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Perplexity — Market Research1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Approval Queue Sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "KIE — Get Image Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Pending Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Pending Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pending Rows": {
+      "main": [
+        [
+          {
+            "node": "Delete Pending Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Pending Rows": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Chat Call": {
+      "main": [
+        [
+          {
+            "node": "Chat — Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval Action Webhook": {
+      "main": [
+        [
+          {
+            "node": "Is Approve?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Approve?": {
+      "main": [
+        [
+          {
+            "node": "Find Content Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Reject?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Content Row": {
+      "main": [
+        [
+          {
+            "node": "Update to Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update to Approved": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Reject?": {
+      "main": [
+        [
+          {
+            "node": "Find Row for Reject",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find Row for Edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row for Reject": {
+      "main": [
+        [
+          {
+            "node": "Update to Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update to Rejected": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Row for Edit": {
+      "main": [
+        [
+          {
+            "node": "Update Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Content": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Themes List — Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Themes Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Themes Sheet": {
+      "main": [
+        [
+          {
+            "node": "Format Themes Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Themes Response": {
+      "main": [
+        [
+          {
+            "node": "Themes List — Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "87d406c3-1042-4cc9-9426-a3aafeae5e7c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "818abf4ed141c7b72047fe89d373f3d85eb21aa1bfa695eff1c5ec2f686a3ee7"
+  },
+  "id": "WJf9TtC4bTdkzJCOklCf2",
+  "tags": []
+}

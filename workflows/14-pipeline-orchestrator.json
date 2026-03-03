@@ -1,0 +1,842 @@
+{
+  "name": "ELUXR 14-Pipeline-Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-generate-content",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "eluxr-generate-content-orch"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "orch-0001-4000-8000-000000000002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: \"Unauthorized\" }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000004",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?user_id=eq.{{ $json.user_id }}&status=eq.running&select=id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000005",
+      "name": "Check Existing Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 100],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-has-running",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000006",
+      "name": "Has Running?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [880, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, status: \"accepted\", pipeline_run_id: $json.id, resumed: true }) }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000007",
+      "name": "Return Existing Run",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reference Auth Validator output by name (HTTP Request replaced $json)\nconst authData = $('Auth Validator').item.json;\nconst userId = authData.user_id;\nconst email = authData.email || '';\nconst body = authData.body || {};\n\n// Capture the original Authorization header for passing to sub-workflows\nconst webhookData = $('Webhook').item.json;\nconst authHeader = (webhookData.headers || {}).authorization || (webhookData.headers || {}).Authorization || '';\n\nreturn {\n  json: {\n    user_id: userId,\n    pipeline_type: 'full_pipeline',\n    status: 'running',\n    current_step: 0,\n    total_steps: 6,\n    step_label: 'Starting...',\n    step_progress: 0,\n    started_at: new Date().toISOString(),\n    metadata: {\n      business_url: body.business_url || '',\n      industry: body.industry || '',\n      month: body.month || '',\n      products: body.products || '',\n      brand_voice: body.brand_voice || '',\n      platforms: body.platforms || []\n    },\n    body: body,\n    email: email,\n    auth_header: authHeader\n  }\n};"
+      },
+      "id": "orch-0001-4000-8000-000000000008",
+      "name": "Create Pipeline Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ user_id: $json.user_id, pipeline_type: $json.pipeline_type, status: $json.status, current_step: $json.current_step, total_steps: $json.total_steps, step_label: $json.step_label, step_progress: $json.step_progress, started_at: $json.started_at, metadata: $json.metadata }) }}",
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000009",
+      "name": "INSERT pipeline_runs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const insertResult = $input.item.json;\n// PostgREST returns array with Prefer: return=representation\nconst row = Array.isArray(insertResult) ? insertResult[0] : insertResult;\nconst runId = row.id;\nconst metadata = row.metadata || {};\n\n// Recover email, body, and auth header from the Create Pipeline Run node\nconst createNode = $('Create Pipeline Run').item.json;\n\nreturn {\n  json: {\n    pipeline_run_id: runId,\n    user_id: row.user_id,\n    body: createNode.body || metadata,\n    email: createNode.email || metadata.email || '',\n    auth_header: createNode.auth_header || ''\n  }\n};"
+      },
+      "id": "orch-0001-4000-8000-000000000010",
+      "name": "Extract Run ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, status: \"accepted\", pipeline_run_id: $json.pipeline_run_id }) }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000011",
+      "name": "Respond 202",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1760, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ current_step: 1, step_label: \"Analyzing your business...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000012",
+      "name": "Update Step 1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1980, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase1-analyzer",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [] }) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000013",
+      "name": "Call 01-ICP-Analyzer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ current_step: 2, step_label: \"Creating content themes...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000014",
+      "name": "Update Step 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2420, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase2-themes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [], icp_summary: $json.icp_summary || $json.data?.icp_summary || '', holidays: $json.holidays || '' }) }}",
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000015",
+      "name": "Call 02-Theme-Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2640, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ current_step: 3, step_label: \"Writing posts...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000016",
+      "name": "Update Step 3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2860, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase4-studio",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [] }) }}",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000017",
+      "name": "Call 04-Content-Studio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3080, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ current_step: 4, step_label: \"Generating images...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000018",
+      "name": "Update Step 4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3300, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-imagegen",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prompt: 'Professional social media graphic for ' + ($('Extract Run ID').item.json.body.industry || 'business') + '. Brand: ' + ($('Extract Run ID').item.json.body.brand_voice || 'professional') + ' style.', aspect_ratio: '1:1', style: 'photorealistic' }) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000019",
+      "name": "Call 11-Image-Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3520, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ current_step: 5, step_label: \"Creating videos...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000020",
+      "name": "Update Step 5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-videogen",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prompt: 'Professional UGC-style promotional video for ' + ($('Extract Run ID').item.json.body.industry || 'business') + '. Brand voice: ' + ($('Extract Run ID').item.json.body.brand_voice || 'professional'), aspect_ratio: '9:16', platform: ($('Extract Run ID').item.json.body.platforms || [])[0] || 'Instagram Reels', image_url: $json.image_url || '' }) }}",
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000021",
+      "name": "Call 13-Video-Creator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3960, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ current_step: 6, step_label: \"Syncing calendar...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000022",
+      "name": "Update Step 6",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4180, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase3-calendar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ month: $('Extract Run ID').item.json.body.month || '' }) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000023",
+      "name": "Call 09-Calendar-Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4400, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: \"completed\", current_step: 6, step_label: \"Complete!\", step_progress: 100, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000024",
+      "name": "Mark Complete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4620, 200]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Auth Validator", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Auth Validator": {
+      "main": [
+        [
+          { "node": "Auth OK?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [
+          { "node": "Check Existing Run", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "401 Unauthorized", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Check Existing Run": {
+      "main": [
+        [
+          { "node": "Has Running?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Has Running?": {
+      "main": [
+        [
+          { "node": "Return Existing Run", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Create Pipeline Run", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Create Pipeline Run": {
+      "main": [
+        [
+          { "node": "INSERT pipeline_runs", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "INSERT pipeline_runs": {
+      "main": [
+        [
+          { "node": "Extract Run ID", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Run ID": {
+      "main": [
+        [
+          { "node": "Respond 202", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Respond 202": {
+      "main": [
+        [
+          { "node": "Update Step 1", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Step 1": {
+      "main": [
+        [
+          { "node": "Call 01-ICP-Analyzer", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call 01-ICP-Analyzer": {
+      "main": [
+        [
+          { "node": "Update Step 2", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Step 2": {
+      "main": [
+        [
+          { "node": "Call 02-Theme-Generator", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call 02-Theme-Generator": {
+      "main": [
+        [
+          { "node": "Update Step 3", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Step 3": {
+      "main": [
+        [
+          { "node": "Call 04-Content-Studio", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call 04-Content-Studio": {
+      "main": [
+        [
+          { "node": "Update Step 4", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Step 4": {
+      "main": [
+        [
+          { "node": "Call 11-Image-Generator", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call 11-Image-Generator": {
+      "main": [
+        [
+          { "node": "Update Step 5", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Step 5": {
+      "main": [
+        [
+          { "node": "Call 13-Video-Creator", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call 13-Video-Creator": {
+      "main": [
+        [
+          { "node": "Update Step 6", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Step 6": {
+      "main": [
+        [
+          { "node": "Call 09-Calendar-Sync", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call 09-Calendar-Sync": {
+      "main": [
+        [
+          { "node": "Mark Complete", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": true
+}

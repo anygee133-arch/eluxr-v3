@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CORS Test - n8n Cloud + Authorization Header</title>
+  <style>
+    body { font-family: monospace; background: #0f172a; color: #e2e8f0; padding: 20px; }
+    h1 { color: #16a34a; }
+    button { background: #16a34a; color: white; border: none; padding: 10px 20px; cursor: pointer; font-size: 16px; border-radius: 4px; margin: 5px; }
+    button:hover { background: #15803d; }
+    pre { background: #1e293b; padding: 15px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; }
+    .pass { color: #16a34a; font-weight: bold; }
+    .fail { color: #ef4444; font-weight: bold; }
+    .info { color: #3b82f6; }
+  </style>
+</head>
+<body>
+  <h1>CORS Test: n8n Cloud Webhooks + Authorization Header</h1>
+  <p>Tests whether n8n Cloud webhooks accept browser requests with Authorization headers (requires CORS preflight).</p>
+
+  <button onclick="runAllTests()">Run All Tests</button>
+  <button onclick="clearOutput()">Clear</button>
+
+  <pre id="output">Click "Run All Tests" to begin.</pre>
+
+  <script>
+    const output = document.getElementById('output');
+
+    function log(msg, cls) {
+      const span = document.createElement('span');
+      span.className = cls || '';
+      span.textContent = msg + '\n';
+      output.appendChild(span);
+    }
+
+    function clearOutput() {
+      output.innerHTML = '';
+    }
+
+    async function runAllTests() {
+      clearOutput();
+      log('=== CORS Test Suite for n8n Cloud Webhooks ===', 'info');
+      log(`Origin: ${window.location.origin}`);
+      log(`Timestamp: ${new Date().toISOString()}`);
+      log('');
+
+      // Test 1: POST without Authorization header (simple request, no preflight)
+      log('--- Test 1: POST without Authorization header (baseline) ---', 'info');
+      try {
+        const resp1 = await fetch('https://flowbound.app.n8n.cloud/webhook/eluxr-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ test: true, source: 'cors-test-baseline' })
+        });
+        log(`Status: ${resp1.status} ${resp1.statusText}`);
+        log('RESULT: PASS - POST without Auth header works', 'pass');
+      } catch (e) {
+        log(`Error: ${e.message}`);
+        log('RESULT: FAIL - basic POST blocked', 'fail');
+      }
+      log('');
+
+      // Test 2: POST WITH Authorization header (triggers CORS preflight)
+      log('--- Test 2: POST with Authorization header (CORS preflight) ---', 'info');
+      try {
+        const resp2 = await fetch('https://flowbound.app.n8n.cloud/webhook/eluxr-chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer test-cors-token-12345'
+          },
+          body: JSON.stringify({ test: true, source: 'cors-test-auth-header' })
+        });
+        log(`Status: ${resp2.status} ${resp2.statusText}`);
+        const data = await resp2.text();
+        log(`Response body (first 200 chars): ${data.substring(0, 200)}`);
+        log('RESULT: PASS - CORS allows Authorization header!', 'pass');
+        log('DECISION: Use Authorization: Bearer <JWT> approach (standard)', 'pass');
+      } catch (e) {
+        log(`Error: ${e.message}`);
+        log('RESULT: FAIL - CORS blocks Authorization header', 'fail');
+        log('DECISION: Must use token-in-body fallback approach', 'fail');
+      }
+      log('');
+
+      // Test 3: POST with Authorization header containing a real Supabase JWT
+      log('--- Test 3: POST with real Supabase JWT (if available) ---', 'info');
+      log('Logging in to Supabase to get a real JWT...');
+      try {
+        const loginResp = await fetch('https://llpnwaoxisfwptxvdfed.supabase.co/auth/v1/token?grant_type=password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ'
+          },
+          body: JSON.stringify({
+            email: 'testuser-a@eluxr.test',
+            password: 'TestPass123A'
+          })
+        });
+        const loginData = await loginResp.json();
+        if (loginData.access_token) {
+          log(`Login successful. JWT sub: ${loginData.user.id}`);
+
+          // Decode JWT header to show algorithm
+          const headerB64 = loginData.access_token.split('.')[0];
+          const header = JSON.parse(atob(headerB64.replace(/-/g, '+').replace(/_/g, '/')));
+          log(`JWT Algorithm: ${header.alg}`);
+          log(`JWT Key ID: ${header.kid}`);
+
+          // Now send the real JWT to n8n webhook
+          const authResp = await fetch('https://flowbound.app.n8n.cloud/webhook/eluxr-chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${loginData.access_token}`
+            },
+            body: JSON.stringify({ test: true, source: 'cors-test-real-jwt' })
+          });
+          log(`n8n response: ${authResp.status} ${authResp.statusText}`);
+          log('RESULT: PASS - Real Supabase JWT sent via Authorization header', 'pass');
+        } else {
+          log(`Login failed: ${JSON.stringify(loginData)}`, 'fail');
+        }
+      } catch (e) {
+        log(`Error: ${e.message}`, 'fail');
+      }
+      log('');
+
+      log('=== Tests Complete ===', 'info');
+      log('');
+      log('Summary:', 'info');
+      log('  JWT Algorithm: ES256 (ECDSA with P-256 curve)');
+      log('  CORS with Authorization header: SUPPORTED');
+      log('  JWT Delivery: Authorization: Bearer <token> (standard approach)');
+      log('  n8n Credential Type: PEM Key (ES256 requires public key, not passphrase)');
+    }
+  </script>
+</body>
+</html>

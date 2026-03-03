@@ -1,0 +1,355 @@
+{
+  "name": "11-Image-Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-imagegen",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "img-webhook-001",
+      "name": "Image Gen \u2014 Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [0, 300],
+      "typeVersion": 2,
+      "webhookId": "eluxr-imagegen"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "img-auth-exec-001",
+      "name": "Auth Validate (eluxr-imagegen)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-img",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "img-auth-if-001",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error || 'Authentication required' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "img-401-001",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body;\nconst prompt = body.prompt || 'Professional social media graphic';\nconst aspectRatio = body.aspect_ratio || '1:1';\nconst style = body.style || 'photorealistic';\n\nconst dimensions = {\n  '1:1': { width: 1024, height: 1024 },\n  '16:9': { width: 1920, height: 1080 },\n  '9:16': { width: 1080, height: 1920 },\n  '4:3': { width: 1024, height: 768 }\n};\n\nconst dim = dimensions[aspectRatio] || dimensions['1:1'];\n\nreturn {\n  json: {\n    prompt: `${style} style: ${prompt}`,\n    width: dim.width,\n    height: dim.height,\n    aspect_ratio: aspectRatio,\n    style: style\n  }\n};"
+      },
+      "id": "img-prepare-001",
+      "name": "Prepare Nano Banana Prompt",
+      "type": "n8n-nodes-base.code",
+      "position": [660, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"model\": \"nano-banana-pro\",\n    \"input\": {\n      \"prompt\": {{ JSON.stringify($json.prompt || \"Professional social media image\") }},\n      \"width\": 1024,\n      \"height\": 1024,\n      \"output_format\": \"png\"\n    }\n  }",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "img-kie-create-001",
+      "name": "KIE \u2014 Create Image Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [880, 300],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\nreturn {\n  json: {\n    ...item,\n    pollCount: 0,\n    taskId: item.data?.task_id || item.data?.taskId || item.task_id || item.taskId\n  }\n};"
+      },
+      "id": "img-init-poll-001",
+      "name": "Init Poll Counter",
+      "type": "n8n-nodes-base.code",
+      "position": [1100, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "id": "img-initial-wait-001",
+      "name": "Initial Wait",
+      "type": "n8n-nodes-base.wait",
+      "position": [1320, 300],
+      "typeVersion": 1.1,
+      "webhookId": "img-initial-wait-webhook"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/jobs/recordInfo?taskId={{ $json.data?.taskId || $json.taskId }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "img-kie-get-001",
+      "name": "KIE \u2014 Get Image Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1540, 300],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\nconst pollCount = (result.pollCount || 0) + 1;\n\nconst state = result.data?.state || result.state || 'processing';\nconst isReady = state === 'success' || state === 'completed';\nconst isTimeout = pollCount >= 12;\nconst isError = state === 'failed' || state === 'error';\n\nreturn {\n  json: {\n    ...result,\n    pollCount,\n    isComplete: isReady || isTimeout || isError,\n    isSuccess: isReady,\n    error: isTimeout ? 'Image generation timed out after 65 seconds' :\n           isError ? `Image generation failed: ${state}` : null\n  }\n};"
+      },
+      "id": "img-check-result-001",
+      "name": "Check Image Result",
+      "type": "n8n-nodes-base.code",
+      "position": [1760, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "img-complete-check",
+              "leftValue": "={{ $json.isComplete }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "img-if-complete-001",
+      "name": "Is Complete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1980, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "img-success-check",
+              "leftValue": "={{ $json.isSuccess }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "img-if-success-001",
+      "name": "Is Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2200, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\n\nlet imageUrl = '';\n\nif (result.data && result.data.resultJson) {\n  try {\n    const parsed = JSON.parse(result.data.resultJson);\n    if (parsed.resultUrls && parsed.resultUrls.length > 0) {\n      imageUrl = parsed.resultUrls[0];\n    }\n  } catch(e) {\n    // fallback\n  }\n}\n\nreturn {\n  json: {\n    success: !!imageUrl,\n    image_url: imageUrl,\n    taskId: result.data?.taskId || result.taskId || ''\n  }\n};"
+      },
+      "id": "img-parse-result-001",
+      "name": "Parse Image Result",
+      "type": "n8n-nodes-base.code",
+      "position": [2420, 100],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "img-response-001",
+      "name": "Image Gen \u2014 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [2640, 100],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error || 'Image generation failed', taskId: $json.data?.taskId || $json.taskId || '' }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "img-error-response-001",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [2420, 300],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "amount": 5
+      },
+      "id": "img-retry-wait-001",
+      "name": "Retry Wait",
+      "type": "n8n-nodes-base.wait",
+      "position": [2200, 500],
+      "typeVersion": 1.1,
+      "webhookId": "img-retry-wait-webhook"
+    }
+  ],
+  "connections": {
+    "Image Gen \u2014 Webhook": {
+      "main": [
+        [{ "node": "Auth Validate (eluxr-imagegen)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Auth Validate (eluxr-imagegen)": {
+      "main": [
+        [{ "node": "Auth OK?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [{ "node": "Prepare Nano Banana Prompt", "type": "main", "index": 0 }],
+        [{ "node": "401 Unauthorized", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Nano Banana Prompt": {
+      "main": [
+        [{ "node": "KIE \u2014 Create Image Task", "type": "main", "index": 0 }]
+      ]
+    },
+    "KIE \u2014 Create Image Task": {
+      "main": [
+        [{ "node": "Init Poll Counter", "type": "main", "index": 0 }]
+      ]
+    },
+    "Init Poll Counter": {
+      "main": [
+        [{ "node": "Initial Wait", "type": "main", "index": 0 }]
+      ]
+    },
+    "Initial Wait": {
+      "main": [
+        [{ "node": "KIE \u2014 Get Image Result", "type": "main", "index": 0 }]
+      ]
+    },
+    "KIE \u2014 Get Image Result": {
+      "main": [
+        [{ "node": "Check Image Result", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Image Result": {
+      "main": [
+        [{ "node": "Is Complete?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is Complete?": {
+      "main": [
+        [{ "node": "Is Success?", "type": "main", "index": 0 }],
+        [{ "node": "Retry Wait", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is Success?": {
+      "main": [
+        [{ "node": "Parse Image Result", "type": "main", "index": 0 }],
+        [{ "node": "Error Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Image Result": {
+      "main": [
+        [{ "node": "Image Gen \u2014 Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Retry Wait": {
+      "main": [
+        [{ "node": "KIE \u2014 Get Image Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

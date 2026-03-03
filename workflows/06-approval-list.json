@@ -1,0 +1,211 @@
+{
+  "name": "06-Approval-List",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "eluxr-approval-list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "al-webhook-001",
+      "name": "List Queue -- Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        300
+      ],
+      "typeVersion": 2,
+      "webhookId": "eluxr-approval-list"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "al-auth-002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-auth-al",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "al-if-003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized', statusCode: 401 }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "al-401-004",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        660,
+        500
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?user_id=eq.{{ $json.user_id }}&order=created_at.desc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "al-supabase-005",
+      "name": "Supabase -- SELECT Content Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        660,
+        100
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.item.json;\n\n// Supabase returns an array of content_items for this user\n// Handle both array response (direct) and wrapped response\nconst allItems = Array.isArray(items) ? items : (items.body || items.data || [items]);\n\n// Handle empty response\nif (!allItems || allItems.length === 0 || (allItems.length === 1 && !allItems[0].id)) {\n  return { json: {\n    success: true,\n    stats: { pending_review: 0, pending: 0, approved: 0, rejected: 0, published: 0, draft: 0, total: 0 },\n    pending_review: [],\n    pending: [],\n    approved: [],\n    rejected: [],\n    published: [],\n    draft: [],\n    all: []\n  } };\n}\n\nconst pending_review = allItems.filter(i => i.status === 'pending_review');\nconst approved = allItems.filter(i => i.status === 'approved');\nconst rejected = allItems.filter(i => i.status === 'rejected');\nconst published = allItems.filter(i => i.status === 'published');\nconst draft = allItems.filter(i => i.status === 'draft');\n\nreturn { json: {\n  success: true,\n  stats: {\n    pending_review: pending_review.length,\n    pending: pending_review.length,\n    approved: approved.length,\n    rejected: rejected.length,\n    published: published.length,\n    draft: draft.length,\n    total: allItems.length\n  },\n  pending_review: pending_review,\n  pending: pending_review,\n  approved: approved,\n  rejected: rejected,\n  published: published,\n  draft: draft,\n  all: allItems\n} };"
+      },
+      "id": "al-organize-006",
+      "name": "Organize by Status",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        880,
+        100
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "al-response-007",
+      "name": "List -- Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1100,
+        100
+      ],
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "List Queue -- Webhook": {
+      "main": [
+        [
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- SELECT Content Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- SELECT Content Items": {
+      "main": [
+        [
+          {
+            "node": "Organize by Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Organize by Status": {
+      "main": [
+        [
+          {
+            "node": "List -- Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,675 @@
+{
+  "name": "04-Content-Studio",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase4-studio",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "04-studio-0001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "eluxr-phase4-studio"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "04-studio-0002",
+      "name": "Daily Content Trigger (6 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "04-studio-0003",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "04-studio-0004",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "04-studio-0005",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date().toISOString().split('T')[0];\nconst input = $input.item.json;\n\nreturn {\n  json: {\n    date: today,\n    trigger_source: input.body ? 'webhook' : 'cron',\n    user_id: input.user_id || '',\n    webhook_data: input.body || null\n  }\n};"
+      },
+      "id": "04-studio-0006",
+      "name": "Merge Trigger Sources",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?user_id=eq.{{ $json.user_id }}&select=*,campaigns(month,status)&order=week_number.asc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "04-studio-0007",
+      "name": "Supabase -- Read Themes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date().toISOString().split('T')[0];\nconst triggerData = $('Merge Trigger Sources').item.json;\nconst themesRaw = $input.item.json;\nconst themes = Array.isArray(themesRaw) ? themesRaw : [themesRaw];\n\n// Flatten weekly themes into daily content items\nconst dailyItems = [];\nfor (const theme of themes) {\n  if (!theme.content_types || !Array.isArray(theme.content_types)) continue;\n  for (const ct of theme.content_types) {\n    dailyItems.push({\n      ...ct,\n      theme_id: theme.id,\n      campaign_id: theme.campaign_id,\n      user_id: triggerData.user_id,\n      weekly_show_name: theme.theme_name || theme.show_concept || '',\n      week_number: theme.week_number\n    });\n  }\n}\n\n// Filter to today's content if trigger is cron, otherwise use webhook body\nlet filteredItems = dailyItems;\nif (triggerData.trigger_source === 'cron') {\n  filteredItems = dailyItems.filter(item => item.date === today);\n}\n\nif (filteredItems.length === 0) {\n  filteredItems = dailyItems.length > 0\n    ? [dailyItems[0]]\n    : [{ theme: 'General engagement post', content_type: 'Value', platform: 'LinkedIn', user_id: triggerData.user_id }];\n}\n\nreturn filteredItems.map(item => ({ json: item }));"
+      },
+      "id": "04-studio-0008",
+      "name": "Filter Today's Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// PIPE-07 FIX: Normalize content_type BEFORE the Switch node\n// Claude generates: Hook, Value, Proof, Carousel, Video, Engagement, Cliffhanger\n// Normalize to: text, image, video, carousel\nconst item = $input.item.json;\nconst ct = (item.content_type || '').toLowerCase().trim();\n\nitem.original_content_type = item.content_type;\n\nif (ct.includes('video') || ct.includes('reel')) {\n  item.content_type = 'video';\n} else if (ct.includes('carousel') || ct.includes('thread')) {\n  item.content_type = 'carousel';\n} else if (ct.includes('image')) {\n  item.content_type = 'image';\n} else {\n  item.content_type = 'text';\n}\n\nreturn { json: item };"
+      },
+      "id": "04-studio-0009",
+      "name": "Normalize Content Type",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "video",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content_type }}",
+                    "rightValue": "carousel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": false,
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "04-studio-0010",
+      "name": "Route: Text / Image / Video / Carousel",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are an elite social media copywriter. Write a {{ $json.platform || 'LinkedIn' }} post based on these details:\\n\\nWeekly Show: {{ $json.weekly_show_name || 'Value Series' }}\\nTheme: {{ $json.theme || 'Engagement post' }}\\nContent Type: {{ $json.original_content_type || $json.content_type || 'Value Post' }}\\nSuggested Hook: {{ $json.hook || 'Start with something attention-grabbing' }}\\nCTA: {{ $json.cta || 'Engage with your audience' }}\\nHashtags: {{ $json.hashtags || '' }}\\n\\nPLATFORM-SPECIFIC RULES:\\n- LinkedIn: 1300-1800 chars, personal story hook, line breaks for readability, 3-5 hashtags at end\\n- Instagram: 150-300 chars caption, 20-30 hashtags in first comment, include emoji\\n- X/Twitter: Thread format (5-7 tweets), numbered, each under 280 chars\\n- Facebook: Conversational tone, 100-300 chars, question-based engagement\\n- TikTok: Script format with [VISUAL] and [TEXT ON SCREEN] cues\\n\\nReturn JSON with keys: platform, post_text, hashtags, first_comment (for Instagram), thread (for X, array of tweet strings), image_prompt (describe ideal accompanying image), posting_notes\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "04-studio-0011",
+      "name": "Claude -- Write Post Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        -200
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"nano-banana-pro\",\n  \"input\": {\n    \"prompt\": \"Professional social media graphic for {{ $json.platform || 'LinkedIn' }}. Theme: {{ $json.theme || 'business content' }}. Style: clean, modern, photorealistic. High quality, no text overlays or watermarks.\",\n    \"aspect_ratio\": \"1:1\",\n    \"width\": 1024,\n    \"height\": 1024,\n    \"output_format\": \"png\"\n  }\n}",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "04-studio-0012",
+      "name": "KIE -- Generate Content Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are a video content strategist and scriptwriter. Create a camera-ready video script.\\n\\nTheme: {{ $json.theme || 'Engagement content' }}\\nPlatform: {{ $json.platform || 'Instagram Reels' }}\\nHook Idea: {{ $json.hook || 'Attention-grabbing opener' }}\\n\\nCreate a SHORT-FORM VIDEO SCRIPT (30-60 seconds) with this EXACT structure:\\n\\n1. HOOK (0:00-0:03): Opening line that stops the scroll. Bold, direct, creates curiosity.\\n2. SETUP (0:03-0:10): Context -- why this matters. Use a stat, personal story, or relatable pain point.\\n3. VALUE (0:10-0:25): 2-3 actionable points. Each with [ON-SCREEN TEXT] cues.\\n4. CTA (0:25-0:30): Clear call to action. Follow, comment, link in bio.\\n\\nAlso include:\\n- [CAMERA DIRECTION] notes (close-up, wide, screen share, etc.)\\n- [B-ROLL] suggestions for each section\\n- [MUSIC] mood suggestion\\n- Estimated engagement hooks (pattern interrupts)\\n\\nReturn as JSON with keys: title, duration_seconds, hook, setup, value_points (array), cta, camera_directions (array), b_roll_suggestions (array), music_mood, on_screen_text (array), thumbnail_idea\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "04-studio-0013",
+      "name": "Claude -- Video Script Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        200
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all content from text/image/video/carousel branches\nconst item = $input.item.json;\nlet content = '';\nlet contentType = 'text';\n\ntry {\n  if (item.content && item.content[0]) {\n    content = item.content[0].text;\n  } else if (item.data && item.data.taskId) {\n    content = JSON.stringify(item);\n    contentType = 'image';\n  } else {\n    content = JSON.stringify(item);\n  }\n} catch(e) {\n  content = JSON.stringify(item);\n}\n\n// Get the original data from before the Switch\nconst normalizeData = $('Normalize Content Type').item.json;\n\nreturn {\n  json: {\n    user_id: normalizeData.user_id || '',\n    campaign_id: normalizeData.campaign_id || null,\n    theme_id: normalizeData.theme_id || null,\n    title: normalizeData.theme || normalizeData.weekly_show_name || 'Generated Content',\n    content: content,\n    content_type: normalizeData.content_type || 'text',\n    platform: (normalizeData.platform || 'linkedin').toLowerCase(),\n    scheduled_date: normalizeData.date || null,\n    status: 'pending_review',\n    image_url: null,\n    video_url: null,\n    image_prompt: normalizeData.theme || ''\n  }\n};"
+      },
+      "id": "04-studio-0014",
+      "name": "Merge All Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"campaign_id\": {{ $json.campaign_id ? '\"' + $json.campaign_id + '\"' : 'null' }},\n  \"theme_id\": {{ $json.theme_id ? '\"' + $json.theme_id + '\"' : 'null' }},\n  \"title\": {{ JSON.stringify($json.title) }},\n  \"content\": {{ JSON.stringify($json.content) }},\n  \"content_type\": {{ JSON.stringify($json.content_type) }},\n  \"platform\": {{ JSON.stringify($json.platform) }},\n  \"scheduled_date\": {{ $json.scheduled_date ? '\"' + $json.scheduled_date + '\"' : 'null' }},\n  \"status\": \"pending_review\",\n  \"image_url\": {{ $json.image_url ? JSON.stringify($json.image_url) : 'null' }},\n  \"video_url\": {{ $json.video_url ? JSON.stringify($json.video_url) : 'null' }},\n  \"image_prompt\": {{ JSON.stringify($json.image_prompt || '') }}\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "04-studio-0015",
+      "name": "Supabase -- INSERT Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, phase: 4, message: 'Content generated and saved', data: $json }) }}",
+        "options": {}
+      },
+      "id": "04-studio-0016",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fallback handler for unmatched content types\nconst item = $input.item.json;\nreturn {\n  json: {\n    user_id: item.user_id || '',\n    campaign_id: item.campaign_id || null,\n    theme_id: item.theme_id || null,\n    title: item.theme || 'Fallback Content',\n    content: JSON.stringify({ note: 'Content type not matched by Switch', original_type: item.original_content_type, normalized_type: item.content_type }),\n    content_type: item.content_type || 'text',\n    platform: (item.platform || 'linkedin').toLowerCase(),\n    scheduled_date: item.date || null,\n    status: 'pending_review',\n    image_url: null,\n    video_url: null,\n    image_prompt: ''\n  }\n};"
+      },
+      "id": "04-studio-0017",
+      "name": "Fallback Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Content Trigger (6 AM)": {
+      "main": [
+        [
+          {
+            "node": "Merge Trigger Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Merge Trigger Sources",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Trigger Sources": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- Read Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- Read Themes": {
+      "main": [
+        [
+          {
+            "node": "Filter Today's Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Today's Content": {
+      "main": [
+        [
+          {
+            "node": "Normalize Content Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Content Type": {
+      "main": [
+        [
+          {
+            "node": "Route: Text / Image / Video / Carousel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route: Text / Image / Video / Carousel": {
+      "main": [
+        [
+          {
+            "node": "Claude -- Write Post Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "KIE -- Generate Content Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude -- Video Script Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude -- Write Post Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude -- Write Post Content": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KIE -- Generate Content Image": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude -- Video Script Generator": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback Handler": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- INSERT Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Content": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- INSERT Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- INSERT Content": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

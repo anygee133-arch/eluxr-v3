@@ -1,0 +1,223 @@
+{
+  "name": "05-Content-Submit",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-phase5-submit",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "05-submit-0001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "eluxr-phase5-submit"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "05-submit-0002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "05-submit-0003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "05-submit-0004",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\n// Normalize content_type to DB CHECK constraint values\nconst rawType = (body.content_type || 'text').toLowerCase().trim();\nlet contentType = 'text';\nif (rawType.includes('video') || rawType.includes('reel')) contentType = 'video';\nelse if (rawType.includes('carousel') || rawType.includes('thread')) contentType = 'carousel';\nelse if (rawType.includes('image')) contentType = 'image';\nelse contentType = 'text';\n\n// Normalize platform to DB CHECK constraint values\nconst rawPlatform = (body.platform || 'linkedin').toLowerCase().trim();\nlet platform = 'linkedin';\nif (rawPlatform.includes('instagram')) platform = 'instagram';\nelse if (rawPlatform.includes('x') || rawPlatform.includes('twitter')) platform = 'x';\nelse if (rawPlatform.includes('youtube')) platform = 'youtube';\nelse platform = 'linkedin';\n\nreturn {\n  json: {\n    user_id: authData.user_id,\n    title: body.title || body.theme || 'Untitled Post',\n    content: body.content || body.post_text || '',\n    content_type: contentType,\n    platform: platform,\n    scheduled_date: body.scheduled_date || body.scheduled_for || null,\n    status: 'pending_review',\n    image_url: body.image_url || null,\n    video_url: body.video_url || null,\n    image_prompt: body.image_prompt || '',\n    campaign_id: body.campaign_id || null,\n    theme_id: body.theme_id || null\n  }\n};"
+      },
+      "id": "05-submit-0005",
+      "name": "Format Queue Item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"campaign_id\": {{ $json.campaign_id ? '\"' + $json.campaign_id + '\"' : 'null' }},\n  \"theme_id\": {{ $json.theme_id ? '\"' + $json.theme_id + '\"' : 'null' }},\n  \"title\": {{ JSON.stringify($json.title) }},\n  \"content\": {{ JSON.stringify($json.content) }},\n  \"content_type\": {{ JSON.stringify($json.content_type) }},\n  \"platform\": {{ JSON.stringify($json.platform) }},\n  \"scheduled_date\": {{ $json.scheduled_date ? '\"' + $json.scheduled_date + '\"' : 'null' }},\n  \"status\": \"pending_review\",\n  \"image_url\": {{ $json.image_url ? JSON.stringify($json.image_url) : 'null' }},\n  \"video_url\": {{ $json.video_url ? JSON.stringify($json.video_url) : 'null' }},\n  \"image_prompt\": {{ JSON.stringify($json.image_prompt || '') }}\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "05-submit-0006",
+      "name": "Supabase -- INSERT Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, action: 'submitted', item: Array.isArray($json) ? $json[0] : $json }) }}",
+        "options": {}
+      },
+      "id": "05-submit-0007",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        -200
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Format Queue Item",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Queue Item": {
+      "main": [
+        [
+          {
+            "node": "Supabase -- INSERT Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase -- INSERT Content": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
