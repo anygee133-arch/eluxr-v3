@@ -705,6 +705,38 @@ details .details-content { padding: 20px; }
   100% { background-position: -200% 0; }
 }
 
+/* ICP CARD SECTIONS */
+.icp-section {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.icp-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.icp-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #16a34a;
+  margin-bottom: 6px;
+}
+.icp-section-value {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary, #cbd5e1);
+}
+.icp-section-value ul {
+  margin: 4px 0 0 0;
+  padding-left: 20px;
+}
+.icp-section-value li {
+  margin-bottom: 4px;
+}
+
 /* TAB SLIDE TRANSITIONS */
 @keyframes slideInLeft {
   from { opacity: 0; transform: translateX(-30px); }
@@ -1431,6 +1463,45 @@ details .details-content { padding: 20px; }
           <button type="submit" class="btn btn-primary btn-lg">Generate My Content Calendar</button>
         </div>
       </form>
+    </div>
+
+    <!-- ICP Summary Card -->
+    <div id="icp-card" class="card card-glass fade-in-up stagger-2" style="display: none; margin-top: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="margin: 0; color: var(--text-primary, #e2e8f0); font-size: 18px;">
+          <span style="color: #16a34a; margin-right: 8px;">&#9679;</span>Your Business Profile
+        </h3>
+        <span id="icp-last-analyzed" style="font-size: 12px; color: var(--text-muted, #94a3b8);"></span>
+      </div>
+      <div id="icp-skeleton" style="display: none;">
+        <div class="skeleton-line" style="width: 70%;"></div>
+        <div class="skeleton-line" style="width: 90%;"></div>
+        <div class="skeleton-line" style="width: 55%;"></div>
+        <div class="skeleton-line" style="width: 80%;"></div>
+        <div class="skeleton-line" style="width: 65%;"></div>
+      </div>
+      <div id="icp-content" style="display: none;">
+        <div id="icp-summary-section" class="icp-section">
+          <div class="icp-section-label">Summary</div>
+          <div id="icp-summary-text" class="icp-section-value"></div>
+        </div>
+        <div id="icp-audience-section" class="icp-section" style="display: none;">
+          <div class="icp-section-label">Target Audience</div>
+          <div id="icp-audience-text" class="icp-section-value"></div>
+        </div>
+        <div id="icp-painpoints-section" class="icp-section" style="display: none;">
+          <div class="icp-section-label">Pain Points</div>
+          <div id="icp-painpoints-text" class="icp-section-value"></div>
+        </div>
+        <div id="icp-messaging-section" class="icp-section" style="display: none;">
+          <div class="icp-section-label">Content Opportunities</div>
+          <div id="icp-messaging-text" class="icp-section-value"></div>
+        </div>
+        <div id="icp-hashtags-section" class="icp-section" style="display: none;">
+          <div class="icp-section-label">Recommended Hashtags</div>
+          <div id="icp-hashtags-text" class="icp-section-value"></div>
+        </div>
+      </div>
     </div>
 
     <div class="chatbox fade-in-up stagger-2">

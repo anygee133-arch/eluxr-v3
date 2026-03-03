@@ -4,15 +4,15 @@
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 5 in progress (Frontend Migration + UI Polish). Plan 01 complete.
+**Current Focus:** Phase 5 in progress (Frontend Migration + UI Polish). Plans 01-02 complete.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 5 of 11 (Frontend Migration + UI Polish)
-**Plan:** 1 of 4 in phase
-**Status:** In progress -- Plan 05-01 complete (premium CSS + config + deployment files)
-**Last activity:** 2026-03-03 - Completed 05-01-PLAN.md (premium CSS animations, config.js, vercel.json, .gitignore)
+**Plan:** 2 of 4 in phase
+**Status:** In progress -- Plan 05-02 complete (Supabase data layer migration)
+**Last activity:** 2026-03-03 - Completed 05-02-PLAN.md (mapContentItem, Supabase queries, localStorage removal)
 
 **Progress:**
 ```
@@ -20,7 +20,7 @@ Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
 Phase  3: Workflow Decomposition      [### COMPLETE ######## ] 6/6 plans
 Phase  4: Progress Tracking           [### COMPLETE ######## ] 3/3 plans
-Phase  5: Frontend Migration + UI     [##                    ] 1/4 plans
+Phase  5: Frontend Migration + UI     [#####                 ] 2/4 plans
 Phase  6: Content Pipeline            [ . . . . . . . . . . ] 0%
 Phase  7: Approval Queue              [ . . . . . . . . . . ] 0%
 Phase  8: Calendar + Scheduling       [ . . . . . . . . . . ] 0%
@@ -28,7 +28,7 @@ Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
 Phase 10: Standalone Tools            [ . . . . . . . . . . ] 0%
 Phase 11: Trend Intelligence          [ . . . . . . . . . . ] 0%
 
-Overall: 23/50 requirements complete (46%)
+Overall: 24/50 requirements complete (48%)
 ```
 
 ## Performance Metrics
@@ -36,10 +36,10 @@ Overall: 23/50 requirements complete (46%)
 | Metric | Value |
 |--------|-------|
 | Requirements total | 50 |
-| Requirements complete | 23 |
+| Requirements complete | 24 |
 | Phases total | 11 |
 | Phases complete | 4 |
-| Current streak | 27 plans |
+| Current streak | 28 plans |
 
 ## Accumulated Context
 
@@ -98,6 +98,10 @@ Overall: 23/50 requirements complete (46%)
 | config.js loaded as first script, before Supabase module | Ensures window.ELUXR_CONFIG available to all scripts (module and non-module) | 5 |
 | Hostname-based environment detection for config | localhost/127.0.0.1 = development, everything else = production | 5 |
 | Directional tab slides in goToPhase() | Forward nav slides right, backward slides left -- tracks previousPhase for direction | 5 |
+| mapContentItem() normalizes pending_review->pending | DB uses pending_review status; frontend expects pending; normalizer handles translation | 5 |
+| Re-fetch from Supabase after mutations (not local state) | Approval/reject/batch re-fetch from Supabase instead of local state mutation; ensures consistency | 5 |
+| Business profile saved to Supabase profiles (not localStorage) | Upsert on form submit; load on SIGNED_IN; replaces localStorage persistence | 5 |
+| checkActivePipeline uses in-memory only (no localStorage) | Supabase query for running pipelines replaces localStorage pipeline run tracking | 5 |
 
 ### Known Issues
 
@@ -133,13 +137,13 @@ Overall: 23/50 requirements complete (46%)
 
 ### Last Session
 - **Date:** 2026-03-03
-- **Activity:** Completed 05-01-PLAN.md -- Premium CSS animations (stagger 5-10, glassmorphism, button micro-animations, progress bar glow, skeleton loading, directional tab slides), config.js, vercel.json, .gitignore
-- **Outcome:** Plan 05-01 COMPLETE. 10/10 must-haves verified. All hardcoded URLs replaced with config references. Deployment infrastructure ready.
+- **Activity:** Completed 05-02-PLAN.md -- Supabase data layer migration: mapContentItem normalizer, direct Supabase queries for content_items/themes/profiles, removed all localStorage/saveSession/generateMockData
+- **Outcome:** Plan 05-02 COMPLETE. 9/9 must-haves verified. Zero localStorage. Zero mock data. All data flows from Supabase through mapContentItem to rendering functions.
 
 ### Next Session
-- **Expected:** Execute Plan 05-02 (next plan in Phase 5)
-- **Prerequisites:** 05-01 complete. CSS animations defined. config.js wired. Deployment files created.
-- **Entry point:** `/gsd:execute-phase 05-02`
+- **Expected:** Execute Plan 05-03 (next plan in Phase 5)
+- **Prerequisites:** 05-02 complete. Data layer migrated. mapContentItem normalizer active. Profiles load/save via Supabase.
+- **Entry point:** `/gsd:execute-phase 05-03`
 
 ---
 *State initialized: 2026-02-27*
