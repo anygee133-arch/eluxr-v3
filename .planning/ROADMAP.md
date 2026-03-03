@@ -107,12 +107,12 @@ Plans:
 **Plans:** 6 plans in 4 waves
 
 Plans:
-- [ ] 03-01-PLAN.md -- Prerequisites: n8n plan verification, Supabase API validation, content_type tracing, theme insert design
-- [ ] 03-02-PLAN.md -- Build sub-workflows 01-05 (ICP, Themes, Content Studio) + PIPE-07 Switch fix
-- [ ] 03-03-PLAN.md -- Build sub-workflows 06-10 (Approval, Calendar, Chat) + Sheets collapse
-- [ ] 03-04-PLAN.md -- Build sub-workflows 11-13 (Standalone Tools) + TOOL-05 polling fix + TOOL-06 video wiring fix
-- [ ] 03-05-PLAN.md -- Cutover: activate sub-workflows, deactivate monolith, update frontend URLs
-- [ ] 03-06-PLAN.md -- End-to-end verification of all 5 Phase 3 requirements
+- [x] 03-01-PLAN.md -- Prerequisites: n8n plan verification, Supabase API validation, content_type tracing, theme insert design
+- [x] 03-02-PLAN.md -- Build sub-workflows 01-05 (ICP, Themes, Content Studio) + PIPE-07 Switch fix
+- [x] 03-03-PLAN.md -- Build sub-workflows 06-10 (Approval, Calendar, Chat) + Sheets collapse
+- [x] 03-04-PLAN.md -- Build sub-workflows 11-13 (Standalone Tools) + TOOL-05 polling fix + TOOL-06 video wiring fix
+- [x] 03-05-PLAN.md -- Cutover: activate sub-workflows, deactivate monolith, update frontend URLs
+- [x] 03-06-PLAN.md -- End-to-end verification of all 5 Phase 3 requirements
 
 ---
 
@@ -139,6 +139,13 @@ Plans:
 **Research Flags:** MEDIUM -- Verify Supabase Realtime connection limits on the chosen plan tier.
 
 **Pitfalls:** CRIT-5 (execution timeouts), HIGH-6 (webhook response timeouts)
+
+**Plans:** 3 plans in 2 waves
+
+Plans:
+- [ ] 04-01-PLAN.md -- Build n8n Pipeline Orchestrator workflow (respond 202, execute 6 steps with progress updates)
+- [ ] 04-02-PLAN.md -- Frontend Realtime progress UI (replace fake simulation with Supabase Realtime subscription)
+- [ ] 04-03-PLAN.md -- E2E verification of all 5 Phase 4 success criteria + user walkthrough
 
 ---
 
@@ -320,8 +327,8 @@ Plans:
 |-------|------|-------------|--------|
 | 1 | Security Hardening + Database Foundation | INFRA-01, INFRA-02, INFRA-05 | Complete |
 | 2 | Authentication | AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, INFRA-04 | Complete |
-| 3 | Workflow Decomposition + Backend Bug Fixes | INFRA-03, INFRA-06, PIPE-07, TOOL-05, TOOL-06 | Not Started |
-| 4 | Async Pipeline + Real-Time Progress Tracking | PROG-01, PROG-02, PROG-03, PROG-04, UI-05 | Not Started |
+| 3 | Workflow Decomposition + Backend Bug Fixes | INFRA-03, INFRA-06, PIPE-07, TOOL-05, TOOL-06 | Complete |
+| 4 | Async Pipeline + Real-Time Progress Tracking | PROG-01, PROG-02, PROG-03, PROG-04, UI-05 | In Progress |
 | 5 | Frontend Migration + UI Polish | UI-01, UI-02, UI-03, UI-04, UI-06 | Not Started |
 | 6 | Content Pipeline | PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 | Not Started |
 | 7 | Approval Queue | APPR-01, APPR-02, APPR-03, APPR-04, APPR-05, APPR-06 | Not Started |
@@ -367,4 +374,4 @@ Phase 2 (Auth)
 
 ---
 *Roadmap created: 2026-02-27*
-*Last updated: 2026-03-01*
+*Last updated: 2026-03-02*
