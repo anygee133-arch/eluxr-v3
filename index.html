@@ -2391,7 +2391,7 @@ details .details-content { padding: 20px; }
 const API_BASE = window.ELUXR_CONFIG.N8N_WEBHOOK_BASE;
 const N8N_BASE_URL = window.ELUXR_CONFIG.N8N_WEBHOOK_BASE;
 
-// Themes from Google Sheets (loaded from backend)
+// Themes (loaded from Supabase)
 let weeklyThemes = [];
 
 // State
@@ -2561,8 +2561,20 @@ async function handleFormSubmit(e) {
     platforms: formData.platforms
   };
 
-  // Save to localStorage so it persists across page refreshes
-  localStorage.setItem('eluxr_business_context', JSON.stringify(businessContext));
+  // Save business profile to Supabase
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (user) {
+      await window.supabase.from('profiles').upsert({
+        id: user.id,
+        business_url: businessContext.business_url,
+        industry: businessContext.industry,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+    }
+  } catch (err) {
+    console.error('Error saving profile:', err);
+  }
 
   // Check if there's existing pending content and offer to clear it
   const pendingCount = contentData.filter(c => c.status !== 'approved').length;
@@ -2889,7 +2901,7 @@ async function generateSingleContent() {
     let postText = '';
     let imagePrompt = `Professional ${platform} social media image for: ${topic}. Style: modern, clean, photorealistic.`;
 
-    // Step 1: Trigger Phase 4 to generate content (it saves to Google Sheets)
+    // Step 1: Trigger Phase 4 to generate content (saves to Supabase)
     try {
       await authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
         method: 'POST',
@@ -3150,7 +3162,6 @@ function addToCalendar() {
   contentData.push(newContent);
   renderCalendar(currentMonth, contentData);
   updateStats();
-  saveSession(currentSessionId, { contentData, month: currentMonth });
 
   showToast(`Content added to Day ${nextDay}!`, 'success');
 }
@@ -3231,9 +3242,8 @@ async function generateContent(formData) {
         return;
       }
 
-      // Store run ID for recovery
+      // Store run ID in memory for recovery
       currentPipelineRunId = runId;
-      localStorage.setItem('eluxr_active_pipeline_run', runId);
 
       // Show progress UI and navigate to phase 2
       goToPhase(2);
@@ -3580,7 +3590,6 @@ function cleanupProgress() {
     progressChannel = null;
   }
   currentPipelineRunId = null;
-  localStorage.removeItem('eluxr_active_pipeline_run');
 }
 
 // Page refresh recovery -- check for active pipeline runs
@@ -3610,7 +3619,6 @@ async function checkActivePipeline() {
 
     // Active run found -- restore progress UI
     currentPipelineRunId = activeRun.id;
-    localStorage.setItem('eluxr_active_pipeline_run', activeRun.id);
 
     // Navigate to progress view and restore state
     goToPhase(2);
@@ -3630,52 +3638,6 @@ async function checkActivePipeline() {
 // Expose checkActivePipeline to module script
 window.checkActivePipeline = checkActivePipeline;
 
-// Mock data
-function generateMockData(formData) {
-  const date = new Date(formData.month + '-01');
-  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  const platforms = formData.platforms && formData.platforms.length > 0 ? formData.platforms : ['LinkedIn', 'Instagram'];
-
-  const themes = ['Industry Insights', 'Product Feature', 'Customer Success', 'Tips & Tricks', 'Behind the Scenes', 'Team Spotlight', 'FAQ Friday', 'Weekend Motivation'];
-  const contentTypes = ['Educational', 'Promotional', 'Engagement', 'Story', 'Tips'];
-
-  contentData = [];
-  currentSessionId = currentSessionId || 'demo-' + Date.now();
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    if (Math.random() > 0.7) continue;
-
-    const platform = platforms[Math.floor(Math.random() * platforms.length)];
-    const theme = themes[Math.floor(Math.random() * themes.length)];
-    const contentType = contentTypes[Math.floor(Math.random() * contentTypes.length)];
-    const dayOfWeek = new Date(date.getFullYear(), date.getMonth(), day).getDay();
-    const isFriday = dayOfWeek === 5;
-
-    contentData.push({
-      id: `content-${day}`,
-      day_number: day,
-      date: `${formData.month}-${String(day).padStart(2, '0')}`,
-      platform: platform,
-      theme: theme,
-      content_type: contentType,
-      post_text: `This is a sample ${contentType.toLowerCase()} post about ${theme.toLowerCase()} for ${formData.industry || 'your business'}. Your actual content will be AI-generated based on your business analysis.\n\n#${(formData.industry || 'Business').replace(/\s+/g, '')} #ContentMarketing`,
-      hashtags: `#${(formData.industry || 'Business').replace(/\s+/g, '')} #ContentMarketing #Business`,
-      image_url: `https://picsum.photos/seed/${day}/800/600`,
-      video_url: isFriday ? 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4' : null,
-      status: 'pending'
-    });
-  }
-
-  saveSession(currentSessionId, { contentData, month: currentMonth });
-
-  setTimeout(() => {
-    goToPhase(3);
-    renderCalendar(currentMonth, contentData);
-    updateStats();
-    showToast('Content calendar generated successfully!', 'success');
-  }, 1000);
-}
-
 // Calendar rendering
 // Month navigation functions
 function changeMonth(delta) {
@@ -3688,7 +3650,6 @@ function changeMonth(delta) {
   renderCalendar(currentMonth, contentData);
   updateStats();
   closeContentList();
-  saveSession(currentSessionId, { contentData, month: currentMonth });
 }
 
 function goToCurrentMonth() {
@@ -3697,7 +3658,6 @@ function goToCurrentMonth() {
   renderCalendar(currentMonth, contentData);
   updateStats();
   closeContentList();
-  saveSession(currentSessionId, { contentData, month: currentMonth });
 }
 
 // Make functions globally accessible for onclick handlers
@@ -4061,13 +4021,13 @@ function closeScheduleModal() {
 async function generateScheduleContent(dateStr) {
   showToast('Generating content for ' + dateStr + '...', 'success');
 
-  // Find theme for this date - prioritize backend themes (from Google Sheets)
+  // Find theme for this date - prioritize backend themes
   const backendTheme = weeklyThemes.find(t => t.date === dateStr) || {};
   const localTheme = scheduleThemes.find(t => t.date === dateStr) || {};
   const localContent = contentData.find(c => c.date === dateStr) || {};
 
   // Get business context
-  const context = businessContext || JSON.parse(localStorage.getItem('eluxr_business_context') || '{}');
+  const context = businessContext || {};
 
   // Calculate week number from date
   const dateObj = new Date(dateStr);
@@ -4103,7 +4063,7 @@ async function generateScheduleContent(dateStr) {
       })
     });
 
-    // Wait for content to be saved to Google Sheets
+    // Wait for content to be saved to Supabase
     await new Promise(resolve => setTimeout(resolve, 4000));
 
     showToast('Content generated!', 'success');
@@ -4426,8 +4386,9 @@ async function approveContent() {
 
   try {
     await submitApproval('approved', content.id);
-    content.status = 'approved';
-    saveSession(currentSessionId, { contentData, month: currentMonth });
+    // Re-fetch from Supabase after approval
+    const freshData = await fetchCalendarData();
+    contentData = freshData.all;
     renderCalendar(currentMonth, contentData);
     updateStats();
     closeModal();
@@ -4467,7 +4428,6 @@ async function saveEdit() {
 
   try {
     await submitApproval('edit', content.id, newText);
-    saveSession(currentSessionId, { contentData, month: currentMonth });
 
     document.getElementById('preview-text').innerHTML = newText.replace(/\n/g, '<br>');
     document.getElementById('edit-section').classList.add('hidden');
@@ -4508,7 +4468,6 @@ async function regenerateContent() {
       if (result.content) {
         content.post_text = result.content;
         content.content = result.content;
-        saveSession(currentSessionId, { contentData, month: currentMonth });
         showContentPreview(currentPreviewDay); // Refresh preview
         showToast('Content regenerated!', 'success');
       } else {
@@ -4534,8 +4493,9 @@ async function rejectContent() {
 
   try {
     await submitApproval('rejected', content.id, feedback || '');
-    content.status = 'rejected';
-    saveSession(currentSessionId, { contentData, month: currentMonth });
+    // Re-fetch from Supabase after rejection
+    const freshData = await fetchCalendarData();
+    contentData = freshData.all;
     renderCalendar(currentMonth, contentData);
     updateStats();
     closeModal();
@@ -4599,11 +4559,12 @@ async function approveSelected() {
     const content = contentData.find(c => c.id === id);
     if (content) {
       await submitApproval('approve', id);
-      content.status = 'approved';
     }
   }
   selectedItems.clear();
-  saveSession(currentSessionId, { contentData, month: currentMonth });
+  // Re-fetch from Supabase after batch approval
+  const freshData = await fetchCalendarData();
+  contentData = freshData.all;
   updateBatchBar();
   renderCalendar(currentMonth, contentData);
   updateStats();
@@ -4677,11 +4638,6 @@ async function syncToGoogleCalendar() {
     console.log('Calendar sync error:', error);
     showToast('Calendar sync failed. Check n8n workflow.', 'error');
   }
-}
-
-// Session
-function saveSession(sessionId, data) {
-  localStorage.setItem('eluxr_current_session', JSON.stringify({ sessionId, ...data }));
 }
 
 // Stats
@@ -4827,7 +4783,7 @@ async function clearPendingContent(silent = false) {
   showToast('Clearing pending content...', 'success');
 
   try {
-    // Call n8n endpoint to clear from Google Sheets
+    // Call n8n endpoint to clear pending content
     const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-clear-pending`, {
       method: 'POST',
       body: JSON.stringify({ action: 'clear_pending' })
@@ -4841,15 +4797,14 @@ async function clearPendingContent(silent = false) {
     console.log('Backend clear failed, clearing locally only:', error);
   }
 
-  // Clear locally - keep only approved
-  const approvedContent = contentData.filter(c => c.status === 'approved');
-  contentData = approvedContent;
+  // Re-fetch from Supabase to get current state
+  const freshData = await fetchCalendarData();
+  contentData = freshData.all;
 
   // Update UI
   renderCalendar(currentMonth, contentData);
   updateStats();
   closeContentList();
-  saveSession(currentSessionId, { contentData, month: currentMonth });
 
   if (!silent) {
     showToast('Pending content cleared! Approved posts kept.', 'success');
@@ -4859,10 +4814,10 @@ async function clearPendingContent(silent = false) {
 
 function startOver() {
   if (confirm('Are you sure you want to start over? This will clear your current session.')) {
-    localStorage.removeItem('eluxr_current_session');
     contentData = [];
     selectedItems.clear();
     currentSessionId = null;
+    businessContext = null;
 
     // Reset stats display
     document.getElementById('stat-total').textContent = '0';
