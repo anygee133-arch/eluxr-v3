@@ -1051,6 +1051,276 @@ details .details-content { padding: 20px; }
   margin-bottom: 4px;
 }
 
+/* PRODUCTS CARD */
+.products-card {
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255,255,255,0.75) inset,
+    0 1px 0 rgba(255,255,255,0.9) inset;
+  border-radius: var(--radius-lg);
+  margin-top: 24px;
+  overflow: hidden;
+  transition: all 0.4s var(--transition);
+}
+.products-card:hover {
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 20px 60px rgba(22, 163, 74, 0.1),
+    0 0 0 1px rgba(255,255,255,0.85) inset,
+    0 0 30px rgba(22, 163, 74, 0.06),
+    0 1px 0 rgba(255,255,255,0.9) inset;
+  border-color: rgba(22, 163, 74, 0.2);
+}
+.products-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.25s var(--transition);
+}
+.products-card-header:hover {
+  background: rgba(240, 253, 244, 0.3);
+}
+.products-card-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.products-card-header .product-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  background: rgba(22, 163, 74, 0.15);
+  color: #16a34a;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.products-card-header .chevron {
+  font-size: 18px;
+  color: var(--text-muted);
+  transition: transform 0.35s var(--transition);
+}
+.products-card.expanded .chevron {
+  transform: rotate(180deg);
+}
+.products-list {
+  max-height: 0;
+  overflow-y: auto;
+  transition: max-height 0.4s var(--transition), padding 0.3s var(--transition);
+  padding: 0 24px;
+}
+.products-card.expanded .products-list {
+  max-height: 400px;
+  padding: 0 24px 20px;
+}
+.product-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.5);
+  transition: opacity 0.3s var(--transition);
+}
+.product-item:last-child {
+  border-bottom: none;
+}
+.product-item.inactive {
+  opacity: 0.4;
+}
+.product-item.inactive .product-name {
+  text-decoration: line-through;
+}
+.product-name {
+  flex: 1;
+  min-width: 0;
+}
+.product-name input {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: transparent;
+  transition: all 0.25s var(--transition);
+}
+.product-name input:hover {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(226, 232, 240, 0.5);
+}
+.product-name input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.8);
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.08);
+}
+.product-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.product-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.product-price {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+  white-space: nowrap;
+}
+.product-category {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--purple);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.product-remove {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s var(--transition);
+}
+.product-remove:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+.products-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(241, 245, 249, 0.5);
+}
+.btn-add-product {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px dashed rgba(22, 163, 74, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--green);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s var(--transition);
+}
+.btn-add-product:hover {
+  background: rgba(240, 253, 244, 0.5);
+  border-color: rgba(22, 163, 74, 0.5);
+}
+.btn-save-products {
+  display: none;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--green);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s var(--transition);
+}
+.btn-save-products:hover {
+  background: var(--green-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
+}
+.btn-save-products.visible {
+  display: inline-flex;
+}
+.products-empty {
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* PLATFORM SELECTOR (promoted) */
+.platform-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+.platform-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 1px solid rgba(226, 232, 240, 0.5);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s var(--transition);
+  user-select: none;
+}
+.platform-toggle:hover {
+  border-color: rgba(22, 163, 74, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+}
+.platform-toggle.active {
+  border-color: rgba(22, 163, 74, 0.3);
+  background: rgba(240, 253, 244, 0.8);
+  color: #16a34a;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(22, 163, 74, 0.06);
+}
+.platform-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--green);
+}
+.platform-validation-error {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 6px;
+  display: none;
+}
+
 /* TAB SLIDE TRANSITIONS */
 @keyframes slideInLeft {
   0% { opacity: 0; transform: translateX(-16px) scale(0.99); filter: blur(2px); }
@@ -1790,27 +2060,23 @@ details .details-content { padding: 20px; }
           <input type="month" class="form-input" id="month" name="month" required>
         </div>
 
+        <div class="form-group">
+          <label class="form-label">Target Platforms *</label>
+          <div class="platform-selector" id="platform-selector">
+            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="LinkedIn" checked> LinkedIn</label>
+            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="Instagram" checked> Instagram</label>
+            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="X" checked> X</label>
+            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="YouTube" checked> YouTube</label>
+          </div>
+          <div class="platform-validation-error" id="platform-error">Please select at least one platform</div>
+        </div>
+
         <details>
           <summary>Advanced Options</summary>
           <div class="details-content">
             <div class="form-group">
-              <label class="form-label" for="products">Products/Services to Feature</label>
-              <textarea class="form-textarea" id="products" name="products" placeholder="List your main products or services you want to promote..."></textarea>
-            </div>
-
-            <div class="form-group">
               <label class="form-label" for="brand_voice">Brand Voice</label>
               <textarea class="form-textarea" id="brand_voice" name="brand_voice" placeholder="Describe your brand voice (e.g., professional, friendly, witty, inspirational)..."></textarea>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Target Platforms</label>
-              <div class="platforms-group" id="platforms">
-                <label><input type="checkbox" name="platforms" value="LinkedIn" checked> LinkedIn</label>
-                <label><input type="checkbox" name="platforms" value="Instagram" checked> Instagram</label>
-                <label><input type="checkbox" name="platforms" value="X"> X (Twitter)</label>
-                <label><input type="checkbox" name="platforms" value="YouTube"> YouTube</label>
-              </div>
             </div>
           </div>
         </details>
@@ -1856,6 +2122,26 @@ details .details-content { padding: 20px; }
         <div id="icp-hashtags-section" class="icp-section" style="display: none;">
           <div class="icp-section-label">Recommended Hashtags</div>
           <div id="icp-hashtags-text" class="icp-section-value"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products Card (populated after ICP analysis / login) -->
+    <div id="products-card-container" class="products-card fade-in-up stagger-3" style="display: none;">
+      <div class="products-card-header" onclick="toggleProductsCard()">
+        <h3>
+          <span style="color: var(--purple); margin-right: 2px;">&#9632;</span>
+          Scraped Products
+          <span class="product-count" id="product-count">0</span>
+        </h3>
+        <span class="chevron">&#9660;</span>
+      </div>
+      <div class="products-list" id="products-list">
+        <div class="products-empty" id="products-empty">No products scraped yet. Run the pipeline to analyze your website.</div>
+        <div id="products-items"></div>
+        <div class="products-actions" id="products-actions" style="display: none;">
+          <button type="button" class="btn-add-product" onclick="addCustomProduct()">+ Add Custom Product</button>
+          <button type="button" class="btn-save-products" id="btn-save-products" onclick="saveProductChanges()">Save Changes</button>
         </div>
       </div>
     </div>
@@ -2705,6 +2991,8 @@ details .details-content { padding: 20px; }
             if (window.loadUserProfile) window.loadUserProfile();
             // Load existing ICP from Supabase
             if (window.loadICP) window.loadICP();
+            // Load scraped products from Supabase
+            if (window.loadProducts) window.loadProducts();
             // Check for active pipeline run after login confirmed
             if (window.checkActivePipeline) {
               window.checkActivePipeline();
@@ -3059,8 +3347,215 @@ function renderJSONAsHTML(obj) {
 window.loadICP = loadICP;
 window.showICPSkeleton = showICPSkeleton;
 
+// === PRODUCTS MANAGEMENT ===
+let productsData = [];
+let productsModified = false;
+
+async function loadProducts() {
+  const container = document.getElementById('products-card-container');
+  const countBadge = document.getElementById('product-count');
+  if (!container) return;
+  try {
+    const { data: products, error } = await window.supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('category');
+    if (error) {
+      console.error('Error loading products:', error);
+      return;
+    }
+    productsData = products || [];
+    if (countBadge) countBadge.textContent = productsData.length;
+    if (productsData.length > 0) {
+      container.style.display = 'block';
+      renderProductsCard(productsData);
+    } else {
+      container.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('loadProducts error:', err);
+  }
+}
+
+function renderProductsCard(products) {
+  const itemsContainer = document.getElementById('products-items');
+  const emptyEl = document.getElementById('products-empty');
+  const actionsEl = document.getElementById('products-actions');
+  if (!itemsContainer) return;
+
+  if (!products || products.length === 0) {
+    if (emptyEl) emptyEl.style.display = 'block';
+    if (actionsEl) actionsEl.style.display = 'none';
+    itemsContainer.innerHTML = '';
+    return;
+  }
+
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (actionsEl) actionsEl.style.display = 'flex';
+
+  itemsContainer.innerHTML = products.map((p, idx) => {
+    const nameVal = escapeHTML(p.name || '');
+    const descVal = escapeHTML(p.description || '');
+    const priceVal = p.price ? escapeHTML(String(p.price)) : '';
+    const catVal = escapeHTML(p.category || '');
+    return '<div class="product-item" data-product-id="' + (p.id || '') + '" data-index="' + idx + '">' +
+      '<div class="product-name">' +
+        '<input type="text" value="' + nameVal + '" placeholder="Product name" onchange="markProductsModified()" />' +
+      '</div>' +
+      '<div class="product-meta">' +
+        (descVal ? '<span class="product-desc" title="' + descVal + '">' + descVal + '</span>' : '') +
+        (priceVal ? '<span class="product-price">' + priceVal + '</span>' : '') +
+        (catVal ? '<span class="product-category">' + catVal + '</span>' : '') +
+      '</div>' +
+      '<button type="button" class="product-remove" onclick="removeProduct(this)" title="Remove product">&times;</button>' +
+    '</div>';
+  }).join('');
+}
+
+function toggleProductsCard() {
+  const card = document.getElementById('products-card-container');
+  if (card) card.classList.toggle('expanded');
+}
+
+function markProductsModified() {
+  productsModified = true;
+  const saveBtn = document.getElementById('btn-save-products');
+  if (saveBtn) saveBtn.classList.add('visible');
+}
+
+function removeProduct(btn) {
+  const item = btn.closest('.product-item');
+  if (!item) return;
+  item.classList.toggle('inactive');
+  markProductsModified();
+}
+
+function addCustomProduct() {
+  const itemsContainer = document.getElementById('products-items');
+  if (!itemsContainer) return;
+  const newId = 'new-' + Date.now();
+  const html = '<div class="product-item" data-product-id="' + newId + '" data-new="true">' +
+    '<div class="product-name">' +
+      '<input type="text" value="" placeholder="Enter product name..." onchange="markProductsModified()" autofocus />' +
+    '</div>' +
+    '<div class="product-meta">' +
+      '<span class="product-category">Custom</span>' +
+    '</div>' +
+    '<button type="button" class="product-remove" onclick="removeProduct(this)" title="Remove product">&times;</button>' +
+  '</div>';
+  itemsContainer.insertAdjacentHTML('beforeend', html);
+  markProductsModified();
+  // Focus the new input
+  const newInput = itemsContainer.querySelector('[data-product-id="' + newId + '"] input');
+  if (newInput) newInput.focus();
+  // Expand if collapsed
+  const card = document.getElementById('products-card-container');
+  if (card && !card.classList.contains('expanded')) card.classList.add('expanded');
+}
+
+async function saveProductChanges() {
+  const items = document.querySelectorAll('#products-items .product-item');
+  const saveBtn = document.getElementById('btn-save-products');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) { showToast('Not authenticated', 'error'); return; }
+
+    for (const item of items) {
+      const productId = item.getAttribute('data-product-id');
+      const isNew = item.getAttribute('data-new') === 'true';
+      const isInactive = item.classList.contains('inactive');
+      const nameInput = item.querySelector('.product-name input');
+      const name = nameInput ? nameInput.value.trim() : '';
+
+      if (!name && isNew) continue; // Skip empty new products
+
+      if (isInactive && !isNew) {
+        // Deactivate existing product
+        await window.supabase.from('products').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', productId);
+      } else if (isNew && name) {
+        // Insert new custom product
+        await window.supabase.from('products').insert({
+          user_id: user.id,
+          name: name,
+          category: 'Custom',
+          is_active: true
+        });
+      } else if (!isNew && name) {
+        // Update existing product name
+        const original = productsData.find(p => p.id === productId);
+        if (original && original.name !== name) {
+          await window.supabase.from('products').update({ name: name, updated_at: new Date().toISOString() }).eq('id', productId);
+        }
+      }
+    }
+
+    showToast('Products saved successfully', 'success');
+    productsModified = false;
+    if (saveBtn) saveBtn.classList.remove('visible');
+    await loadProducts(); // Refresh the list
+  } catch (err) {
+    console.error('Error saving products:', err);
+    showToast('Error saving products: ' + err.message, 'error');
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; }
+  }
+}
+
+// === PLATFORM SELECTOR ===
+function initPlatformToggles() {
+  const toggles = document.querySelectorAll('.platform-toggle input[type="checkbox"]');
+  toggles.forEach(cb => {
+    cb.addEventListener('change', function() {
+      const label = this.closest('.platform-toggle');
+      if (this.checked) {
+        label.classList.add('active');
+      } else {
+        label.classList.remove('active');
+      }
+      // Hide validation error when a platform is selected
+      const errorEl = document.getElementById('platform-error');
+      if (errorEl && getSelectedPlatforms().length > 0) {
+        errorEl.style.display = 'none';
+      }
+    });
+  });
+}
+
+function getSelectedPlatforms() {
+  return Array.from(document.querySelectorAll('#platform-selector input[name="platforms"]:checked')).map(cb => cb.value.toLowerCase());
+}
+
+function getSelectedMonth() {
+  const monthInput = document.getElementById('month');
+  return monthInput ? monthInput.value : '';
+}
+
+function validatePlatforms() {
+  const selected = getSelectedPlatforms();
+  const errorEl = document.getElementById('platform-error');
+  if (selected.length === 0) {
+    if (errorEl) errorEl.style.display = 'block';
+    return false;
+  }
+  if (errorEl) errorEl.style.display = 'none';
+  return true;
+}
+
+window.loadProducts = loadProducts;
+window.saveProductChanges = saveProductChanges;
+window.toggleProductsCard = toggleProductsCard;
+window.addCustomProduct = addCustomProduct;
+window.removeProduct = removeProduct;
+window.markProductsModified = markProductsModified;
+window.getSelectedPlatforms = getSelectedPlatforms;
+window.getSelectedMonth = getSelectedMonth;
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  initPlatformToggles();
   const now = new Date();
   const monthInput = document.getElementById('month');
   const currentMonthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -3150,20 +3645,24 @@ function goToPhase(n) {
 async function handleFormSubmit(e) {
   e.preventDefault();
 
+  // Validate at least 1 platform selected
+  if (!validatePlatforms()) {
+    showToast('Please select at least one target platform', 'error');
+    return;
+  }
+
   const formData = {
     business_url: document.getElementById('business_url').value,
     industry: document.getElementById('industry').value,
-    month: document.getElementById('month').value,
-    products: document.getElementById('products').value,
+    month: getSelectedMonth(),
     brand_voice: document.getElementById('brand_voice').value,
-    platforms: Array.from(document.querySelectorAll('input[name="platforms"]:checked')).map(cb => cb.value)
+    platforms: getSelectedPlatforms()
   };
 
   // Store business context globally for use in Content Generator
   businessContext = {
     business_url: formData.business_url,
     industry: formData.industry,
-    products: formData.products,
     brand_voice: formData.brand_voice,
     platforms: formData.platforms
   };
@@ -4159,6 +4658,10 @@ function renderProgress(run) {
   }
   if (currentStep >= 2 && !icpLoaded && window.loadICP) {
     window.loadICP();
+  }
+  // Products card: refresh after ICP analysis step completes (products were just scraped)
+  if (currentStep >= 2 && window.loadProducts) {
+    window.loadProducts();
   }
 
   // Update step list checkmarks
