@@ -14,10 +14,7 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        0,
-        0
-      ],
+      "position": [0, 0],
       "webhookId": "eluxr-phase1-analyzer"
     },
     {
@@ -28,10 +25,7 @@
       "name": "Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [
-        220,
-        0
-      ]
+      "position": [220, 0]
     },
     {
       "parameters": {
@@ -61,10 +55,7 @@
       "name": "Auth OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        440,
-        0
-      ]
+      "position": [440, 0]
     },
     {
       "parameters": {
@@ -78,70 +69,56 @@
       "name": "401 Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [
-        660,
-        200
-      ]
+      "position": [660, 200]
     },
     {
       "parameters": {
-        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nconst businessUrl = body.business_url || '';\nconst industry = body.industry || '';\n\nreturn { json: { user_id: authData.user_id, business_url: businessUrl, industry: industry } };"
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nconst businessUrl = body.business_url || '';\nconst industry = body.industry || '';\nconst month = body.month || '';\nconst platforms = body.platforms || [];\nconst pipelineRunId = body.pipeline_run_id || '';\nconst callbackUrl = body.callback_url || '';\nconst userId = authData.user_id || '';\n\n// Build Jina Reader URL\nconst jinaUrl = 'https://r.jina.ai/' + businessUrl;\n\nreturn {\n  json: {\n    jina_url: jinaUrl,\n    business_url: businessUrl,\n    industry: industry,\n    month: month,\n    platforms: platforms,\n    pipeline_run_id: pipelineRunId,\n    callback_url: callbackUrl,\n    user_id: userId\n  }\n};"
       },
-      "id": "01-icp-0005",
-      "name": "Prepare Perplexity Request",
+      "id": "01-icp-0100",
+      "name": "Prepare Jina URL",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        660,
-        -200
-      ]
+      "position": [660, -200]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.perplexity.ai/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "perplexityApi",
+        "method": "GET",
+        "url": "={{ $json.jina_url }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {}
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a market research analyst. Provide detailed, actionable market research for social media content strategy. Include: target demographics, competitor analysis, content gaps, trending topics, and audience pain points. Return structured JSON.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Perform deep market research for this business. Business URL or description: {{ $json.business_url }}. Industry: {{ $json.industry }}. Analyze competitors, target audience demographics, content gaps in their social media presence, trending topics in this industry, and key pain points of their ideal customers. Return as structured JSON with keys: target_demographics, competitors, content_gaps, trending_topics, audience_pain_points, recommended_platforms.\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 4000\n}",
         "options": {
-          "timeout": 60000
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
-      "id": "01-icp-0006",
-      "name": "Perplexity -- Market Research",
+      "id": "01-icp-0200",
+      "name": "Scrape Website",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        880,
-        -200
-      ],
-      "credentials": {
-        "perplexityApi": {
-          "id": "3rYRY1C2K9o0DDXI",
-          "name": "Perplexity account"
-        }
-      }
+      "position": [880, -200],
+      "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "const perplexityData = $input.item.json;\nconst prepData = $('Prepare Perplexity Request').item.json;\n\nconst research = perplexityData.choices ? perplexityData.choices[0].message.content : JSON.stringify(perplexityData);\n\nconst prompt = 'You are an ICP specialist for social media marketing. Based on the following market research, create a comprehensive Ideal Customer Profile.\\n\\nBusiness: ' + prepData.business_url + '\\nIndustry: ' + prepData.industry + '\\nMarket Research: ' + research + '\\n\\nReturn a JSON object with keys: icp_summary, demographics, psychographics, content_preferences, competitors, content_opportunities, recommended_hashtags.\\n\\nReturn ONLY valid JSON, no markdown.';\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  messages: [{ role: 'user', content: prompt }]\n});\n\nreturn { json: { apiBody: body, user_id: prepData.user_id, business_url: prepData.business_url, industry: prepData.industry } };"
+        "jsCode": "const jinaOutput = $input.item.json;\nconst prepData = $('Prepare Jina URL').item.json;\n\n// Extract content from Jina response\n// Jina returns { data: { content: '...' } } in JSON mode\nlet siteContent = '';\ntry {\n  if (jinaOutput.data && jinaOutput.data.content) {\n    siteContent = jinaOutput.data.content;\n  } else if (jinaOutput.content) {\n    siteContent = jinaOutput.content;\n  } else if (typeof jinaOutput === 'string') {\n    siteContent = jinaOutput;\n  } else {\n    siteContent = JSON.stringify(jinaOutput);\n  }\n} catch(e) {\n  siteContent = JSON.stringify(jinaOutput);\n}\n\n// Truncate to 12000 chars for Claude\nconst truncated = siteContent.substring(0, 12000);\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  system: 'You are a product/service extractor. Analyze website content and extract ALL products, services, or offerings. If the site is not e-commerce, treat service packages, consulting tiers, software plans, or menu items as products.',\n  messages: [{\n    role: 'user',\n    content: 'Analyze this website content and extract ALL products, services, or offerings mentioned.\\n\\nWEBSITE CONTENT:\\n' + truncated + '\\n\\nReturn a JSON array of products. Each product should have:\\n- name: string (product/service name)\\n- description: string (brief description, max 100 chars)\\n- price: string or null (if price is visible)\\n- features: string[] (key features, max 5)\\n- image_url: string or null (product image URL if found)\\n- category: string (product category)\\n\\nIf the site is not e-commerce, treat service packages, consulting tiers, software plans, or menu items as \"products.\"\\n\\nReturn ONLY a valid JSON array. No markdown, no explanation.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    site_content: siteContent.substring(0, 3000),\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    month: prepData.month,\n    platforms: prepData.platforms,\n    pipeline_run_id: prepData.pipeline_run_id,\n    callback_url: prepData.callback_url\n  }\n};"
       },
-      "id": "01-icp-0007",
-      "name": "Prepare ICP Prompt",
+      "id": "01-icp-0300",
+      "name": "Prepare Extract Products",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1100,
-        -200
-      ]
+      "position": [1100, -200]
     },
     {
       "parameters": {
@@ -167,36 +144,370 @@
         "rawContentType": "application/json",
         "body": "={{ $json.apiBody }}",
         "options": {
-          "timeout": 120000
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
-      "id": "01-icp-0008",
-      "name": "Claude -- ICP Generator",
+      "id": "01-icp-0310",
+      "name": "Claude -- Extract Products",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1320,
-        -200
-      ],
+      "position": [1320, -200],
       "credentials": {
         "anthropicApi": {
           "id": "cZwkXj4ZfHTkpBtT",
           "name": "Anthropic account"
         }
-      }
+      },
+      "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare ICP Prompt').item.json;\n\nlet icpContent = '';\ntry {\n  icpContent = input.content[0].text;\n} catch(e) {\n  icpContent = JSON.stringify(input);\n}\n\nlet icpParsed = {};\ntry {\n  icpParsed = JSON.parse(icpContent);\n} catch(e) {\n  icpParsed = { raw: icpContent };\n}\n\nreturn {\n  json: {\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    icp_summary: icpParsed.icp_summary || '',\n    demographics: icpParsed.demographics || {},\n    psychographics: icpParsed.psychographics || {},\n    content_preferences: icpParsed.content_preferences || {},\n    competitors: icpParsed.competitors || [],\n    content_opportunities: icpParsed.content_opportunities || [],\n    recommended_hashtags: icpParsed.recommended_hashtags || [],\n    raw_research: icpContent\n  }\n};"
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Extract Products').item.json;\n\n// Extract Claude response text\nlet raw = '';\ntry {\n  raw = input.content[0].text;\n} catch(e) {\n  raw = '';\n}\n\n// Robust JSON parsing\nlet products = [];\ntry {\n  products = JSON.parse(raw);\n} catch(e) {\n  // Strip markdown fences\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try {\n    products = JSON.parse(stripped);\n  } catch(e2) {\n    // Extract first JSON array\n    const match = stripped.match(/\\[[\\s\\S]*\\]/);\n    if (match) {\n      try {\n        products = JSON.parse(match[0]);\n      } catch(e3) {\n        products = [];\n      }\n    }\n  }\n}\n\nif (!Array.isArray(products)) {\n  products = [];\n}\n\n// Map to products table schema\nconst mapped = products.map(p => ({\n  user_id: prepData.user_id,\n  name: (p.name || 'Unknown Product').substring(0, 255),\n  description: (p.description || '').substring(0, 500),\n  price: p.price || null,\n  features: p.features || [],\n  image_url: p.image_url || null,\n  category: (p.category || 'General').substring(0, 100),\n  source_url: prepData.business_url,\n  is_active: true\n}));\n\nreturn {\n  json: {\n    products: mapped,\n    products_count: mapped.length,\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    month: prepData.month,\n    platforms: prepData.platforms,\n    pipeline_run_id: prepData.pipeline_run_id,\n    callback_url: prepData.callback_url,\n    site_content: prepData.site_content\n  }\n};"
       },
-      "id": "01-icp-0009",
-      "name": "Parse ICP Response",
+      "id": "01-icp-0400",
+      "name": "Parse Products",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1540,
-        -200
-      ]
+      "position": [1540, -200]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?user_id=eq.{{ $json.user_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-0500",
+      "name": "Delete Old Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Parse Products').item.json;\nconst products = data.products || [];\n\nif (products.length === 0) {\n  // Skip save, pass through\n  return {\n    json: {\n      skipped: true,\n      products_count: 0,\n      user_id: data.user_id,\n      business_url: data.business_url,\n      industry: data.industry,\n      month: data.month,\n      platforms: data.platforms,\n      pipeline_run_id: data.pipeline_run_id,\n      callback_url: data.callback_url,\n      site_content: data.site_content,\n      products: []\n    }\n  };\n}\n\nreturn {\n  json: {\n    skipped: false,\n    products_body: JSON.stringify(products),\n    products_count: products.length,\n    user_id: data.user_id,\n    business_url: data.business_url,\n    industry: data.industry,\n    month: data.month,\n    platforms: data.platforms,\n    pipeline_run_id: data.pipeline_run_id,\n    callback_url: data.callback_url,\n    site_content: data.site_content,\n    products: products\n  }\n};"
+      },
+      "id": "01-icp-0550",
+      "name": "Prepare Save Products",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, -200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-products",
+              "leftValue": "={{ $json.skipped }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "01-icp-0560",
+      "name": "Has Products?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2200, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.products_body }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-0600",
+      "name": "Save Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2420, -400],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge point after Save Products or skip\n// Recover data from Prepare Save Products\nconst data = $('Prepare Save Products').item.json;\n\n// Build Perplexity Research 1 prompt: Industry landscape + competitor analysis\nconst prompt = 'Research the ' + data.industry + ' industry. Provide: 1) Key market trends and growth areas, 2) Top 5-10 competitors for a business like ' + data.business_url + ', 3) Industry-specific content strategies that perform well on social media. Include citations.';\n\nconst body = JSON.stringify({\n  model: 'sonar-pro',\n  messages: [\n    {\n      role: 'system',\n      content: 'You are a market research analyst specializing in social media content strategy. Provide detailed, actionable research with citations.'\n    },\n    {\n      role: 'user',\n      content: prompt\n    }\n  ],\n  temperature: 0.3,\n  max_tokens: 4000\n});\n\nreturn {\n  json: {\n    perplexity_body_1: body,\n    user_id: data.user_id,\n    business_url: data.business_url,\n    industry: data.industry,\n    month: data.month,\n    platforms: data.platforms,\n    pipeline_run_id: data.pipeline_run_id,\n    callback_url: data.callback_url,\n    site_content: data.site_content,\n    products: data.products,\n    products_count: data.products_count\n  }\n};"
+      },
+      "id": "01-icp-0700",
+      "name": "Prepare Research 1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "perplexityApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.perplexity_body_1 }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-0710",
+      "name": "Perplexity Research 1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2860, -200],
+      "credentials": {
+        "perplexityApi": {
+          "id": "3rYRY1C2K9o0DDXI",
+          "name": "Perplexity account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const research1 = $input.item.json;\nconst prepData = $('Prepare Research 1').item.json;\n\n// Extract research 1 content\nlet research1Content = '';\ntry {\n  research1Content = research1.choices[0].message.content;\n} catch(e) {\n  research1Content = JSON.stringify(research1);\n}\n\n// Build Perplexity Research 2 prompt: Audience pain points + desires\nconst prompt = 'Research the target audience for ' + prepData.industry + ' businesses like ' + prepData.business_url + '. Provide: 1) Top pain points and frustrations, 2) Desires and aspirations, 3) Common objections to purchasing, 4) Buying triggers, 5) Where this audience spends time online. Include citations.';\n\nconst body = JSON.stringify({\n  model: 'sonar-pro',\n  messages: [\n    {\n      role: 'system',\n      content: 'You are a consumer psychology researcher specializing in audience analysis for marketing. Provide detailed, actionable insights with citations.'\n    },\n    {\n      role: 'user',\n      content: prompt\n    }\n  ],\n  temperature: 0.3,\n  max_tokens: 4000\n});\n\nreturn {\n  json: {\n    perplexity_body_2: body,\n    research_1: research1Content,\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    month: prepData.month,\n    platforms: prepData.platforms,\n    pipeline_run_id: prepData.pipeline_run_id,\n    callback_url: prepData.callback_url,\n    site_content: prepData.site_content,\n    products: prepData.products,\n    products_count: prepData.products_count\n  }\n};"
+      },
+      "id": "01-icp-0800",
+      "name": "Prepare Research 2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3080, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "perplexityApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.perplexity_body_2 }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-0810",
+      "name": "Perplexity Research 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3300, -200],
+      "credentials": {
+        "perplexityApi": {
+          "id": "3rYRY1C2K9o0DDXI",
+          "name": "Perplexity account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const research2 = $input.item.json;\nconst prepData = $('Prepare Research 2').item.json;\n\n// Extract research 2 content\nlet research2Content = '';\ntry {\n  research2Content = research2.choices[0].message.content;\n} catch(e) {\n  research2Content = JSON.stringify(research2);\n}\n\n// Build Perplexity Research 3 prompt: Content gaps + opportunities\nconst prompt = 'Research content marketing opportunities in the ' + prepData.industry + ' space for ' + prepData.business_url + '. Provide: 1) Underserved content topics, 2) High-engagement content formats, 3) 15-20 trending and niche hashtags for LinkedIn, Instagram, X, and YouTube, 4) Content pillars that resonate with the target audience. Include citations.';\n\nconst body = JSON.stringify({\n  model: 'sonar-pro',\n  messages: [\n    {\n      role: 'system',\n      content: 'You are a content marketing strategist specializing in social media trends and content gap analysis. Provide detailed, actionable research with citations.'\n    },\n    {\n      role: 'user',\n      content: prompt\n    }\n  ],\n  temperature: 0.3,\n  max_tokens: 4000\n});\n\nreturn {\n  json: {\n    perplexity_body_3: body,\n    research_1: prepData.research_1,\n    research_2: research2Content,\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    month: prepData.month,\n    platforms: prepData.platforms,\n    pipeline_run_id: prepData.pipeline_run_id,\n    callback_url: prepData.callback_url,\n    site_content: prepData.site_content,\n    products: prepData.products,\n    products_count: prepData.products_count\n  }\n};"
+      },
+      "id": "01-icp-0900",
+      "name": "Prepare Research 3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3520, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "perplexityApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.perplexity_body_3 }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-0910",
+      "name": "Perplexity Research 3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3740, -200],
+      "credentials": {
+        "perplexityApi": {
+          "id": "3rYRY1C2K9o0DDXI",
+          "name": "Perplexity account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const research3 = $input.item.json;\nconst prepData = $('Prepare Research 3').item.json;\n\n// Extract research 3 content\nlet research3Content = '';\ntry {\n  research3Content = research3.choices[0].message.content;\n} catch(e) {\n  research3Content = JSON.stringify(research3);\n}\n\n// Build product summary for Claude\nconst productsList = (prepData.products || []).map(p => {\n  return '- ' + p.name + (p.price ? ' ($' + p.price + ')' : '') + ': ' + (p.description || 'No description');\n}).join('\\n');\n\n// Build comprehensive Claude ICP synthesis prompt\nconst prompt = 'You are a world-class marketing strategist. Based on the following research, create a comprehensive Ideal Customer Profile (ICP) for this business.\\n\\n' +\n  'BUSINESS: ' + prepData.business_url + '\\n' +\n  'INDUSTRY: ' + prepData.industry + '\\n\\n' +\n  'WEBSITE CONTENT SUMMARY:\\n' + (prepData.site_content || 'Not available') + '\\n\\n' +\n  'PRODUCTS/SERVICES OFFERED:\\n' + (productsList || 'None extracted') + '\\n\\n' +\n  'RESEARCH 1 - INDUSTRY LANDSCAPE & COMPETITORS:\\n' + prepData.research_1 + '\\n\\n' +\n  'RESEARCH 2 - AUDIENCE PAIN POINTS & DESIRES:\\n' + prepData.research_2 + '\\n\\n' +\n  'RESEARCH 3 - CONTENT GAPS & OPPORTUNITIES:\\n' + research3Content + '\\n\\n' +\n  'Synthesize ALL of the above into a professional ICP. Return a JSON object with EXACTLY these keys:\\n' +\n  JSON.stringify({\n    icp_summary: '2-3 paragraph executive summary of the ideal customer',\n    demographics: { age_range: '', gender: '', income_level: '', education: '', location: '', job_titles: [] },\n    psychographics: { values: [], interests: [], lifestyle: '' },\n    pain_points: ['array of specific pain points'],\n    desires: ['array of specific desires and aspirations'],\n    objections: ['array of common objections to purchasing'],\n    buying_triggers: ['array of triggers that prompt purchasing'],\n    content_pillars: [{ name: '', description: '', example_topics: [] }],\n    content_preferences: { platforms: {}, content_types: [], best_posting_times: {} },\n    competitors: [{ name: '', url: '', strengths: [], weaknesses: [] }],\n    content_opportunities: ['array of underserved content topics'],\n    recommended_hashtags: { linkedin: [], instagram: [], x: [], youtube: [] }\n  }, null, 2) + '\\n\\nFill in ALL fields with real, researched data. Return ONLY valid JSON. No markdown, no explanation.';\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 8192,\n  messages: [{ role: 'user', content: prompt }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    raw_research: prepData.research_1 + '\\n---\\n' + prepData.research_2 + '\\n---\\n' + research3Content,\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    month: prepData.month,\n    platforms: prepData.platforms,\n    pipeline_run_id: prepData.pipeline_run_id,\n    callback_url: prepData.callback_url,\n    products: prepData.products,\n    products_count: prepData.products_count\n  }\n};"
+      },
+      "id": "01-icp-1000",
+      "name": "Prepare Synthesize ICP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3960, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.apiBody }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-1010",
+      "name": "Claude -- Synthesize ICP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4180, -200],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Synthesize ICP').item.json;\n\n// Extract Claude response text\nlet raw = '';\ntry {\n  raw = input.content[0].text;\n} catch(e) {\n  raw = JSON.stringify(input);\n}\n\n// Robust JSON parsing\nlet icpParsed = {};\ntry {\n  icpParsed = JSON.parse(raw);\n} catch(e) {\n  // Strip markdown fences\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try {\n    icpParsed = JSON.parse(stripped);\n  } catch(e2) {\n    // Extract first JSON object\n    const match = stripped.match(/\\{[\\s\\S]*\\}/);\n    if (match) {\n      try {\n        icpParsed = JSON.parse(match[0]);\n      } catch(e3) {\n        icpParsed = { icp_summary: raw };\n      }\n    } else {\n      icpParsed = { icp_summary: raw };\n    }\n  }\n}\n\nreturn {\n  json: {\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    icp_summary: icpParsed.icp_summary || '',\n    demographics: icpParsed.demographics || {},\n    psychographics: icpParsed.psychographics || {},\n    content_preferences: icpParsed.content_preferences || {},\n    competitors: icpParsed.competitors || [],\n    content_opportunities: icpParsed.content_opportunities || [],\n    recommended_hashtags: icpParsed.recommended_hashtags || {},\n    raw_research: prepData.raw_research,\n    content_pillars: icpParsed.content_pillars || [],\n    pain_points: icpParsed.pain_points || [],\n    desires: icpParsed.desires || [],\n    objections: icpParsed.objections || [],\n    buying_triggers: icpParsed.buying_triggers || [],\n    pipeline_run_id: prepData.pipeline_run_id,\n    callback_url: prepData.callback_url,\n    products_count: prepData.products_count\n  }\n};"
+      },
+      "id": "01-icp-1100",
+      "name": "Parse ICP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4400, -200]
     },
     {
       "parameters": {
@@ -225,140 +536,368 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"business_url\": {{ JSON.stringify($json.business_url) }},\n  \"industry\": {{ JSON.stringify($json.industry) }},\n  \"icp_summary\": {{ JSON.stringify($json.icp_summary) }},\n  \"demographics\": {{ JSON.stringify($json.demographics) }},\n  \"psychographics\": {{ JSON.stringify($json.psychographics) }},\n  \"content_preferences\": {{ JSON.stringify($json.content_preferences) }},\n  \"competitors\": {{ JSON.stringify($json.competitors) }},\n  \"content_opportunities\": {{ JSON.stringify($json.content_opportunities) }},\n  \"recommended_hashtags\": {{ JSON.stringify($json.recommended_hashtags) }},\n  \"raw_research\": {{ JSON.stringify($json.raw_research) }}\n}",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"business_url\": {{ JSON.stringify($json.business_url) }},\n  \"industry\": {{ JSON.stringify($json.industry) }},\n  \"icp_summary\": {{ JSON.stringify($json.icp_summary) }},\n  \"demographics\": {{ JSON.stringify($json.demographics) }},\n  \"psychographics\": {{ JSON.stringify($json.psychographics) }},\n  \"content_preferences\": {{ JSON.stringify($json.content_preferences) }},\n  \"competitors\": {{ JSON.stringify($json.competitors) }},\n  \"content_opportunities\": {{ JSON.stringify($json.content_opportunities) }},\n  \"recommended_hashtags\": {{ JSON.stringify($json.recommended_hashtags) }},\n  \"raw_research\": {{ JSON.stringify($json.raw_research) }},\n  \"content_pillars\": {{ JSON.stringify($json.content_pillars) }},\n  \"pain_points\": {{ JSON.stringify($json.pain_points) }},\n  \"desires\": {{ JSON.stringify($json.desires) }},\n  \"objections\": {{ JSON.stringify($json.objections) }},\n  \"buying_triggers\": {{ JSON.stringify($json.buying_triggers) }}\n}",
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
-      "id": "01-icp-0010",
-      "name": "Supabase -- UPSERT ICP",
+      "id": "01-icp-1200",
+      "name": "Save ICP",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1760,
-        -200
-      ]
+      "position": [4620, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const saveResult = $input.item.json;\nconst icpData = $('Parse ICP').item.json;\n\n// Extract ICP ID from save result\nlet icpId = '';\ntry {\n  const row = Array.isArray(saveResult) ? saveResult[0] : saveResult;\n  icpId = row.id || '';\n} catch(e) {\n  icpId = '';\n}\n\nreturn {\n  json: {\n    icp_id: icpId,\n    products_count: icpData.products_count,\n    pipeline_run_id: icpData.pipeline_run_id,\n    callback_url: icpData.callback_url\n  }\n};"
+      },
+      "id": "01-icp-1250",
+      "name": "Prepare Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4840, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pipeline-Secret",
+              "value": "eluxr-pipeline-internal-2024"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ pipeline_run_id: $json.pipeline_run_id, step: 1, status: 'complete' }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-1300",
+      "name": "Callback to Orchestrator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5060, -200],
+      "alwaysOutputData": true
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, phase: 1, session_id: 'session_' + Date.now(), data: $json }) }}",
+        "responseBody": "={{ JSON.stringify({ success: true, icp_id: $('Prepare Callback').item.json.icp_id, products_count: $('Prepare Callback').item.json.products_count }) }}",
         "options": {}
       },
-      "id": "01-icp-0011",
-      "name": "Response",
+      "id": "01-icp-1400",
+      "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [
-        1980,
-        -200
-      ]
+      "position": [5280, -200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handler: catches failures and calls callback with error status\nconst errorData = $input.item.json;\n\n// Try to recover pipeline_run_id and callback_url from earlier nodes\nlet pipelineRunId = '';\nlet callbackUrl = '';\ntry {\n  const prepJina = $('Prepare Jina URL').item.json;\n  pipelineRunId = prepJina.pipeline_run_id || '';\n  callbackUrl = prepJina.callback_url || '';\n} catch(e) {\n  // Can't recover, will skip callback\n}\n\nreturn {\n  json: {\n    pipeline_run_id: pipelineRunId,\n    callback_url: callbackUrl,\n    error_message: 'ICP Analyzer failed: ' + (errorData.message || errorData.error || 'Unknown error')\n  }\n};"
+      },
+      "id": "01-icp-1500",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4400, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-callback",
+              "leftValue": "={{ $json.callback_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "01-icp-1510",
+      "name": "Has Callback URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [4620, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pipeline-Secret",
+              "value": "eluxr-pipeline-internal-2024"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ pipeline_run_id: $json.pipeline_run_id, step: 1, status: 'error', error_message: $json.error_message }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-1520",
+      "name": "Error Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4840, 100],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $('Handle Error').item.json.error_message }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "01-icp-1530",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [5060, 200]
     }
   ],
   "connections": {
     "Webhook": {
       "main": [
         [
-          {
-            "node": "Auth Validator",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Auth Validator", "type": "main", "index": 0 }
         ]
       ]
     },
     "Auth Validator": {
       "main": [
         [
-          {
-            "node": "Auth OK?",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Auth OK?", "type": "main", "index": 0 }
         ]
       ]
     },
     "Auth OK?": {
       "main": [
         [
-          {
-            "node": "Prepare Perplexity Request",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Prepare Jina URL", "type": "main", "index": 0 }
         ],
         [
-          {
-            "node": "401 Unauthorized",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "401 Unauthorized", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Prepare Perplexity Request": {
+    "Prepare Jina URL": {
       "main": [
         [
-          {
-            "node": "Perplexity -- Market Research",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Scrape Website", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Perplexity -- Market Research": {
+    "Scrape Website": {
       "main": [
         [
-          {
-            "node": "Prepare ICP Prompt",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Prepare Extract Products", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Prepare ICP Prompt": {
+    "Prepare Extract Products": {
       "main": [
         [
-          {
-            "node": "Claude -- ICP Generator",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Claude -- Extract Products", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Claude -- ICP Generator": {
+    "Claude -- Extract Products": {
       "main": [
         [
-          {
-            "node": "Parse ICP Response",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Parse Products", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Parse ICP Response": {
+    "Parse Products": {
       "main": [
         [
-          {
-            "node": "Supabase -- UPSERT ICP",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Delete Old Products", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Supabase -- UPSERT ICP": {
+    "Delete Old Products": {
       "main": [
         [
-          {
-            "node": "Response",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Prepare Save Products", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Save Products": {
+      "main": [
+        [
+          { "node": "Has Products?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Has Products?": {
+      "main": [
+        [
+          { "node": "Save Products", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Prepare Research 1", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Save Products": {
+      "main": [
+        [
+          { "node": "Prepare Research 1", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Research 1": {
+      "main": [
+        [
+          { "node": "Perplexity Research 1", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Perplexity Research 1": {
+      "main": [
+        [
+          { "node": "Prepare Research 2", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Research 2": {
+      "main": [
+        [
+          { "node": "Perplexity Research 2", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Perplexity Research 2": {
+      "main": [
+        [
+          { "node": "Prepare Research 3", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Research 3": {
+      "main": [
+        [
+          { "node": "Perplexity Research 3", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Perplexity Research 3": {
+      "main": [
+        [
+          { "node": "Prepare Synthesize ICP", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Synthesize ICP": {
+      "main": [
+        [
+          { "node": "Claude -- Synthesize ICP", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude -- Synthesize ICP": {
+      "main": [
+        [
+          { "node": "Parse ICP", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse ICP": {
+      "main": [
+        [
+          { "node": "Save ICP", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Save ICP": {
+      "main": [
+        [
+          { "node": "Prepare Callback", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Callback": {
+      "main": [
+        [
+          { "node": "Callback to Orchestrator", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Callback to Orchestrator": {
+      "main": [
+        [
+          { "node": "Respond Success", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          { "node": "Has Callback URL?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Has Callback URL?": {
+      "main": [
+        [
+          { "node": "Error Callback", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Respond Error", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Error Callback": {
+      "main": [
+        [
+          { "node": "Respond Error", "type": "main", "index": 0 }
         ]
       ]
     }
