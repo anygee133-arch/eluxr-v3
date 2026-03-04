@@ -208,6 +208,16 @@ Plans:
 
 **Pitfalls:** CRIT-5 (execution limits), HIGH-4 (AI response parsing), MOD-3 (hallucinated research), MOD-6 (rate limits)
 
+**Plans:** 6 plans in 5 waves
+
+Plans:
+- [ ] 06-01-PLAN.md -- Schema migration (products table + column additions) + orchestrator callback restructure
+- [ ] 06-02-PLAN.md -- ICP Analyzer overhaul (Jina scraping + Perplexity research + Claude synthesis + products)
+- [ ] 06-03-PLAN.md -- Frontend: products card, platform selector, month selector, updated pipeline trigger
+- [ ] 06-04-PLAN.md -- Theme Generator overhaul (Netflix model, show naming, product assignment, progressive arc)
+- [ ] 06-05-PLAN.md -- Content Studio overhaul (weekly batch posts + hero images + video scripts + trending audio)
+- [ ] 06-06-PLAN.md -- E2E verification: migration, deployment, pipeline test, user checkpoint
+
 ---
 
 ## Phase 7: Approval Queue
