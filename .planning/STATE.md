@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-03-04T03:49:57Z"
-last_activity: "2026-03-04 - Completed 06-03: Products card, platform selector, and pipeline trigger updates on Setup tab."
+last_updated: "2026-03-04T03:57:02.917Z"
+last_activity: "2026-03-04 - Completed 06-04: Theme Generator overhauled with Netflix model, product assignment, and orchestrator callback."
 progress:
   total_phases: 11
   completed_phases: 5
   total_plans: 27
-  completed_plans: 24
-  percent: 88
+  completed_plans: 25
+  percent: 93
 ---
 
 # State: ELUXR Magic Content Engine v2
@@ -19,24 +19,24 @@ progress:
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 6 (Content Pipeline). Plans 01-03 complete, executing plan 04 next.
+**Current Focus:** Phase 6 (Content Pipeline). Plans 01-04 complete, executing plan 05 next.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 6 of 11 (Content Pipeline)
-**Plan:** 3 of 6 complete
-**Status:** Executing Phase 6. Plan 06-03 (frontend products + platforms) complete.
-**Last activity:** 2026-03-04 - Completed 06-03: Products card, platform selector, and pipeline trigger updates on Setup tab.
+**Plan:** 4 of 6 complete
+**Status:** Executing Phase 6. Plan 06-04 (Theme Generator overhaul) complete.
+**Last activity:** 2026-03-04 - Completed 06-04: Theme Generator overhauled with Netflix model, product assignment, and orchestrator callback.
 
 **Progress:**
-[█████████░] 88%
+[█████████░] 93%
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
 Phase  3: Workflow Decomposition      [### COMPLETE ######## ] 6/6 plans
 Phase  4: Progress Tracking           [### COMPLETE ######## ] 3/3 plans
 Phase  5: Frontend Migration + UI     [### COMPLETE ######## ] 4/4 plans (Vercel deferred)
-Phase  6: Content Pipeline            [######                ] 3/6 plans
+Phase  6: Content Pipeline            [########              ] 4/6 plans
 Phase  7: Approval Queue              [ . . . . . . . . . . ] 0%
 Phase  8: Calendar + Scheduling       [ . . . . . . . . . . ] 0%
 Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
@@ -58,6 +58,7 @@ Overall: 25/50 requirements complete (50%)
 | Phase 06 P01 | 4 | 2 tasks | 2 files |
 | Phase 06 P02 | 4 | 1 tasks | 1 files |
 | Phase 06 P03 | 3 | 1 tasks | 1 files |
+| Phase 06 P04 | 3 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,9 @@ Overall: 25/50 requirements complete (50%)
 | Platform selector promoted from Advanced Options to primary form element | Users need to see and configure target platforms before generation; should not be hidden | 6 |
 | Products textarea removed; products from Supabase table | Scraped products stored in products table by ICP Analyzer; manual text entry replaced by CRUD card | 6 |
 | Product removal uses is_active=false soft delete | Preserves product history; products can be re-activated if needed | 6 |
+| Extract Params code node separates auth data from pipeline params | Prevents downstream nodes from complex nested references; clean flat object | 6 |
+| Extract Campaign ID code node after UPSERT | PostgREST UPSERT returns array; safely extracts campaign_id and carries forward context | 6 |
+| Error handling path mirrors 01-ICP-Analyzer pattern across sub-workflows | Consistent failure behavior: Handle Error -> Has Callback URL? -> Error Callback -> Respond Error | 6 |
 
 ### Known Issues
 
@@ -169,14 +173,14 @@ Overall: 25/50 requirements complete (50%)
 
 ### Last Session
 - **Date:** 2026-03-04
-- **Activity:** Completed 06-03: Products card, platform selector, and pipeline trigger updates on Setup tab.
-- **Outcome:** Collapsible products dropdown card with inline editing. Platform selector promoted to primary form element. handleFormSubmit sends platforms + month to orchestrator. loadProducts called on login and after ICP analysis step.
+- **Activity:** Completed 06-04: Theme Generator overhauled with Netflix model, product assignment, and orchestrator callback.
+- **Outcome:** 02-Theme-Generator overhauled from 12 to 23 nodes. Reads ICP + products from Supabase, generates Netflix model via Claude (show name, 4 seasons, progressive arc, product-per-day), stores campaign with show_name and 4 theme rows with season_arc/inspirational_theme/content_types JSONB, calls orchestrator callback with step=2.
 
 ### Next Session
-- **Expected:** Execute Phase 6, Plan 04 (Theme Generator overhaul)
-- **Prerequisites:** 06-01 complete (schema), 06-02 complete (ICP Analyzer), 06-03 complete (frontend products + platforms)
-- **Entry point:** `/gsd:execute-phase 06-04`
+- **Expected:** Execute Phase 6, Plan 05 (Content Studio overhaul)
+- **Prerequisites:** 06-01 complete (schema), 06-02 complete (ICP Analyzer), 06-03 complete (frontend), 06-04 complete (Theme Generator)
+- **Entry point:** `/gsd:execute-phase 06-05`
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-04 (06-03 complete)*
+*Last updated: 2026-03-04 (06-04 complete)*
