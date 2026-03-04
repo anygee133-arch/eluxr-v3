@@ -149,7 +149,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Reference Auth Validator output by name (HTTP Request replaced $json)\nconst authData = $('Auth Validator').item.json;\nconst userId = authData.user_id;\nconst email = authData.email || '';\nconst body = authData.body || {};\n\n// Capture the original Authorization header for passing to sub-workflows\nconst webhookData = $('Webhook').item.json;\nconst authHeader = (webhookData.headers || {}).authorization || (webhookData.headers || {}).Authorization || '';\n\nreturn {\n  json: {\n    user_id: userId,\n    pipeline_type: 'full_pipeline',\n    status: 'running',\n    current_step: 0,\n    total_steps: 6,\n    step_label: 'Starting...',\n    step_progress: 0,\n    started_at: new Date().toISOString(),\n    metadata: {\n      business_url: body.business_url || '',\n      industry: body.industry || '',\n      month: body.month || '',\n      products: body.products || '',\n      brand_voice: body.brand_voice || '',\n      platforms: body.platforms || []\n    },\n    body: body,\n    email: email,\n    auth_header: authHeader\n  }\n};"
+        "jsCode": "// Reference Auth Validator output by name (HTTP Request replaced $json)\nconst authData = $('Auth Validator').item.json;\nconst userId = authData.user_id;\nconst email = authData.email || '';\nconst body = authData.body || {};\n\n// Capture the original Authorization header for passing to sub-workflows\nconst webhookData = $('Webhook').item.json;\nconst authHeader = (webhookData.headers || {}).authorization || (webhookData.headers || {}).Authorization || '';\n\nreturn {\n  json: {\n    user_id: userId,\n    pipeline_type: 'full_pipeline',\n    status: 'running',\n    current_step: 0,\n    total_steps: 6,\n    step_label: 'Starting...',\n    step_progress: 0,\n    started_at: new Date().toISOString(),\n    metadata: {\n      business_url: body.business_url || '',\n      industry: body.industry || '',\n      month: body.month || '',\n      products: body.products || '',\n      brand_voice: body.brand_voice || '',\n      platforms: body.platforms || [],\n      auth_token: authHeader\n    },\n    body: body,\n    email: email,\n    auth_header: authHeader\n  }\n};"
       },
       "id": "orch-0001-4000-8000-000000000008",
       "name": "Create Pipeline Run",
@@ -195,7 +195,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const insertResult = $input.item.json;\n// PostgREST returns array with Prefer: return=representation\nconst row = Array.isArray(insertResult) ? insertResult[0] : insertResult;\nconst runId = row.id;\nconst metadata = row.metadata || {};\n\n// Recover email, body, and auth header from the Create Pipeline Run node\nconst createNode = $('Create Pipeline Run').item.json;\n\nreturn {\n  json: {\n    pipeline_run_id: runId,\n    user_id: row.user_id,\n    body: createNode.body || metadata,\n    email: createNode.email || metadata.email || '',\n    auth_header: createNode.auth_header || ''\n  }\n};"
+        "jsCode": "const insertResult = $input.item.json;\n// PostgREST returns array with Prefer: return=representation\nconst row = Array.isArray(insertResult) ? insertResult[0] : insertResult;\nconst runId = row.id;\nconst metadata = row.metadata || {};\n\n// Recover email, body, and auth header from the Create Pipeline Run node\nconst createNode = $('Create Pipeline Run').item.json;\n\nreturn {\n  json: {\n    pipeline_run_id: runId,\n    user_id: row.user_id,\n    body: createNode.body || metadata,\n    email: createNode.email || metadata.email || '',\n    auth_header: createNode.auth_header || '',\n    callback_url: 'https://flowbound.app.n8n.cloud/webhook/eluxr-pipeline-callback'\n  }\n};"
       },
       "id": "orch-0001-4000-8000-000000000010",
       "name": "Extract Run ID",
@@ -272,9 +272,9 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [] }) }}",
+        "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [], pipeline_run_id: $('Extract Run ID').item.json.pipeline_run_id, callback_url: $('Extract Run ID').item.json.callback_url, user_id: $('Extract Run ID').item.json.user_id }) }}",
         "options": {
-          "timeout": 120000,
+          "timeout": 10000,
           "response": {
             "response": {
               "neverError": true
@@ -283,15 +283,162 @@
         }
       },
       "id": "orch-0001-4000-8000-000000000013",
-      "name": "Call 01-ICP-Analyzer",
+      "name": "Fire 01-ICP-Analyzer",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2200, 200]
+      "position": [2200, 200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-pipeline-callback",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000030",
+      "name": "Callback Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 800],
+      "webhookId": "eluxr-pipeline-callback-orch"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-secret-check",
+              "leftValue": "={{ $json.headers['x-pipeline-secret'] || $json.headers['X-Pipeline-Secret'] || '' }}",
+              "rightValue": "eluxr-pipeline-internal-2024",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000031",
+      "name": "Valid Secret?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [220, 800]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reject unauthorized callback\nreturn {\n  json: {\n    error: 'Unauthorized callback',\n    status: 403\n  }\n};"
+      },
+      "id": "orch-0001-4000-8000-000000000032",
+      "name": "403 Forbidden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 1000]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst pipelineRunId = body.pipeline_run_id;\nconst completedStep = body.step;\nconst status = body.status || 'complete';\nconst errorMessage = body.error_message || '';\nconst data = body.data || {};\n\n// Recover auth token and context from pipeline_runs metadata\n// (stored during Create Pipeline Run)\nconst authToken = body.auth_token || data.auth_token || '';\nconst context = data.context || {};\n\n// Define pipeline stages: what to fire AFTER each step completes\nconst stages = {\n  1: { step: 2, label: 'Creating content themes...', webhook: 'eluxr-phase2-themes', week_number: null },\n  2: { step: 3, label: 'Generating Week 1 content...', webhook: 'eluxr-phase4-studio', week_number: 1 },\n  3: { step: 4, label: 'Generating Week 2 content...', webhook: 'eluxr-phase4-studio', week_number: 2 },\n  4: { step: 5, label: 'Generating Week 3 content...', webhook: 'eluxr-phase4-studio', week_number: 3 },\n  5: { step: 6, label: 'Generating Week 4 content...', webhook: 'eluxr-phase4-studio', week_number: 4 },\n  6: { step: null, label: 'Complete!', webhook: null, week_number: null }\n};\n\n// Handle error status from sub-workflow\nif (status === 'error') {\n  return {\n    json: {\n      action: 'mark_failed',\n      pipeline_run_id: pipelineRunId,\n      completed_step: completedStep,\n      error_message: errorMessage\n    }\n  };\n}\n\nconst nextStage = stages[completedStep];\nif (!nextStage) {\n  return {\n    json: {\n      action: 'mark_failed',\n      pipeline_run_id: pipelineRunId,\n      completed_step: completedStep,\n      error_message: 'Unknown step: ' + completedStep\n    }\n  };\n}\n\nif (nextStage.step === null) {\n  // Pipeline complete (step 6 finished)\n  return {\n    json: {\n      action: 'mark_complete',\n      pipeline_run_id: pipelineRunId,\n      completed_step: completedStep\n    }\n  };\n}\n\n// Fire next stage\nreturn {\n  json: {\n    action: 'fire_next',\n    pipeline_run_id: pipelineRunId,\n    completed_step: completedStep,\n    next_step: nextStage.step,\n    step_label: nextStage.label,\n    webhook_path: nextStage.webhook,\n    week_number: nextStage.week_number,\n    auth_token: authToken,\n    context: context\n  }\n};"
+      },
+      "id": "orch-0001-4000-8000-000000000033",
+      "name": "Route Next Stage",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 800]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "fire_next",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "Fire Next"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "mark_complete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "Complete"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "mark_failed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "Failed"
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": false
+        }
+      },
+      "id": "orch-0001-4000-8000-000000000034",
+      "name": "Action Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [660, 800]
     },
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $json.pipeline_run_id }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -315,25 +462,35 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ current_step: 2, step_label: \"Creating content themes...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
+        "jsonBody": "={{ JSON.stringify({ current_step: $json.next_step, step_label: $json.step_label, step_progress: 0, status: 'running', updated_at: new Date().toISOString() }) }}",
         "options": {}
       },
-      "id": "orch-0001-4000-8000-000000000014",
-      "name": "Update Step 2",
+      "id": "orch-0001-4000-8000-000000000035",
+      "name": "Update Next Step Progress",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2420, 200]
+      "position": [880, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch pipeline_runs metadata to recover auth_token and context\nconst runId = $json.pipeline_run_id;\nconst nextStep = $('Route Next Stage').item.json.next_step;\nconst webhookPath = $('Route Next Stage').item.json.webhook_path;\nconst weekNumber = $('Route Next Stage').item.json.week_number;\nconst authToken = $('Route Next Stage').item.json.auth_token;\nconst context = $('Route Next Stage').item.json.context;\n\n// Get pipeline_runs row to recover metadata\nconst patchResult = $input.item.json;\nconst row = Array.isArray(patchResult) ? patchResult[0] : patchResult;\nconst metadata = row.metadata || {};\n\nreturn {\n  json: {\n    webhook_url: 'https://flowbound.app.n8n.cloud/webhook/' + webhookPath,\n    fire_body: {\n      pipeline_run_id: runId,\n      callback_url: 'https://flowbound.app.n8n.cloud/webhook/eluxr-pipeline-callback',\n      user_id: row.user_id || metadata.user_id || '',\n      business_url: metadata.business_url || context.business_url || '',\n      industry: metadata.industry || context.industry || '',\n      month: metadata.month || context.month || '',\n      platforms: metadata.platforms || context.platforms || [],\n      brand_voice: metadata.brand_voice || context.brand_voice || '',\n      week_number: weekNumber\n    },\n    auth_token: authToken || metadata.auth_token || ''\n  }\n};"
+      },
+      "id": "orch-0001-4000-8000-000000000036",
+      "name": "Prepare Fire Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 600]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase2-themes",
+        "url": "={{ $json.webhook_url }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
+              "value": "={{ $json.auth_token }}"
             },
             {
               "name": "Content-Type",
@@ -343,9 +500,9 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [], icp_summary: $json.icp_summary || $json.data?.icp_summary || '', holidays: $json.holidays || '' }) }}",
+        "jsonBody": "={{ JSON.stringify($json.fire_body) }}",
         "options": {
-          "timeout": 180000,
+          "timeout": 10000,
           "response": {
             "response": {
               "neverError": true
@@ -353,16 +510,27 @@
           }
         }
       },
-      "id": "orch-0001-4000-8000-000000000015",
-      "name": "Call 02-Theme-Generator",
+      "id": "orch-0001-4000-8000-000000000037",
+      "name": "Fire Next Stage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2640, 200]
+      "position": [1320, 600],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return success for the callback webhook response\nreturn {\n  json: {\n    success: true,\n    action: 'fired_next_stage',\n    next_step: $('Route Next Stage').item.json.next_step,\n    step_label: $('Route Next Stage').item.json.step_label\n  }\n};"
+      },
+      "id": "orch-0001-4000-8000-000000000038",
+      "name": "Callback Response OK",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 600]
     },
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $json.pipeline_run_id }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -386,298 +554,70 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ current_step: 3, step_label: \"Writing posts...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
+        "jsonBody": "={{ JSON.stringify({ status: 'completed', current_step: 6, step_label: 'Complete!', step_progress: 100, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() }) }}",
         "options": {}
       },
-      "id": "orch-0001-4000-8000-000000000016",
-      "name": "Update Step 3",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [2860, 200]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase4-studio",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [] }) }}",
-        "options": {
-          "timeout": 300000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "orch-0001-4000-8000-000000000017",
-      "name": "Call 04-Content-Studio",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [3080, 200]
-    },
-    {
-      "parameters": {
-        "method": "PATCH",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "apikey",
-              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ current_step: 4, step_label: \"Generating images...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
-        "options": {}
-      },
-      "id": "orch-0001-4000-8000-000000000018",
-      "name": "Update Step 4",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [3300, 200]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-imagegen",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ prompt: 'Professional social media graphic for ' + ($('Extract Run ID').item.json.body.industry || 'business') + '. Brand: ' + ($('Extract Run ID').item.json.body.brand_voice || 'professional') + ' style.', aspect_ratio: '1:1', style: 'photorealistic' }) }}",
-        "options": {
-          "timeout": 120000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "orch-0001-4000-8000-000000000019",
-      "name": "Call 11-Image-Generator",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [3520, 200]
-    },
-    {
-      "parameters": {
-        "method": "PATCH",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "apikey",
-              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ current_step: 5, step_label: \"Creating videos...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
-        "options": {}
-      },
-      "id": "orch-0001-4000-8000-000000000020",
-      "name": "Update Step 5",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [3740, 200]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-videogen",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ prompt: 'Professional UGC-style promotional video for ' + ($('Extract Run ID').item.json.body.industry || 'business') + '. Brand voice: ' + ($('Extract Run ID').item.json.body.brand_voice || 'professional'), aspect_ratio: '9:16', platform: ($('Extract Run ID').item.json.body.platforms || [])[0] || 'Instagram Reels', image_url: $json.image_url || '' }) }}",
-        "options": {
-          "timeout": 180000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "orch-0001-4000-8000-000000000021",
-      "name": "Call 13-Video-Creator",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [3960, 200]
-    },
-    {
-      "parameters": {
-        "method": "PATCH",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "apikey",
-              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ current_step: 6, step_label: \"Syncing calendar...\", step_progress: 0, status: \"running\", updated_at: new Date().toISOString() }) }}",
-        "options": {}
-      },
-      "id": "orch-0001-4000-8000-000000000022",
-      "name": "Update Step 6",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [4180, 200]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://flowbound.app.n8n.cloud/webhook/eluxr-phase3-calendar",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ $('Extract Run ID').item.json.auth_header }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ month: $('Extract Run ID').item.json.body.month || '' }) }}",
-        "options": {
-          "timeout": 60000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "orch-0001-4000-8000-000000000023",
-      "name": "Call 09-Calendar-Sync",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [4400, 200]
-    },
-    {
-      "parameters": {
-        "method": "PATCH",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $('Extract Run ID').item.json.pipeline_run_id }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "apikey",
-              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: \"completed\", current_step: 6, step_label: \"Complete!\", step_progress: 100, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() }) }}",
-        "options": {}
-      },
-      "id": "orch-0001-4000-8000-000000000024",
+      "id": "orch-0001-4000-8000-000000000039",
       "name": "Mark Complete",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [4620, 200]
+      "position": [880, 800]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return success for the callback webhook response\nreturn {\n  json: {\n    success: true,\n    action: 'pipeline_complete',\n    pipeline_run_id: $('Route Next Stage').item.json.pipeline_run_id\n  }\n};"
+      },
+      "id": "orch-0001-4000-8000-000000000040",
+      "name": "Callback Response Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 800]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/pipeline_runs?id=eq.{{ $json.pipeline_run_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'failed', error_message: $json.error_message || 'Pipeline failed at step ' + $json.completed_step, updated_at: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "orch-0001-4000-8000-000000000041",
+      "name": "Mark Failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 1000]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return error info for the callback webhook response\nreturn {\n  json: {\n    success: false,\n    action: 'pipeline_failed',\n    pipeline_run_id: $('Route Next Stage').item.json.pipeline_run_id,\n    error_message: $('Route Next Stage').item.json.error_message\n  }\n};"
+      },
+      "id": "orch-0001-4000-8000-000000000042",
+      "name": "Callback Response Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 1000]
     }
   ],
   "connections": {
@@ -753,84 +693,79 @@
     "Update Step 1": {
       "main": [
         [
-          { "node": "Call 01-ICP-Analyzer", "type": "main", "index": 0 }
+          { "node": "Fire 01-ICP-Analyzer", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Call 01-ICP-Analyzer": {
+    "Callback Webhook": {
       "main": [
         [
-          { "node": "Update Step 2", "type": "main", "index": 0 }
+          { "node": "Valid Secret?", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Update Step 2": {
+    "Valid Secret?": {
       "main": [
         [
-          { "node": "Call 02-Theme-Generator", "type": "main", "index": 0 }
+          { "node": "Route Next Stage", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "403 Forbidden", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Call 02-Theme-Generator": {
+    "Route Next Stage": {
       "main": [
         [
-          { "node": "Update Step 3", "type": "main", "index": 0 }
+          { "node": "Action Switch", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Update Step 3": {
+    "Action Switch": {
       "main": [
         [
-          { "node": "Call 04-Content-Studio", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Call 04-Content-Studio": {
-      "main": [
-        [
-          { "node": "Update Step 4", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Update Step 4": {
-      "main": [
-        [
-          { "node": "Call 11-Image-Generator", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Call 11-Image-Generator": {
-      "main": [
-        [
-          { "node": "Update Step 5", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Update Step 5": {
-      "main": [
-        [
-          { "node": "Call 13-Video-Creator", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Call 13-Video-Creator": {
-      "main": [
-        [
-          { "node": "Update Step 6", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Update Step 6": {
-      "main": [
-        [
-          { "node": "Call 09-Calendar-Sync", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Call 09-Calendar-Sync": {
-      "main": [
+          { "node": "Update Next Step Progress", "type": "main", "index": 0 }
+        ],
         [
           { "node": "Mark Complete", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Mark Failed", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Next Step Progress": {
+      "main": [
+        [
+          { "node": "Prepare Fire Payload", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Fire Payload": {
+      "main": [
+        [
+          { "node": "Fire Next Stage", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fire Next Stage": {
+      "main": [
+        [
+          { "node": "Callback Response OK", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Mark Complete": {
+      "main": [
+        [
+          { "node": "Callback Response Complete", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Mark Failed": {
+      "main": [
+        [
+          { "node": "Callback Response Failed", "type": "main", "index": 0 }
         ]
       ]
     }
