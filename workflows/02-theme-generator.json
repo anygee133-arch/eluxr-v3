@@ -14,10 +14,7 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        0,
-        0
-      ],
+      "position": [0, 0],
       "webhookId": "eluxr-phase2-themes"
     },
     {
@@ -28,10 +25,7 @@
       "name": "Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [
-        220,
-        0
-      ]
+      "position": [220, 0]
     },
     {
       "parameters": {
@@ -61,10 +55,7 @@
       "name": "Auth OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        440,
-        0
-      ]
+      "position": [440, 0]
     },
     {
       "parameters": {
@@ -78,10 +69,93 @@
       "name": "401 Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [
-        660,
-        200
-      ]
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nconst userId = authData.user_id || '';\nconst month = body.month || '';\nconst industry = body.industry || '';\nconst platforms = body.platforms || [];\nconst pipelineRunId = body.pipeline_run_id || '';\nconst callbackUrl = body.callback_url || '';\n\nreturn {\n  json: {\n    user_id: userId,\n    month: month,\n    industry: industry,\n    platforms: platforms,\n    pipeline_run_id: pipelineRunId,\n    callback_url: callbackUrl\n  }\n};"
+      },
+      "id": "02-theme-0100",
+      "name": "Extract Params",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, -200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $json.user_id }}&select=*",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "02-theme-0200",
+      "name": "Read ICP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?user_id=eq.{{ $('Extract Params').item.json.user_id }}&is_active=eq.true&select=*",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "02-theme-0300",
+      "name": "Read Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('Extract Params').item.json;\nconst icpRaw = $('Read ICP').item.json;\nconst productsRaw = $input.item.json;\n\n// Parse ICP data\nlet icp = {};\ntry {\n  const icpArr = Array.isArray(icpRaw) ? icpRaw : [icpRaw];\n  icp = icpArr[0] || {};\n} catch(e) {\n  icp = {};\n}\n\n// Parse products data\nlet products = [];\ntry {\n  products = Array.isArray(productsRaw) ? productsRaw : (productsRaw ? [productsRaw] : []);\n  // Filter out empty/error responses\n  products = products.filter(p => p && p.id);\n} catch(e) {\n  products = [];\n}\n\n// Build product list for prompt\nconst productList = products.map((p, i) => {\n  return `${i + 1}. **${p.name}** (ID: ${p.id})\\n   Description: ${p.description || 'N/A'}\\n   Price: ${p.price || 'N/A'}\\n   Category: ${p.category || 'General'}\\n   Features: ${p.features ? (Array.isArray(p.features) ? p.features.join(', ') : JSON.stringify(p.features)) : 'N/A'}`;\n}).join('\\n');\n\nconst productCount = products.length;\nconst month = params.month || new Date().toISOString().slice(0, 7);\n\n// Build the comprehensive Claude prompt\nconst prompt = `You are an expert social media content strategist using the NETFLIX MODEL for content planning.\n\nYou are creating a monthly content campaign for a business. Generate a complete Netflix-model campaign structure.\n\n## BUSINESS CONTEXT\n- Industry: ${params.industry || 'General'}\n- Month: ${month}\n- ICP Summary: ${icp.icp_summary || 'General audience'}\n- Content Pillars: ${icp.content_pillars ? JSON.stringify(icp.content_pillars) : 'Not available'}\n- Pain Points: ${icp.pain_points ? JSON.stringify(icp.pain_points) : 'Not available'}\n- Desires: ${icp.desires ? JSON.stringify(icp.desires) : 'Not available'}\n\n## PRODUCTS/SERVICES (${productCount} total)\n${productList || 'No products available - create generic content themes'}\n\n## NETFLIX MODEL RULES\n\n1. **SHOW NAME**: Create a catchy, branded show name for this month's campaign (e.g., \"The Glow-Up Series\", \"Build Different\", \"The Founders Table\")\n\n2. **4 SEASONS** (1 per week), each with a progressive arc:\n   - Season 1 (Week 1): \"intro\" -- Introduce the brand, products, and value proposition. Hook the audience.\n   - Season 2 (Week 2): \"deepen\" -- Go deeper into product benefits, customer stories, expertise. Build trust.\n   - Season 3 (Week 3): \"challenge\" -- Address objections, myths, comparisons. Overcome barriers.\n   - Season 4 (Week 4): \"celebrate\" -- Success stories, community, future vision. Create loyalty.\n\n3. **DAILY ASSIGNMENTS**: Each day gets exactly 1 product + 1 inspirational topic\n   - 7 days per season = 28 days total\n   - Products should cluster by theme coherence (similar products in same week when possible)\n   ${productCount > 30 ? '- You have more than 30 products: select the top 30 most relevant to the ICP' : productCount > 0 ? '- You have fewer products than days: distribute products evenly, repeating as needed' : '- No products available: create topic-only assignments'}\n\n4. **WEEKLY HOOKS**: Last day of each week teases the next season. Daily posts stand alone within their week.\n\n## REQUIRED OUTPUT FORMAT\n\nReturn a JSON object with this EXACT structure:\n{\n  \"show_name\": \"The [Catchy Name] Series\",\n  \"show_concept\": \"Brief description of the month's overarching narrative (1-2 sentences)\",\n  \"seasons\": [\n    {\n      \"week_number\": 1,\n      \"theme_name\": \"Season 1: [Creative Name]\",\n      \"inspirational_theme\": \"Introduction/Discovery theme description\",\n      \"season_arc\": \"intro\",\n      \"theme_description\": \"What this week covers and why it matters\",\n      \"hook\": \"Weekly hook teasing next season (for last post of week)\",\n      \"days\": [\n        {\n          \"day_number\": 1,\n          \"product_id\": \"uuid-of-product-or-null\",\n          \"product_name\": \"Product Name\",\n          \"topic\": \"Inspirational daily topic tied to product + theme\",\n          \"content_angle\": \"How to present this product through the theme lens\"\n        }\n      ]\n    }\n  ]\n}\n\nEach season MUST have exactly 7 days. Each day MUST have a product_id (use actual UUIDs from the product list above), product_name, topic, and content_angle.\n\nReturn ONLY valid JSON. No markdown fences. No explanation.`;\n\nreturn {\n  json: {\n    prompt: prompt,\n    user_id: params.user_id,\n    month: month,\n    pipeline_run_id: params.pipeline_run_id,\n    callback_url: params.callback_url,\n    product_count: productCount\n  }\n};"
+      },
+      "id": "02-theme-0400",
+      "name": "Prepare Theme Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, -200]
     },
     {
       "parameters": {
@@ -104,19 +178,21 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 8192,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are an expert social media content strategist using the NETFLIX MODEL for content planning.\\n\\nTHE NETFLIX MODEL:\\n- Each month has 4 weekly 'shows' (seasons)\\n- Week 1: 'The Origin Story' -- Personal stories, behind-the-scenes, relatable founder moments\\n- Week 2: 'The Proof' -- Case studies, client wins, data-driven results, testimonials\\n- Week 3: 'The Method' -- How-to guides, tutorials, step-by-step processes, tips\\n- Week 4: 'The Vision' -- Industry trends, bold predictions, future-casting, cliffhangers for next month\\n\\nCYCLICITY RULES (NO content type repeats on consecutive days):\\n- Monday: Hook Post (personal story or bold statement)\\n- Tuesday: Value Post (tips, education, industry insights)\\n- Wednesday: Social Proof (case study, testimonial, client win)\\n- Thursday: Carousel/Thread (multi-slide educational content)\\n- Friday: Video/Reel (short-form video script)\\n- Saturday: Engagement (poll, question, interactive)\\n- Sunday: Cliffhanger (teaser for next week)\\n\\nGENERATE A 30-DAY THEME CALENDAR for:\\n- Month: {{ $json.body.month }}\\n- Products/Services: {{ $json.body.products }}\\n- Industry: {{ $json.body.industry }}\\n- ICP Summary: {{ $json.body.icp_summary }}\\n- Holidays/Events: {{ $json.body.holidays }}\\n\\nFor EACH of the 30 days return a JSON array of objects with:\\n- day_number (1-30)\\n- date (YYYY-MM-DD)\\n- day_of_week (Monday-Sunday)\\n- week_number (1-4)\\n- weekly_show_name (the Netflix show title for that week)\\n- theme (specific topic for this day)\\n- content_type (Hook/Value/Proof/Carousel/Video/Engagement/Cliffhanger)\\n- platform (primary: LinkedIn/Instagram/X/YouTube/Facebook)\\n- secondary_platform (for repurposing)\\n- hook (the opening line or attention-grabber)\\n- cta (call to action)\\n- hashtags (5 relevant hashtags)\\n- notes (production notes or tips)\\n\\nReturn ONLY valid JSON array, no markdown.\"\n    }\n  ]\n}",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 8192, messages: [{ role: 'user', content: $json.prompt }] }) }}",
         "options": {
-          "timeout": 180000
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
-      "id": "02-theme-0005",
-      "name": "Claude -- Netflix Theme Generator",
+      "id": "02-theme-0500",
+      "name": "Generate Themes",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        660,
-        -200
-      ],
+      "position": [1540, -200],
       "credentials": {
         "anthropicApi": {
           "id": "cZwkXj4ZfHTkpBtT",
@@ -126,16 +202,13 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.item.json;\nconst authData = $('Auth OK?').item.json;\n\nlet themeContent = '';\ntry {\n  themeContent = input.content[0].text;\n} catch(e) {\n  themeContent = JSON.stringify(input);\n}\n\nlet themes = [];\ntry {\n  themes = JSON.parse(themeContent);\n} catch(e) {\n  const match = themeContent.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (match) {\n    themes = JSON.parse(match[0]);\n  } else {\n    themes = [{ error: 'Could not parse themes', raw: themeContent }];\n  }\n}\n\n// Group into 4 weekly themes\nconst weeklyThemes = {};\nfor (const day of themes) {\n  const weekNum = day.week_number || 1;\n  if (!weeklyThemes[weekNum]) {\n    weeklyThemes[weekNum] = {\n      week_number: weekNum,\n      theme_name: day.weekly_show_name || 'Week ' + weekNum,\n      theme_description: '',\n      show_concept: day.weekly_show_name || '',\n      hook: day.hook || '',\n      content_types: []\n    };\n  }\n  weeklyThemes[weekNum].content_types.push({\n    day_number: day.day_number,\n    date: day.date,\n    day_of_week: day.day_of_week,\n    theme: day.theme,\n    content_type: day.content_type,\n    platform: day.platform,\n    secondary_platform: day.secondary_platform,\n    hook: day.hook,\n    cta: day.cta,\n    hashtags: Array.isArray(day.hashtags) ? day.hashtags.join(', ') : (day.hashtags || ''),\n    notes: day.notes\n  });\n}\n\nconst month = authData.body?.month || new Date().toISOString().slice(0, 7);\nconst userId = authData.user_id;\n\nreturn {\n  json: {\n    user_id: userId,\n    month: month,\n    weekly_themes: Object.values(weeklyThemes),\n    raw_themes: themes\n  }\n};"
+        "jsCode": "const input = $input.item.json;\nconst promptData = $('Prepare Theme Prompt').item.json;\n\n// Extract Claude response text\nlet raw = '';\ntry {\n  raw = input.content[0].text;\n} catch(e) {\n  raw = JSON.stringify(input);\n}\n\n// Robust JSON parsing: try raw -> strip markdown fences -> regex extract\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch(e) {\n  // Strip markdown fences\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try {\n    parsed = JSON.parse(stripped);\n  } catch(e2) {\n    // Extract first JSON object\n    const match = stripped.match(/\\{[\\s\\S]*\\}/);\n    if (match) {\n      parsed = JSON.parse(match[0]);\n    } else {\n      throw new Error('Could not parse Claude response as JSON');\n    }\n  }\n}\n\n// Validate structure\nif (!parsed.show_name) {\n  throw new Error('Missing show_name in Claude response');\n}\nif (!parsed.seasons || !Array.isArray(parsed.seasons)) {\n  throw new Error('Missing or invalid seasons array in Claude response');\n}\nif (parsed.seasons.length !== 4) {\n  throw new Error('Expected 4 seasons, got ' + parsed.seasons.length);\n}\n\n// Validate each season has days\nfor (const season of parsed.seasons) {\n  if (!season.days || !Array.isArray(season.days)) {\n    throw new Error('Season ' + season.week_number + ' missing days array');\n  }\n  if (season.days.length < 7) {\n    throw new Error('Season ' + season.week_number + ' has ' + season.days.length + ' days, expected 7');\n  }\n}\n\nreturn {\n  json: {\n    show_name: parsed.show_name,\n    show_concept: parsed.show_concept || '',\n    seasons: parsed.seasons,\n    user_id: promptData.user_id,\n    month: promptData.month,\n    pipeline_run_id: promptData.pipeline_run_id,\n    callback_url: promptData.callback_url\n  }\n};"
       },
-      "id": "02-theme-0006",
-      "name": "Parse & Group Themes",
+      "id": "02-theme-0600",
+      "name": "Parse Theme Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        880,
-        -200
-      ]
+      "position": [1760, -200]
     },
     {
       "parameters": {
@@ -164,24 +237,36 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"month\": {{ JSON.stringify($json.month) }},\n  \"status\": \"generating\"\n}",
+        "jsonBody": "={{ JSON.stringify({ user_id: $json.user_id, month: $json.month, status: 'generating', show_name: $json.show_name }) }}",
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
-      "id": "02-theme-0007",
-      "name": "Supabase -- UPSERT Campaign",
+      "id": "02-theme-0700",
+      "name": "UPSERT Campaign",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1100,
-        -200
-      ]
+      "position": [1980, -200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const campaignResult = $input.item.json;\nconst themeData = $('Parse Theme Response').item.json;\n\n// Extract campaign_id from UPSERT response\nlet campaignId = '';\ntry {\n  const row = Array.isArray(campaignResult) ? campaignResult[0] : campaignResult;\n  campaignId = row.id || '';\n} catch(e) {\n  throw new Error('Could not extract campaign_id from UPSERT response');\n}\n\nif (!campaignId) {\n  throw new Error('Campaign UPSERT returned empty id');\n}\n\nreturn {\n  json: {\n    campaign_id: campaignId,\n    show_name: themeData.show_name,\n    show_concept: themeData.show_concept,\n    seasons: themeData.seasons,\n    user_id: themeData.user_id,\n    month: themeData.month,\n    pipeline_run_id: themeData.pipeline_run_id,\n    callback_url: themeData.callback_url\n  }\n};"
+      },
+      "id": "02-theme-0750",
+      "name": "Extract Campaign ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2200, -200]
     },
     {
       "parameters": {
         "method": "DELETE",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?campaign_id=eq.{{ $json[0].id }}",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?campaign_id=eq.{{ $json.campaign_id }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -196,30 +281,29 @@
           ]
         },
         "options": {
-          "timeout": 15000
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
-      "id": "02-theme-0008",
-      "name": "Supabase -- Delete Old Themes",
+      "id": "02-theme-0800",
+      "name": "Delete Old Themes",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1320,
-        -200
-      ]
+      "position": [2420, -200]
     },
     {
       "parameters": {
-        "jsCode": "const deleteResult = $input.item.json;\nconst parseData = $('Parse & Group Themes').item.json;\nconst campaignData = $('Supabase -- UPSERT Campaign').item.json;\n\nconst campaignId = Array.isArray(campaignData) ? campaignData[0].id : campaignData.id;\nconst userId = parseData.user_id;\nconst weeklyThemes = parseData.weekly_themes;\n\nconst themeRows = weeklyThemes.map(wt => ({\n  user_id: userId,\n  campaign_id: campaignId,\n  week_number: wt.week_number,\n  theme_name: wt.theme_name,\n  theme_description: wt.theme_description || '',\n  show_concept: wt.show_concept || '',\n  hook: wt.hook || '',\n  content_types: wt.content_types\n}));\n\nreturn { json: { theme_rows: themeRows, campaign_id: campaignId, user_id: userId } };"
+        "jsCode": "const deleteResult = $input.item.json;\nconst data = $('Extract Campaign ID').item.json;\n\nconst themeRows = data.seasons.map(s => ({\n  user_id: data.user_id,\n  campaign_id: data.campaign_id,\n  week_number: s.week_number,\n  theme_name: s.theme_name,\n  theme_description: s.theme_description || '',\n  show_concept: data.show_concept || '',\n  hook: s.hook || '',\n  season_arc: s.season_arc || '',\n  inspirational_theme: s.inspirational_theme || '',\n  content_types: JSON.stringify(s.days)\n}));\n\nreturn {\n  json: {\n    theme_rows: themeRows,\n    campaign_id: data.campaign_id,\n    show_name: data.show_name,\n    user_id: data.user_id,\n    pipeline_run_id: data.pipeline_run_id,\n    callback_url: data.callback_url\n  }\n};"
       },
-      "id": "02-theme-0009",
+      "id": "02-theme-0900",
       "name": "Prepare Theme Rows",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1540,
-        -200
-      ]
+      "position": [2640, -200]
     },
     {
       "parameters": {
@@ -250,17 +334,19 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.theme_rows) }}",
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
-      "id": "02-theme-0010",
-      "name": "Supabase -- INSERT Themes",
+      "id": "02-theme-1000",
+      "name": "Insert Themes",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1760,
-        -200
-      ]
+      "position": [2860, -200]
     },
     {
       "parameters": {
@@ -291,32 +377,167 @@
         "specifyBody": "json",
         "jsonBody": "={ \"status\": \"active\" }",
         "options": {
-          "timeout": 15000
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
-      "id": "02-theme-0011",
-      "name": "Supabase -- Activate Campaign",
+      "id": "02-theme-1100",
+      "name": "Update Campaign Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1980,
-        -200
-      ]
+      "position": [3080, -200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const patchResult = $input.item.json;\nconst themeData = $('Prepare Theme Rows').item.json;\n\nreturn {\n  json: {\n    campaign_id: themeData.campaign_id,\n    show_name: themeData.show_name,\n    themes_count: 4,\n    pipeline_run_id: themeData.pipeline_run_id,\n    callback_url: themeData.callback_url\n  }\n};"
+      },
+      "id": "02-theme-1150",
+      "name": "Prepare Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3300, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pipeline-Secret",
+              "value": "eluxr-pipeline-internal-2024"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ pipeline_run_id: $json.pipeline_run_id, step: 2, status: 'complete' }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "02-theme-1200",
+      "name": "Callback to Orchestrator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3520, -200],
+      "alwaysOutputData": true
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, phase: 2, themes_count: $('Parse & Group Themes').item.json.weekly_themes.length, campaign_id: $('Prepare Theme Rows').item.json.campaign_id, data: $json }) }}",
+        "responseBody": "={{ JSON.stringify({ success: true, campaign_id: $('Prepare Callback').item.json.campaign_id, show_name: $('Prepare Callback').item.json.show_name, themes_count: 4 }) }}",
         "options": {}
       },
-      "id": "02-theme-0012",
-      "name": "Response",
+      "id": "02-theme-1300",
+      "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [
-        2200,
-        -200
-      ]
+      "position": [3740, -200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handler: catches failures and calls callback with error status\nconst errorData = $input.item.json;\n\n// Try to recover pipeline_run_id and callback_url from earlier nodes\nlet pipelineRunId = '';\nlet callbackUrl = '';\ntry {\n  const params = $('Extract Params').item.json;\n  pipelineRunId = params.pipeline_run_id || '';\n  callbackUrl = params.callback_url || '';\n} catch(e) {\n  // Can't recover, will skip callback\n}\n\nreturn {\n  json: {\n    pipeline_run_id: pipelineRunId,\n    callback_url: callbackUrl,\n    error_message: 'Theme Generator failed: ' + (errorData.message || errorData.error || 'Unknown error')\n  }\n};"
+      },
+      "id": "02-theme-1500",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-callback",
+              "leftValue": "={{ $json.callback_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "02-theme-1510",
+      "name": "Has Callback URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2860, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pipeline-Secret",
+              "value": "eluxr-pipeline-internal-2024"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ pipeline_run_id: $json.pipeline_run_id, step: 2, status: 'error', error_message: $json.error_message }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "02-theme-1520",
+      "name": "Error Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3080, 100],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $('Handle Error').item.json.error_message }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "02-theme-1530",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [3300, 200]
     }
   ],
   "connections": {
@@ -346,7 +567,7 @@
       "main": [
         [
           {
-            "node": "Claude -- Netflix Theme Generator",
+            "node": "Extract Params",
             "type": "main",
             "index": 0
           }
@@ -360,40 +581,95 @@
         ]
       ]
     },
-    "Claude -- Netflix Theme Generator": {
+    "Extract Params": {
       "main": [
         [
           {
-            "node": "Parse & Group Themes",
+            "node": "Read ICP",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse & Group Themes": {
+    "Read ICP": {
       "main": [
         [
           {
-            "node": "Supabase -- UPSERT Campaign",
+            "node": "Read Products",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase -- UPSERT Campaign": {
+    "Read Products": {
       "main": [
         [
           {
-            "node": "Supabase -- Delete Old Themes",
+            "node": "Prepare Theme Prompt",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase -- Delete Old Themes": {
+    "Prepare Theme Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Themes": {
+      "main": [
+        [
+          {
+            "node": "Parse Theme Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Theme Response": {
+      "main": [
+        [
+          {
+            "node": "UPSERT Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UPSERT Campaign": {
+      "main": [
+        [
+          {
+            "node": "Extract Campaign ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Campaign ID": {
+      "main": [
+        [
+          {
+            "node": "Delete Old Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Old Themes": {
       "main": [
         [
           {
@@ -408,29 +684,91 @@
       "main": [
         [
           {
-            "node": "Supabase -- INSERT Themes",
+            "node": "Insert Themes",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase -- INSERT Themes": {
+    "Insert Themes": {
       "main": [
         [
           {
-            "node": "Supabase -- Activate Campaign",
+            "node": "Update Campaign Status",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase -- Activate Campaign": {
+    "Update Campaign Status": {
       "main": [
         [
           {
-            "node": "Response",
+            "node": "Prepare Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Callback": {
+      "main": [
+        [
+          {
+            "node": "Callback to Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback to Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Has Callback URL?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Callback URL?": {
+      "main": [
+        [
+          {
+            "node": "Error Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Callback": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
             "type": "main",
             "index": 0
           }
