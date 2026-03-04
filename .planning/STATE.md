@@ -1,27 +1,42 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
+last_updated: "2026-03-04T03:44:26.110Z"
+last_activity: "2026-03-03 - Completed 06-01: products table migration + orchestrator webhook callback restructure."
+progress:
+  total_phases: 11
+  completed_phases: 5
+  total_plans: 27
+  completed_plans: 22
+  percent: 81
+---
+
 # State: ELUXR Magic Content Engine v2
 
 ## Project Reference
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 6 next (Content Pipeline). Phase 5 complete (Vercel deployment deferred to project end).
+**Current Focus:** Phase 6 (Content Pipeline). Plan 01 complete, executing plan 02 next.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 6 of 11 (Content Pipeline)
-**Plan:** Not yet planned
-**Status:** Phase 5 COMPLETE. Ready to plan Phase 6.
-**Last activity:** 2026-03-03 - Completed 05-04 E2E verification. All 5 success criteria passed. User confirmed manual testing.
+**Plan:** 1 of 6 complete
+**Status:** Executing Phase 6. Plan 06-01 (schema + orchestrator) complete.
+**Last activity:** 2026-03-03 - Completed 06-01: products table migration + orchestrator webhook callback restructure.
 
 **Progress:**
-```
+[████████░░] 81%
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
 Phase  3: Workflow Decomposition      [### COMPLETE ######## ] 6/6 plans
 Phase  4: Progress Tracking           [### COMPLETE ######## ] 3/3 plans
 Phase  5: Frontend Migration + UI     [### COMPLETE ######## ] 4/4 plans (Vercel deferred)
-Phase  6: Content Pipeline            [ . . . . . . . . . . ] 0%
+Phase  6: Content Pipeline            [##                    ] 1/6 plans
 Phase  7: Approval Queue              [ . . . . . . . . . . ] 0%
 Phase  8: Calendar + Scheduling       [ . . . . . . . . . . ] 0%
 Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
@@ -40,6 +55,7 @@ Overall: 25/50 requirements complete (50%)
 | Phases total | 11 |
 | Phases complete | 4 |
 | Current streak | 29 plans |
+| Phase 06 P01 | 4 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -106,6 +122,10 @@ Overall: 25/50 requirements complete (50%)
 | ICP skeleton at step 0, refresh at step >= 2 | Step 1 is ICP analysis; current_step 2 confirms step 1 complete | 5 |
 | PGRST116 silently ignored for ICP query | Expected when user hasn't run pipeline; card stays hidden | 5 |
 | escapeHTML() via DOM createElement pattern | No existing utility; needed for safe rendering of Supabase text data | 5 |
+| Webhook callback pattern replaces synchronous orchestrator chaining | Each sub-workflow execution completes in < 30s; eliminates n8n 5-min timeout risk | 6 |
+| Shared secret (X-Pipeline-Secret) protects callback endpoint | Callback comes from n8n workflows not browser; Auth Validator not needed; simple header check | 6 |
+| Auth token stored in pipeline_runs metadata for passthrough | Original user JWT recovered from metadata on each callback, forwarded to sub-workflows | 6 |
+| Fire-and-forget with 10s timeout + neverError | Orchestrator does not wait for sub-workflow response; callback triggers next step | 6 |
 
 ### Known Issues
 
@@ -116,7 +136,7 @@ Overall: 25/50 requirements complete (50%)
 - ~~Switch node routes to multiple branches per item~~ FIXED in 03-02 (PIPE-07) -- allMatchingOutputs=false + exact equality + content type normalization
 - ~~Monolith is single point of failure~~ FIXED in 03-05 -- decomposed into 13 independent sub-workflows
 - ~~Fake progress simulation with hardcoded timers~~ FIXED in 04-02 -- Supabase Realtime-driven progress
-- Pipeline Orchestrator has no "Mark Failed" error path -- sub-workflow failures silently complete (non-blocking, noted for future gap work)
+- ~~Pipeline Orchestrator has no "Mark Failed" error path~~ FIXED in 06-01 -- callback handler has mark_failed branch with error_message
 - "Fetch calendar error: Not authenticated" on initial page load -- race condition, not Phase 4 related
 - Google Calendar multi-tenant may be infeasible (Phase 8 decision needed)
 - n8n Cloud Starter: 2.5k executions/month, 5 concurrent -- may need monitoring in Phase 6 for batch generation
@@ -131,7 +151,7 @@ Overall: 25/50 requirements complete (50%)
 - [ ] Check Supabase Realtime connection limits on chosen plan tier
 - [ ] Test KIE image/video URL longevity (do they expire?)
 - [ ] Evaluate Google Calendar per-user OAuth feasibility vs .ics export
-- [ ] Add error handling path to Pipeline Orchestrator (Mark Failed on sub-workflow failure)
+- [x] Add error handling path to Pipeline Orchestrator (Mark Failed on sub-workflow failure) -- DONE in 06-01: callback handler routes error status to Mark Failed
 
 ### Blockers
 
@@ -141,14 +161,14 @@ Overall: 25/50 requirements complete (50%)
 
 ### Last Session
 - **Date:** 2026-03-03
-- **Activity:** Completed 05-04 E2E verification. All 5 Phase 5 success criteria verified via code checks + manual user testing. Vercel deployment deferred to project end.
-- **Outcome:** Phase 5 COMPLETE. User confirmed: ICP card persists, glassmorphism correct, tabs smooth, no mock data.
+- **Activity:** Completed 06-01: products table migration + orchestrator webhook callback restructure.
+- **Outcome:** Products table with RLS created. 12 columns added across 4 tables. Orchestrator restructured from sync chain to callback pattern. Mark Failed error path added.
 
 ### Next Session
-- **Expected:** Plan and execute Phase 6 (Content Pipeline)
-- **Prerequisites:** Phase 5 complete. Frontend ready to display content. Pipeline orchestrator (Phase 4) operational.
-- **Entry point:** `/gsd:plan-phase 6`
+- **Expected:** Execute Phase 6, Plan 02 (ICP Analyzer overhaul)
+- **Prerequisites:** 06-01 complete (products table + orchestrator callback pattern ready)
+- **Entry point:** `/gsd:execute-phase 06-02`
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-03 (05-03 complete)*
+*Last updated: 2026-03-03 (06-01 complete)*

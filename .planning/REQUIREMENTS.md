@@ -33,9 +33,9 @@ Requirements for this release. Each maps to roadmap phases.
 
 ### Content Pipeline
 
-- [ ] **PIPE-01**: ICP analysis via Perplexity market research + Claude synthesis, stored in Supabase per-tenant
-- [ ] **PIPE-02**: 30-day Netflix-model theme generation with 4 weekly themed "shows" per month
-- [ ] **PIPE-03**: Daily content generation producing platform-specific posts for LinkedIn, Instagram, X, YouTube
+- [x] **PIPE-01**: ICP analysis via Perplexity market research + Claude synthesis, stored in Supabase per-tenant
+- [x] **PIPE-02**: 30-day Netflix-model theme generation with 4 weekly themed "shows" per month
+- [x] **PIPE-03**: Daily content generation producing platform-specific posts for LinkedIn, Instagram, X, YouTube
 - [ ] **PIPE-04**: AI image prompt generation for each post via Claude
 - [ ] **PIPE-05**: Video script generation (hook/setup/value/CTA structure) via Claude
 - [ ] **PIPE-06**: One post per platform per day (4 platforms = 4 posts/day max)
@@ -149,9 +149,9 @@ Requirements for this release. Each maps to roadmap phases.
 | PROG-02 | Phase 4: Progress Tracking | Complete |
 | PROG-03 | Phase 4: Progress Tracking | Complete |
 | PROG-04 | Phase 4: Progress Tracking | Complete |
-| PIPE-01 | Phase 6: Content Pipeline | Pending |
-| PIPE-02 | Phase 6: Content Pipeline | Pending |
-| PIPE-03 | Phase 6: Content Pipeline | Pending |
+| PIPE-01 | Phase 6: Content Pipeline | Complete |
+| PIPE-02 | Phase 6: Content Pipeline | Complete |
+| PIPE-03 | Phase 6: Content Pipeline | Complete |
 | PIPE-04 | Phase 6: Content Pipeline | Pending |
 | PIPE-05 | Phase 6: Content Pipeline | Pending |
 | PIPE-06 | Phase 6: Content Pipeline | Pending |

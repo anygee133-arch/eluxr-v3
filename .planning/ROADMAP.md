@@ -208,7 +208,7 @@ Plans:
 
 **Pitfalls:** CRIT-5 (execution limits), HIGH-4 (AI response parsing), MOD-3 (hallucinated research), MOD-6 (rate limits)
 
-**Plans:** 6 plans in 5 waves
+**Plans:** 1/6 plans executed
 
 Plans:
 - [ ] 06-01-PLAN.md -- Schema migration (products table + column additions) + orchestrator callback restructure
@@ -348,7 +348,7 @@ Plans:
 | 3 | Workflow Decomposition + Backend Bug Fixes | INFRA-03, INFRA-06, PIPE-07, TOOL-05, TOOL-06 | Complete |
 | 4 | Async Pipeline + Real-Time Progress Tracking | PROG-01, PROG-02, PROG-03, PROG-04, UI-05 | Complete |
 | 5 | Frontend Migration + UI Polish | UI-01, UI-02, UI-03, UI-04, UI-06 | Not Started |
-| 6 | Content Pipeline | PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 | Not Started |
+| 6 | 1/6 | In Progress|  |
 | 7 | Approval Queue | APPR-01, APPR-02, APPR-03, APPR-04, APPR-05, APPR-06 | Not Started |
 | 8 | Calendar + Scheduling | CAL-01, CAL-02, CAL-03, CAL-04 | Not Started |
 | 9 | AI Chat | CHAT-01, CHAT-02, CHAT-03 | Not Started |
