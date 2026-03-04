@@ -14,31 +14,8 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        0,
-        200
-      ],
+      "position": [0, 200],
       "webhookId": "eluxr-phase4-studio"
-    },
-    {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "hours",
-              "hoursInterval": 24
-            }
-          ]
-        }
-      },
-      "id": "04-studio-0002",
-      "name": "Daily Content Trigger (6 AM)",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        0,
-        0
-      ]
     },
     {
       "parameters": {
@@ -48,10 +25,7 @@
       "name": "Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [
-        220,
-        200
-      ]
+      "position": [220, 200]
     },
     {
       "parameters": {
@@ -81,10 +55,7 @@
       "name": "Auth OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        440,
-        200
-      ]
+      "position": [440, 200]
     },
     {
       "parameters": {
@@ -98,28 +69,22 @@
       "name": "401 Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [
-        660,
-        400
-      ]
+      "position": [660, 400]
     },
     {
       "parameters": {
-        "jsCode": "const today = new Date().toISOString().split('T')[0];\nconst input = $input.item.json;\n\nreturn {\n  json: {\n    date: today,\n    trigger_source: input.body ? 'webhook' : 'cron',\n    user_id: input.user_id || '',\n    webhook_data: input.body || null\n  }\n};"
+        "jsCode": "const input = $input.item.json;\nconst body = input.body || {};\n\nconst user_id = input.user_id || body.user_id || '';\nconst week_number = parseInt(body.week_number) || 1;\nconst month = body.month || '';\nconst platforms = body.platforms || ['linkedin'];\nconst pipeline_run_id = body.pipeline_run_id || null;\nconst callback_url = body.callback_url || null;\nconst business_url = body.business_url || '';\nconst industry = body.industry || '';\n\n// Calculate step number: Week 1 = step 3, Week 4 = step 6\nconst step = week_number + 2;\n\nreturn {\n  json: {\n    user_id,\n    week_number,\n    month,\n    platforms,\n    pipeline_run_id,\n    callback_url,\n    business_url,\n    industry,\n    step\n  }\n};"
       },
-      "id": "04-studio-0006",
-      "name": "Merge Trigger Sources",
+      "id": "04-studio-0010",
+      "name": "Extract Params",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        660,
-        0
-      ]
+      "position": [660, 200]
     },
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?user_id=eq.{{ $json.user_id }}&select=*,campaigns(month,status)&order=week_number.asc",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?user_id=eq.{{ $json.user_id }}&week_number=eq.{{ $json.week_number }}&select=*,campaigns(id,show_name,month)",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -142,241 +107,137 @@
           }
         }
       },
-      "id": "04-studio-0007",
-      "name": "Supabase -- Read Themes",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        880,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const today = new Date().toISOString().split('T')[0];\nconst triggerData = $('Merge Trigger Sources').item.json;\nconst themesRaw = $input.item.json;\nconst themes = Array.isArray(themesRaw) ? themesRaw : [themesRaw];\n\n// Flatten weekly themes into daily content items\nconst dailyItems = [];\nfor (const theme of themes) {\n  if (!theme.content_types || !Array.isArray(theme.content_types)) continue;\n  for (const ct of theme.content_types) {\n    dailyItems.push({\n      ...ct,\n      theme_id: theme.id,\n      campaign_id: theme.campaign_id,\n      user_id: triggerData.user_id,\n      weekly_show_name: theme.theme_name || theme.show_concept || '',\n      week_number: theme.week_number\n    });\n  }\n}\n\n// Filter to today's content if trigger is cron, otherwise use webhook body\nlet filteredItems = dailyItems;\nif (triggerData.trigger_source === 'cron') {\n  filteredItems = dailyItems.filter(item => item.date === today);\n}\n\nif (filteredItems.length === 0) {\n  filteredItems = dailyItems.length > 0\n    ? [dailyItems[0]]\n    : [{ theme: 'General engagement post', content_type: 'Value', platform: 'LinkedIn', user_id: triggerData.user_id }];\n}\n\nreturn filteredItems.map(item => ({ json: item }));"
-      },
-      "id": "04-studio-0008",
-      "name": "Filter Today's Content",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1100,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// PIPE-07 FIX: Normalize content_type BEFORE the Switch node\n// Claude generates: Hook, Value, Proof, Carousel, Video, Engagement, Cliffhanger\n// Normalize to: text, image, video, carousel\nconst item = $input.item.json;\nconst ct = (item.content_type || '').toLowerCase().trim();\n\nitem.original_content_type = item.content_type;\n\nif (ct.includes('video') || ct.includes('reel')) {\n  item.content_type = 'video';\n} else if (ct.includes('carousel') || ct.includes('thread')) {\n  item.content_type = 'carousel';\n} else if (ct.includes('image')) {\n  item.content_type = 'image';\n} else {\n  item.content_type = 'text';\n}\n\nreturn { json: item };"
-      },
-      "id": "04-studio-0009",
-      "name": "Normalize Content Type",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1320,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": false
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.content_type }}",
-                    "rightValue": "text",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ]
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": false
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.content_type }}",
-                    "rightValue": "image",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ]
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": false
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.content_type }}",
-                    "rightValue": "video",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ]
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": false
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.content_type }}",
-                    "rightValue": "carousel",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ]
-              }
-            }
-          ]
-        },
-        "options": {
-          "allMatchingOutputs": false,
-          "fallbackOutput": "extra"
-        }
-      },
-      "id": "04-studio-0010",
-      "name": "Route: Text / Image / Video / Carousel",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
-      "position": [
-        1540,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "anthropicApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are an elite social media copywriter. Write a {{ $json.platform || 'LinkedIn' }} post based on these details:\\n\\nWeekly Show: {{ $json.weekly_show_name || 'Value Series' }}\\nTheme: {{ $json.theme || 'Engagement post' }}\\nContent Type: {{ $json.original_content_type || $json.content_type || 'Value Post' }}\\nSuggested Hook: {{ $json.hook || 'Start with something attention-grabbing' }}\\nCTA: {{ $json.cta || 'Engage with your audience' }}\\nHashtags: {{ $json.hashtags || '' }}\\n\\nPLATFORM-SPECIFIC RULES:\\n- LinkedIn: 1300-1800 chars, personal story hook, line breaks for readability, 3-5 hashtags at end\\n- Instagram: 150-300 chars caption, 20-30 hashtags in first comment, include emoji\\n- X/Twitter: Thread format (5-7 tweets), numbered, each under 280 chars\\n- Facebook: Conversational tone, 100-300 chars, question-based engagement\\n- TikTok: Script format with [VISUAL] and [TEXT ON SCREEN] cues\\n\\nReturn JSON with keys: platform, post_text, hashtags, first_comment (for Instagram), thread (for X, array of tweet strings), image_prompt (describe ideal accompanying image), posting_notes\"\n    }\n  ]\n}",
-        "options": {
-          "timeout": 120000
-        }
-      },
       "id": "04-studio-0011",
-      "name": "Claude -- Write Post Content",
+      "name": "Read Theme",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1760,
-        -200
-      ],
-      "credentials": {
-        "anthropicApi": {
-          "id": "cZwkXj4ZfHTkpBtT",
-          "name": "Anthropic account"
-        }
-      }
+      "position": [880, 200]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $('Extract Params').item.json.user_id }}&select=icp_summary,content_pillars,recommended_hashtags",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "Content-Type",
-              "value": "application/json"
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"nano-banana-pro\",\n  \"input\": {\n    \"prompt\": \"Professional social media graphic for {{ $json.platform || 'LinkedIn' }}. Theme: {{ $json.theme || 'business content' }}. Style: clean, modern, photorealistic. High quality, no text overlays or watermarks.\",\n    \"aspect_ratio\": \"1:1\",\n    \"width\": 1024,\n    \"height\": 1024,\n    \"output_format\": \"png\"\n  }\n}",
         "options": {
-          "timeout": 60000
-        },
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "httpHeaderAuth"
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "04-studio-0012",
-      "name": "KIE -- Generate Content Image",
+      "name": "Read ICP",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1760,
-        0
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "KIE_AI_API_CREDENTIAL",
-          "name": "KIE AI API"
-        }
-      }
+      "position": [1100, 200]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "anthropicApi",
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?user_id=eq.{{ $('Extract Params').item.json.user_id }}&is_active=eq.true&select=id,name,description,price,image_url",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
             },
             {
-              "name": "Content-Type",
-              "value": "application/json"
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are a video content strategist and scriptwriter. Create a camera-ready video script.\\n\\nTheme: {{ $json.theme || 'Engagement content' }}\\nPlatform: {{ $json.platform || 'Instagram Reels' }}\\nHook Idea: {{ $json.hook || 'Attention-grabbing opener' }}\\n\\nCreate a SHORT-FORM VIDEO SCRIPT (30-60 seconds) with this EXACT structure:\\n\\n1. HOOK (0:00-0:03): Opening line that stops the scroll. Bold, direct, creates curiosity.\\n2. SETUP (0:03-0:10): Context -- why this matters. Use a stat, personal story, or relatable pain point.\\n3. VALUE (0:10-0:25): 2-3 actionable points. Each with [ON-SCREEN TEXT] cues.\\n4. CTA (0:25-0:30): Clear call to action. Follow, comment, link in bio.\\n\\nAlso include:\\n- [CAMERA DIRECTION] notes (close-up, wide, screen share, etc.)\\n- [B-ROLL] suggestions for each section\\n- [MUSIC] mood suggestion\\n- Estimated engagement hooks (pattern interrupts)\\n\\nReturn as JSON with keys: title, duration_seconds, hook, setup, value_points (array), cta, camera_directions (array), b_roll_suggestions (array), music_mood, on_screen_text (array), thumbnail_idea\"\n    }\n  ]\n}",
         "options": {
-          "timeout": 120000
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
       "id": "04-studio-0013",
-      "name": "Claude -- Video Script Generator",
+      "name": "Read Products",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1760,
-        200
-      ],
+      "position": [1320, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('Extract Params').item.json;\nconst themeRaw = $('Read Theme').item.json;\nconst icpRaw = $('Read ICP').item.json;\nconst productsRaw = $('Read Products').item.json;\n\n// Parse theme (PostgREST returns array)\nconst themes = Array.isArray(themeRaw) ? themeRaw : [themeRaw];\nconst theme = themes[0] || {};\nconst campaign = theme.campaigns || {};\nconst campaign_id = campaign.id || theme.campaign_id || null;\nconst show_name = campaign.show_name || 'Content Series';\nconst theme_id = theme.id || null;\nconst theme_name = theme.theme_name || 'Weekly Theme';\nconst inspirational_theme = theme.inspirational_theme || '';\nconst season_arc = theme.season_arc || '';\n\n// Parse daily assignments from content_types JSONB\nlet dailyAssignments = [];\nif (theme.content_types && Array.isArray(theme.content_types)) {\n  dailyAssignments = theme.content_types;\n} else if (typeof theme.content_types === 'string') {\n  try { dailyAssignments = JSON.parse(theme.content_types); } catch(e) { dailyAssignments = []; }\n}\n\n// Parse ICP\nconst icps = Array.isArray(icpRaw) ? icpRaw : [icpRaw];\nconst icp = icps[0] || {};\nconst icp_summary = (icp.icp_summary || '').substring(0, 500);\nconst recommended_hashtags = icp.recommended_hashtags || [];\n\n// Parse products into lookup map\nconst products = Array.isArray(productsRaw) ? productsRaw : (productsRaw ? [productsRaw] : []);\nconst productMap = {};\nfor (const p of products) {\n  if (p.id) productMap[p.id] = p;\n}\n\n// Decide video days: days 2, 4, 6 (and optionally 7 for 4 scripts)\nconst videoDays = [2, 4, 6];\nif (params.week_number % 2 === 0) videoDays.push(7); // Alternate weeks get 4 videos\n\n// Calculate scheduled dates\nconst month = params.month; // e.g., \"2026-03\"\nconst weekNum = params.week_number;\nconst platforms = params.platforms;\n\n// Build items for the daily loop (7 days)\nconst dailyItems = [];\nfor (let dayIdx = 0; dayIdx < 7; dayIdx++) {\n  const dayNumber = dayIdx + 1;\n  const assignment = dailyAssignments[dayIdx] || {};\n  const product_id = assignment.product_id || null;\n  const product = product_id ? (productMap[product_id] || {}) : {};\n  const product_name = assignment.product_name || product.name || 'Featured Product';\n  const product_description = product.description || '';\n  const product_price = product.price || '';\n  const product_image_url = product.image_url || null;\n  const topic = assignment.topic || 'Engagement';\n  const content_angle = assignment.content_angle || '';\n  const isVideoDay = videoDays.includes(dayNumber);\n\n  // Calculate scheduled_date: month start + (weekNum-1)*7 + (dayNumber-1)\n  let scheduledDate = '';\n  if (month) {\n    const parts = month.split('-');\n    const year = parseInt(parts[0]);\n    const mon = parseInt(parts[1]) - 1;\n    const dayOfMonth = (weekNum - 1) * 7 + dayNumber;\n    const d = new Date(year, mon, dayOfMonth);\n    // Handle month overflow gracefully\n    if (d.getMonth() !== mon) {\n      // Day exceeds month length, use last day of month\n      const lastDay = new Date(year, mon + 1, 0).getDate();\n      scheduledDate = `${year}-${String(mon + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;\n    } else {\n      scheduledDate = `${year}-${String(mon + 1).padStart(2, '0')}-${String(dayOfMonth).padStart(2, '0')}`;\n    }\n  }\n\n  // Build Claude prompt for this day (all platforms in one call)\n  const platformRules = [];\n  for (const plat of platforms) {\n    const p = plat.toLowerCase();\n    if (p === 'linkedin') platformRules.push('- LinkedIn: 1300-1800 chars, thought leadership tone, line breaks between paragraphs, 3-5 professional hashtags, product CTA');\n    if (p === 'instagram') platformRules.push('- Instagram: 150-300 char caption, 20-30 hashtags in separate first_comment field, emoji allowed, product CTA');\n    if (p === 'x') platformRules.push('- X: 5-7 tweet thread (each under 280 chars, numbered), punchy and conversational, product CTA in last tweet');\n    if (p === 'youtube') platformRules.push('- YouTube: Community post format, story-driven, 200-400 chars, product CTA');\n  }\n\n  const prompt = `Generate social media posts for these platforms: ${platforms.join(', ')}\\n\\nContext:\\n- Show: \"${show_name}\"\\n- Season ${weekNum}: \"${theme_name}\" -- ${inspirational_theme}\\n- Day's Product: ${product_name} -- ${product_description}${product_price ? ' (Price: ' + product_price + ')' : ''}\\n- Day's Topic: \"${topic}\"\\n- Content Angle: \"${content_angle}\"\\n- ICP: ${icp_summary}\\n\\nPlatform rules:\\n${platformRules.join('\\n')}\\n\\nReturn JSON:\\n{\\n  \"posts\": {\\n    \"linkedin\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" },\\n    \"instagram\": { \"text\": \"...\", \"hashtags\": [...], \"first_comment\": \"...\", \"cta\": \"...\" },\\n    \"x\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" },\\n    \"youtube\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }\\n  },\\n  \"image_prompt\": \"Product + lifestyle blend image prompt for the day (max 500 chars)\"\\n}\\nOnly include platforms listed. Product CTA ties back to featured product.\\n\\nAlso generate a hero image prompt: product as hero in aspirational lifestyle scene, matching the season theme, 1:1 aspect ratio, photorealistic, no text overlays.`;\n\n  dailyItems.push({\n    day_number: dayNumber,\n    product_id,\n    product_name,\n    product_description,\n    product_price,\n    product_image_url,\n    topic,\n    content_angle,\n    is_video_day: isVideoDay,\n    scheduled_date: scheduledDate,\n    prompt,\n    // Carry context forward\n    user_id: params.user_id,\n    campaign_id,\n    theme_id,\n    show_name,\n    theme_name,\n    week_number: weekNum,\n    platforms,\n    pipeline_run_id: params.pipeline_run_id,\n    callback_url: params.callback_url,\n    step: params.step,\n    icp_summary,\n    recommended_hashtags,\n    inspirational_theme\n  });\n}\n\nreturn dailyItems.map(item => ({ json: item }));"
+      },
+      "id": "04-studio-0020",
+      "name": "Prepare Daily Content Loop",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 200]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "04-studio-0021",
+      "name": "Day Content Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1760, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const day = $input.item.json;\n\nconst apiBody = {\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  messages: [\n    {\n      role: 'user',\n      content: day.prompt\n    }\n  ]\n};\n\nreturn {\n  json: {\n    apiBody: JSON.stringify(apiBody),\n    ...day\n  }\n};"
+      },
+      "id": "04-studio-0022",
+      "name": "Prepare Day Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.apiBody }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "04-studio-0023",
+      "name": "Generate Day Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 200],
       "credentials": {
         "anthropicApi": {
           "id": "cZwkXj4ZfHTkpBtT",
@@ -386,16 +247,232 @@
     },
     {
       "parameters": {
-        "jsCode": "// Merge all content from text/image/video/carousel branches\nconst item = $input.item.json;\nlet content = '';\nlet contentType = 'text';\n\ntry {\n  if (item.content && item.content[0]) {\n    content = item.content[0].text;\n  } else if (item.data && item.data.taskId) {\n    content = JSON.stringify(item);\n    contentType = 'image';\n  } else {\n    content = JSON.stringify(item);\n  }\n} catch(e) {\n  content = JSON.stringify(item);\n}\n\n// Get the original data from before the Switch\nconst normalizeData = $('Normalize Content Type').item.json;\n\nreturn {\n  json: {\n    user_id: normalizeData.user_id || '',\n    campaign_id: normalizeData.campaign_id || null,\n    theme_id: normalizeData.theme_id || null,\n    title: normalizeData.theme || normalizeData.weekly_show_name || 'Generated Content',\n    content: content,\n    content_type: normalizeData.content_type || 'text',\n    platform: (normalizeData.platform || 'linkedin').toLowerCase(),\n    scheduled_date: normalizeData.date || null,\n    status: 'pending_review',\n    image_url: null,\n    video_url: null,\n    image_prompt: normalizeData.theme || ''\n  }\n};"
+        "jsCode": "const day = $('Prepare Day Claude Prompt').item.json;\nconst claudeResponse = $input.item.json;\n\n// Extract text from Claude response\nlet raw = '';\nif (claudeResponse.content && claudeResponse.content[0]) {\n  raw = claudeResponse.content[0].text;\n} else if (typeof claudeResponse === 'string') {\n  raw = claudeResponse;\n}\n\n// Robust JSON parsing (strip markdown fences, extract JSON)\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try {\n    parsed = JSON.parse(stripped);\n  } catch(e2) {\n    const match = stripped.match(/[\\[{][\\s\\S]*[\\]}]/);\n    if (match) {\n      try {\n        parsed = JSON.parse(match[0]);\n      } catch(e3) {\n        parsed = { posts: {}, image_prompt: 'Professional product lifestyle image, photorealistic, 1:1 aspect ratio' };\n      }\n    } else {\n      parsed = { posts: {}, image_prompt: 'Professional product lifestyle image, photorealistic, 1:1 aspect ratio' };\n    }\n  }\n}\n\nconst posts = parsed.posts || {};\nconst image_prompt = parsed.image_prompt || 'Professional product lifestyle image, photorealistic, 1:1 aspect ratio';\n\n// Map to content_items rows\nconst contentItems = [];\nconst platforms = day.platforms || [];\n\nfor (const platform of platforms) {\n  const plat = platform.toLowerCase();\n  const post = posts[plat] || {};\n\n  contentItems.push({\n    user_id: day.user_id,\n    campaign_id: day.campaign_id,\n    theme_id: day.theme_id,\n    title: `${day.show_name} S${day.week_number} Day ${day.day_number} - ${plat}`,\n    content: post.text || JSON.stringify(post),\n    content_type: 'text',\n    platform: plat,\n    scheduled_date: day.scheduled_date,\n    status: 'pending_review',\n    image_prompt: image_prompt,\n    product_id: day.product_id,\n    hashtags: post.hashtags || [],\n    first_comment: post.first_comment || null\n  });\n}\n\nreturn {\n  json: {\n    day_number: day.day_number,\n    content_items: contentItems,\n    image_prompt: image_prompt,\n    is_video_day: day.is_video_day,\n    scheduled_date: day.scheduled_date,\n    product_id: day.product_id,\n    product_name: day.product_name,\n    product_description: day.product_description,\n    product_image_url: day.product_image_url,\n    topic: day.topic,\n    content_angle: day.content_angle,\n    // Carry context forward\n    user_id: day.user_id,\n    campaign_id: day.campaign_id,\n    theme_id: day.theme_id,\n    show_name: day.show_name,\n    theme_name: day.theme_name,\n    week_number: day.week_number,\n    platforms: day.platforms,\n    pipeline_run_id: day.pipeline_run_id,\n    callback_url: day.callback_url,\n    step: day.step,\n    icp_summary: day.icp_summary,\n    inspirational_theme: day.inspirational_theme\n  }\n};"
       },
-      "id": "04-studio-0014",
-      "name": "Merge All Content",
+      "id": "04-studio-0024",
+      "name": "Parse Day Content",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1980,
-        0
-      ]
+      "position": [2420, 200]
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "04-studio-0025",
+      "name": "Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2640, 200],
+      "webhookId": "04-studio-rate-wait"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all content items from the daily loop\nconst allItems = $('Parse Day Content').all();\n\nconst allContentItems = [];\nconst allImagePrompts = [];\nconst videoDays = [];\n\nfor (const item of allItems) {\n  const data = item.json;\n  if (data.content_items && Array.isArray(data.content_items)) {\n    allContentItems.push(...data.content_items);\n  }\n  allImagePrompts.push({\n    day_number: data.day_number,\n    image_prompt: data.image_prompt,\n    scheduled_date: data.scheduled_date\n  });\n  if (data.is_video_day) {\n    videoDays.push({\n      day_number: data.day_number,\n      product_id: data.product_id,\n      product_name: data.product_name,\n      product_description: data.product_description,\n      product_image_url: data.product_image_url,\n      topic: data.topic,\n      content_angle: data.content_angle,\n      scheduled_date: data.scheduled_date\n    });\n  }\n}\n\n// Carry forward context from first item\nconst ctx = allItems[0] ? allItems[0].json : {};\n\nreturn {\n  json: {\n    content_items: allContentItems,\n    image_prompts: allImagePrompts,\n    video_days: videoDays,\n    content_count: allContentItems.length,\n    user_id: ctx.user_id,\n    campaign_id: ctx.campaign_id,\n    theme_id: ctx.theme_id,\n    show_name: ctx.show_name,\n    theme_name: ctx.theme_name,\n    week_number: ctx.week_number,\n    platforms: ctx.platforms,\n    pipeline_run_id: ctx.pipeline_run_id,\n    callback_url: ctx.callback_url,\n    step: ctx.step,\n    icp_summary: ctx.icp_summary,\n    inspirational_theme: ctx.inspirational_theme\n  }\n};"
+      },
+      "id": "04-studio-0030",
+      "name": "Collect All Day Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2860, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst videoDays = data.video_days || [];\n\n// Build Perplexity prompt for trending audio research\nconst month = data.week_number ? `Week ${data.week_number}` : 'this month';\nconst industry = data.theme_name || 'business';\n\nconst prompt = `What are the top 10 trending sounds/songs on Instagram Reels and YouTube Shorts right now? For each, provide: song name, artist, and which platform it's trending on. Focus on sounds that work well for ${industry} content. Return as JSON array: [{\"name\": \"...\", \"artist\": \"...\", \"platform\": \"Instagram|YouTube\"}]`;\n\nreturn {\n  json: {\n    ...data,\n    perplexity_prompt: prompt,\n    has_video_days: videoDays.length > 0\n  }\n};"
+      },
+      "id": "04-studio-0031",
+      "name": "Prepare Trending Audio Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3080, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.perplexity_prompt) }}\n    }\n  ],\n  \"max_tokens\": 2048\n}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "04-studio-0032",
+      "name": "Research Trending Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3300, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "3rYRY1C2K9o0DDXI",
+          "name": "Perplexity API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prevData = $('Prepare Trending Audio Prompt').item.json;\nconst perplexityResponse = $input.item.json;\n\n// Extract trending audio from Perplexity response\nlet trendingAudioText = '';\ntry {\n  if (perplexityResponse.choices && perplexityResponse.choices[0]) {\n    trendingAudioText = perplexityResponse.choices[0].message.content;\n  }\n} catch(e) {\n  trendingAudioText = 'Trending audio data unavailable';\n}\n\n// Parse trending audio JSON if possible\nlet trendingAudio = [];\ntry {\n  const raw = trendingAudioText;\n  let parsed;\n  try {\n    parsed = JSON.parse(raw);\n  } catch(e) {\n    const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n    try {\n      parsed = JSON.parse(stripped);\n    } catch(e2) {\n      const match = stripped.match(/\\[[\\s\\S]*\\]/);\n      if (match) parsed = JSON.parse(match[0]);\n    }\n  }\n  if (Array.isArray(parsed)) trendingAudio = parsed;\n  else if (parsed && Array.isArray(parsed.trending)) trendingAudio = parsed.trending;\n} catch(e) {\n  // Keep as text\n}\n\n// Now prepare video script prompts for each video day\nconst videoDays = prevData.video_days || [];\nconst videoPrompts = [];\n\nfor (const vday of videoDays) {\n  const audioRecs = trendingAudio.slice(0, 4).map(a => `${a.name} by ${a.artist} (${a.platform})`).join(', ') || trendingAudioText.substring(0, 500);\n\n  const prompt = `Create a professional, production-ready 30-second video script.\\n\\nProduct: ${vday.product_name} - ${vday.product_description || ''}\\nProduct Image/URL: ${vday.product_image_url || 'N/A'}\\nTheme: ${vday.topic}\\nContent Angle: ${vday.content_angle || ''}\\nTarget Audience: ${prevData.icp_summary || ''}\\nSeason Theme: ${prevData.inspirational_theme || ''}\\nTrending Audio Options: ${audioRecs}\\n\\nReturn a JSON object with this EXACT structure:\\n{\\n  \"title\": \"Video title\",\\n  \"duration\": \"30 seconds\",\\n  \"platforms\": [\"Instagram Reels\", \"YouTube Shorts\"],\\n  \"trending_audio\": [\\n    { \"name\": \"...\", \"artist\": \"...\", \"platform\": \"Instagram\" },\\n    { \"name\": \"...\", \"artist\": \"...\", \"platform\": \"YouTube\" }\\n  ],\\n  \"sections\": {\\n    \"hook\": { \"timing\": \"0:00-0:03\", \"script\": \"...\", \"camera\": \"...\", \"b_roll\": \"...\", \"on_screen_text\": \"...\" },\\n    \"setup\": { \"timing\": \"0:03-0:10\", \"script\": \"...\", \"camera\": \"...\", \"b_roll\": \"...\", \"on_screen_text\": \"...\" },\\n    \"value\": { \"timing\": \"0:10-0:25\", \"script\": \"...\", \"camera\": \"...\", \"b_roll\": \"...\", \"on_screen_text\": \"...\", \"key_points\": [...] },\\n    \"cta\": { \"timing\": \"0:25-0:30\", \"script\": \"...\", \"camera\": \"...\", \"on_screen_text\": \"...\", \"action\": \"...\" }\\n  },\\n  \"music_mood\": \"...\",\\n  \"thumbnail_idea\": \"...\",\\n  \"production_notes\": \"...\",\\n  \"product_url\": \"${vday.product_image_url || ''}\",\\n  \"product_image\": \"${vday.product_image_url || ''}\"\\n}`;\n\n  videoPrompts.push({\n    ...vday,\n    video_prompt: prompt\n  });\n}\n\nreturn {\n  json: {\n    ...prevData,\n    trending_audio_raw: trendingAudioText,\n    trending_audio: trendingAudio,\n    video_prompts: videoPrompts\n  }\n};"
+      },
+      "id": "04-studio-0033",
+      "name": "Prepare Video Script Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3520, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-video-check",
+              "leftValue": "={{ ($json.video_prompts || []).length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "04-studio-0044",
+      "name": "Has Video Days?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3740, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst videoPrompts = data.video_prompts || [];\n\n// Output each video prompt as a separate item for the loop\nreturn videoPrompts.map(vp => ({\n  json: {\n    ...vp,\n    user_id: data.user_id,\n    campaign_id: data.campaign_id,\n    theme_id: data.theme_id,\n    show_name: data.show_name,\n    week_number: data.week_number,\n    platforms: data.platforms,\n    pipeline_run_id: data.pipeline_run_id,\n    callback_url: data.callback_url,\n    step: data.step,\n    all_content_items: data.content_items,\n    all_image_prompts: data.image_prompts,\n    content_count: data.content_count,\n    trending_audio_raw: data.trending_audio_raw,\n    trending_audio: data.trending_audio\n  }\n}));"
+      },
+      "id": "04-studio-0034",
+      "name": "Prepare Video Loop Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3960, 100]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "04-studio-0035",
+      "name": "Video Script Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [4180, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const vday = $input.item.json;\n\nconst apiBody = {\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  messages: [\n    {\n      role: 'user',\n      content: vday.video_prompt\n    }\n  ]\n};\n\nreturn {\n  json: {\n    apiBody: JSON.stringify(apiBody),\n    ...vday\n  }\n};"
+      },
+      "id": "04-studio-0036",
+      "name": "Prepare Video Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4180, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.apiBody }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "04-studio-0037",
+      "name": "Generate Video Script",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4400, 200],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const vday = $('Prepare Video Claude Prompt').item.json;\nconst claudeResponse = $input.item.json;\n\n// Extract text from Claude response\nlet raw = '';\nif (claudeResponse.content && claudeResponse.content[0]) {\n  raw = claudeResponse.content[0].text;\n} else if (typeof claudeResponse === 'string') {\n  raw = claudeResponse;\n}\n\n// Robust JSON parsing\nlet videoScript;\ntry {\n  videoScript = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try {\n    videoScript = JSON.parse(stripped);\n  } catch(e2) {\n    const match = stripped.match(/[{][\\s\\S]*[}]/);\n    if (match) {\n      try {\n        videoScript = JSON.parse(match[0]);\n      } catch(e3) {\n        videoScript = { title: 'Video Script', error: 'Failed to parse' };\n      }\n    } else {\n      videoScript = { title: 'Video Script', error: 'Failed to parse' };\n    }\n  }\n}\n\n// Add product references\nvideoScript.product_url = vday.product_image_url || '';\nvideoScript.product_image = vday.product_image_url || '';\n\n// Create video content_item for each video-capable platform\nconst videoItems = [];\nconst videoPlatforms = (vday.platforms || []).filter(p => {\n  const pl = p.toLowerCase();\n  return pl === 'instagram' || pl === 'youtube';\n});\n\nfor (const plat of (videoPlatforms.length > 0 ? videoPlatforms : ['instagram'])) {\n  videoItems.push({\n    user_id: vday.user_id,\n    campaign_id: vday.campaign_id,\n    theme_id: vday.theme_id,\n    title: `${vday.show_name} S${vday.week_number} Day ${vday.day_number} - ${plat.toLowerCase()} video`,\n    content: videoScript.title || 'Video Script',\n    content_type: 'video',\n    platform: plat.toLowerCase(),\n    scheduled_date: vday.scheduled_date,\n    status: 'pending_review',\n    image_prompt: null,\n    product_id: vday.product_id,\n    video_script: videoScript,\n    hashtags: [],\n    first_comment: null\n  });\n}\n\nreturn {\n  json: {\n    video_content_items: videoItems,\n    day_number: vday.day_number,\n    video_script: videoScript\n  }\n};"
+      },
+      "id": "04-studio-0038",
+      "name": "Parse Video Script",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4620, 200]
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "04-studio-0039",
+      "name": "Video Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [4840, 200],
+      "webhookId": "04-studio-video-rate-wait"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all video content items from the video script loop\nconst allVideoItems = $('Parse Video Script').all();\n\nconst videoContentItems = [];\nfor (const item of allVideoItems) {\n  if (item.json.video_content_items) {\n    videoContentItems.push(...item.json.video_content_items);\n  }\n}\n\n// Get the main data from Prepare Video Loop Items (first item has all context)\nconst ctx = $('Prepare Video Loop Items').first().json;\n\nreturn {\n  json: {\n    content_items: ctx.all_content_items || [],\n    video_content_items: videoContentItems,\n    image_prompts: ctx.all_image_prompts || [],\n    content_count: (ctx.content_count || 0) + videoContentItems.length,\n    user_id: ctx.user_id,\n    campaign_id: ctx.campaign_id,\n    theme_id: ctx.theme_id,\n    show_name: ctx.show_name,\n    week_number: ctx.week_number,\n    platforms: ctx.platforms,\n    pipeline_run_id: ctx.pipeline_run_id,\n    callback_url: ctx.callback_url,\n    step: ctx.step\n  }\n};"
+      },
+      "id": "04-studio-0040",
+      "name": "Collect Video Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5060, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\n\n// Merge text content_items + video content_items into one batch\nconst allItems = [...(data.content_items || []), ...(data.video_content_items || [])];\n\n// Prepare the batch insert body\n// Ensure all items have correct fields for Supabase INSERT\nconst batchBody = allItems.map(item => ({\n  user_id: item.user_id,\n  campaign_id: item.campaign_id,\n  theme_id: item.theme_id,\n  title: item.title,\n  content: item.content,\n  content_type: item.content_type,\n  platform: item.platform,\n  scheduled_date: item.scheduled_date,\n  status: 'pending_review',\n  image_prompt: item.image_prompt || null,\n  product_id: item.product_id || null,\n  video_script: item.video_script ? JSON.stringify(item.video_script) : null,\n  hashtags: item.hashtags && item.hashtags.length > 0 ? `{${item.hashtags.map(h => `\"${h.replace(/\"/g, '\\\\\"')}\"`).join(',')}}` : null,\n  first_comment: item.first_comment || null\n}));\n\nreturn {\n  json: {\n    batch_body: batchBody,\n    batch_count: batchBody.length,\n    image_prompts: data.image_prompts || [],\n    user_id: data.user_id,\n    campaign_id: data.campaign_id,\n    week_number: data.week_number,\n    pipeline_run_id: data.pipeline_run_id,\n    callback_url: data.callback_url,\n    step: data.step\n  }\n};"
+      },
+      "id": "04-studio-0041",
+      "name": "Prepare Batch Insert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5280, 200]
     },
     {
       "parameters": {
@@ -424,47 +501,413 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"user_id\": \"{{ $json.user_id }}\",\n  \"campaign_id\": {{ $json.campaign_id ? '\"' + $json.campaign_id + '\"' : 'null' }},\n  \"theme_id\": {{ $json.theme_id ? '\"' + $json.theme_id + '\"' : 'null' }},\n  \"title\": {{ JSON.stringify($json.title) }},\n  \"content\": {{ JSON.stringify($json.content) }},\n  \"content_type\": {{ JSON.stringify($json.content_type) }},\n  \"platform\": {{ JSON.stringify($json.platform) }},\n  \"scheduled_date\": {{ $json.scheduled_date ? '\"' + $json.scheduled_date + '\"' : 'null' }},\n  \"status\": \"pending_review\",\n  \"image_url\": {{ $json.image_url ? JSON.stringify($json.image_url) : 'null' }},\n  \"video_url\": {{ $json.video_url ? JSON.stringify($json.video_url) : 'null' }},\n  \"image_prompt\": {{ JSON.stringify($json.image_prompt || '') }}\n}",
+        "jsonBody": "={{ JSON.stringify($json.batch_body) }}",
         "options": {
           "timeout": 30000
         }
       },
-      "id": "04-studio-0015",
-      "name": "Supabase -- INSERT Content",
+      "id": "04-studio-0042",
+      "name": "Batch Insert Content",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        2200,
-        0
-      ]
+      "position": [5500, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prevData = $('Prepare Batch Insert').item.json;\nconst insertResult = $input.item.json;\n\n// Extract inserted content items for image URL mapping later\nconst insertedItems = Array.isArray(insertResult) ? insertResult : [insertResult];\n\n// Prepare image prompts as loop items\nconst imagePrompts = prevData.image_prompts || [];\n\nreturn imagePrompts.map(ip => ({\n  json: {\n    day_number: ip.day_number,\n    image_prompt: ip.image_prompt,\n    scheduled_date: ip.scheduled_date,\n    campaign_id: prevData.campaign_id,\n    user_id: prevData.user_id,\n    week_number: prevData.week_number,\n    pipeline_run_id: prevData.pipeline_run_id,\n    callback_url: prevData.callback_url,\n    step: prevData.step,\n    batch_count: prevData.batch_count\n  }\n}));"
+      },
+      "id": "04-studio-0050",
+      "name": "Prepare Image Loop Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5720, 200]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "04-studio-0051",
+      "name": "Image Generation Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [5940, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kieai.com/v1/tasks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"nano-banana-pro\",\n  \"input\": {\n    \"prompt\": {{ JSON.stringify($json.image_prompt || 'Professional product lifestyle image') }},\n    \"aspect_ratio\": \"1:1\",\n    \"resolution\": \"1K\",\n    \"output_format\": \"png\"\n  }\n}",
+        "options": {
+          "timeout": 60000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "04-studio-0052",
+      "name": "Create KIE Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [6160, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\nconst imgItem = $('Image Generation Loop').item.json;\n\nreturn {\n  json: {\n    ...item,\n    pollCount: 0,\n    taskId: item.data?.task_id || item.data?.taskId || item.task_id || item.taskId,\n    day_number: imgItem.day_number,\n    scheduled_date: imgItem.scheduled_date,\n    campaign_id: imgItem.campaign_id,\n    user_id: imgItem.user_id,\n    week_number: imgItem.week_number,\n    pipeline_run_id: imgItem.pipeline_run_id,\n    callback_url: imgItem.callback_url,\n    step: imgItem.step,\n    batch_count: imgItem.batch_count\n  }\n};"
+      },
+      "id": "04-studio-0053",
+      "name": "Init Image Poll",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [6380, 200]
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "id": "04-studio-0054",
+      "name": "Image Initial Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [6600, 200],
+      "webhookId": "04-studio-img-initial-wait"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kieai.com/v1/tasks/{{ $json.taskId }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "04-studio-0055",
+      "name": "Poll KIE Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [6820, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KIE_AI_API_CREDENTIAL",
+          "name": "KIE AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.item.json;\nconst prevData = $('Init Image Poll').item.json;\nconst pollCount = (prevData.pollCount || 0) + 1;\n\n// Check status -- KIE uses 'succeeded' or 'success' or 'completed'\nconst status = result.output?.status || result.data?.state || result.status || 'processing';\nconst isReady = status === 'succeeded' || status === 'success' || status === 'completed';\nconst isTimeout = pollCount >= 12;\nconst isError = status === 'failed' || status === 'error';\n\n// Extract image URL if ready\nlet imageUrl = null;\nif (isReady) {\n  // Try multiple response formats\n  if (result.output?.works && result.output.works[0]?.resource?.url) {\n    imageUrl = result.output.works[0].resource.url;\n  } else if (result.data?.resultJson) {\n    try {\n      const parsed = JSON.parse(result.data.resultJson);\n      if (parsed.resultUrls && parsed.resultUrls[0]) imageUrl = parsed.resultUrls[0];\n    } catch(e) {}\n  } else if (result.output?.image_url) {\n    imageUrl = result.output.image_url;\n  }\n}\n\nreturn {\n  json: {\n    ...prevData,\n    pollCount,\n    isComplete: isReady || isTimeout || isError,\n    isSuccess: isReady && !!imageUrl,\n    imageUrl,\n    error: isTimeout ? 'Image generation timed out' : isError ? `Image failed: ${status}` : null\n  }\n};"
+      },
+      "id": "04-studio-0056",
+      "name": "Check KIE Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [7040, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "kie-complete-check",
+              "leftValue": "={{ $json.isComplete }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "04-studio-0057",
+      "name": "IF Complete",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [7260, 200]
+    },
+    {
+      "parameters": {
+        "amount": 5
+      },
+      "id": "04-studio-0058",
+      "name": "Image Retry Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [7480, 400],
+      "webhookId": "04-studio-img-retry-wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "kie-success-check",
+              "leftValue": "={{ $json.isSuccess }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "04-studio-0059",
+      "name": "IF Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [7480, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?campaign_id=eq.{{ $json.campaign_id }}&scheduled_date=eq.{{ $json.scheduled_date }}&image_url=is.null",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"image_url\": {{ JSON.stringify($json.imageUrl) }}\n}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "04-studio-0060",
+      "name": "Update Image URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [7700, 200]
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "04-studio-0061",
+      "name": "Image Gap Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [7920, 200],
+      "webhookId": "04-studio-img-gap-wait"
+    },
+    {
+      "parameters": {
+        "jsCode": "// After image loop completes, prepare callback\nconst firstItem = $('Prepare Image Loop Items').first().json;\n\nreturn {\n  json: {\n    pipeline_run_id: firstItem.pipeline_run_id,\n    callback_url: firstItem.callback_url,\n    step: firstItem.step,\n    week_number: firstItem.week_number,\n    batch_count: firstItem.batch_count,\n    images_generated: 7\n  }\n};"
+      },
+      "id": "04-studio-0070",
+      "name": "Prepare Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [8140, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pipeline-Secret",
+              "value": "eluxr-pipeline-internal-2024"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"pipeline_run_id\": {{ JSON.stringify($json.pipeline_run_id) }},\n  \"step\": {{ $json.step }},\n  \"status\": \"complete\"\n}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "04-studio-0071",
+      "name": "Callback to Orchestrator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [8360, 200]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, phase: 4, message: 'Content generated and saved', data: $json }) }}",
+        "responseBody": "={{ JSON.stringify({ success: true, week_number: $json.week_number || $('Prepare Callback').item.json.week_number, content_count: $('Prepare Callback').item.json.batch_count || 0, images_generated: $('Prepare Callback').item.json.images_generated || 0 }) }}",
         "options": {}
       },
-      "id": "04-studio-0016",
-      "name": "Response",
+      "id": "04-studio-0072",
+      "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [
-        2420,
-        0
-      ]
+      "position": [8580, 200]
     },
     {
       "parameters": {
-        "jsCode": "// Fallback handler for unmatched content types\nconst item = $input.item.json;\nreturn {\n  json: {\n    user_id: item.user_id || '',\n    campaign_id: item.campaign_id || null,\n    theme_id: item.theme_id || null,\n    title: item.theme || 'Fallback Content',\n    content: JSON.stringify({ note: 'Content type not matched by Switch', original_type: item.original_content_type, normalized_type: item.content_type }),\n    content_type: item.content_type || 'text',\n    platform: (item.platform || 'linkedin').toLowerCase(),\n    scheduled_date: item.date || null,\n    status: 'pending_review',\n    image_url: null,\n    video_url: null,\n    image_prompt: ''\n  }\n};"
+        "jsCode": "// Error handler -- recover context and prepare error callback\nconst allItems = [];\ntry { allItems.push($('Extract Params').item.json); } catch(e) {}\n\nconst ctx = allItems[0] || {};\nconst pipeline_run_id = ctx.pipeline_run_id || null;\nconst callback_url = ctx.callback_url || null;\nconst step = ctx.step || 3;\nconst errorMessage = $input.item.json.message || $input.item.json.error || 'Content Studio execution failed';\n\nreturn {\n  json: {\n    pipeline_run_id,\n    callback_url,\n    step,\n    error_message: errorMessage,\n    has_callback: !!callback_url\n  }\n};"
       },
-      "id": "04-studio-0017",
-      "name": "Fallback Handler",
+      "id": "04-studio-0080",
+      "name": "Handle Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1760,
-        400
-      ]
+      "position": [3080, 600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-callback-check",
+              "leftValue": "={{ $json.has_callback }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "04-studio-0081",
+      "name": "Has Callback URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3300, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Pipeline-Secret",
+              "value": "eluxr-pipeline-internal-2024"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"pipeline_run_id\": {{ JSON.stringify($json.pipeline_run_id) }},\n  \"step\": {{ $json.step }},\n  \"status\": \"error\",\n  \"error_message\": {{ JSON.stringify($json.error_message) }}\n}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "04-studio-0082",
+      "name": "Error Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3520, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error_message || 'Content Studio failed' }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "04-studio-0083",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [3740, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle skip-video path: no video days, go straight to batch insert\n// Data comes from Has Video Days? which received from Prepare Video Script Prompts\nconst data = $input.item.json;\n\nreturn {\n  json: {\n    content_items: data.content_items || [],\n    video_content_items: [],\n    image_prompts: data.image_prompts || [],\n    content_count: data.content_count || 0,\n    user_id: data.user_id,\n    campaign_id: data.campaign_id,\n    theme_id: data.theme_id,\n    show_name: data.show_name,\n    week_number: data.week_number,\n    platforms: data.platforms,\n    pipeline_run_id: data.pipeline_run_id,\n    callback_url: data.callback_url,\n    step: data.step\n  }\n};"
+      },
+      "id": "04-studio-0043",
+      "name": "Skip Video Path",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4180, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// IF Success FALSE path -- image failed, skip update and continue loop\nconst data = $input.item.json;\nreturn {\n  json: {\n    ...data,\n    image_skipped: true\n  }\n};"
+      },
+      "id": "04-studio-0062",
+      "name": "Skip Failed Image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [7700, 400]
     }
   ],
   "connections": {
@@ -473,17 +916,6 @@
         [
           {
             "node": "Auth Validator",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Daily Content Trigger (6 AM)": {
-      "main": [
-        [
-          {
-            "node": "Merge Trigger Sources",
             "type": "main",
             "index": 0
           }
@@ -505,7 +937,7 @@
       "main": [
         [
           {
-            "node": "Merge Trigger Sources",
+            "node": "Extract Params",
             "type": "main",
             "index": 0
           }
@@ -519,149 +951,522 @@
         ]
       ]
     },
-    "Merge Trigger Sources": {
+    "Extract Params": {
       "main": [
         [
           {
-            "node": "Supabase -- Read Themes",
+            "node": "Read Theme",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase -- Read Themes": {
+    "Read Theme": {
       "main": [
         [
           {
-            "node": "Filter Today's Content",
+            "node": "Read ICP",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Filter Today's Content": {
+    "Read ICP": {
       "main": [
         [
           {
-            "node": "Normalize Content Type",
+            "node": "Read Products",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize Content Type": {
+    "Read Products": {
       "main": [
         [
           {
-            "node": "Route: Text / Image / Video / Carousel",
+            "node": "Prepare Daily Content Loop",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Route: Text / Image / Video / Carousel": {
+    "Prepare Daily Content Loop": {
       "main": [
         [
           {
-            "node": "Claude -- Write Post Content",
+            "node": "Day Content Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Day Content Loop": {
+      "main": [
+        [
+          {
+            "node": "Prepare Day Claude Prompt",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "KIE -- Generate Content Image",
+            "node": "Collect All Day Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Day Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate Day Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Day Content": {
+      "main": [
+        [
+          {
+            "node": "Parse Day Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Day Content": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "Day Content Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect All Day Content": {
+      "main": [
+        [
+          {
+            "node": "Prepare Trending Audio Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Trending Audio Prompt": {
+      "main": [
+        [
+          {
+            "node": "Research Trending Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research Trending Audio": {
+      "main": [
+        [
+          {
+            "node": "Prepare Video Script Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Video Script Prompts": {
+      "main": [
+        [
+          {
+            "node": "Has Video Days?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Video Days?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Video Loop Items",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Claude -- Video Script Generator",
+            "node": "Skip Video Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Video Loop Items": {
+      "main": [
+        [
+          {
+            "node": "Video Script Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Script Loop": {
+      "main": [
+        [
+          {
+            "node": "Prepare Video Claude Prompt",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Claude -- Write Post Content",
+            "node": "Collect Video Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Video Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate Video Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video Script": {
+      "main": [
+        [
+          {
+            "node": "Parse Video Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Video Script": {
+      "main": [
+        [
+          {
+            "node": "Video Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "Video Script Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Video Content": {
+      "main": [
+        [
+          {
+            "node": "Prepare Batch Insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Video Path": {
+      "main": [
+        [
+          {
+            "node": "Prepare Batch Insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Batch Insert": {
+      "main": [
+        [
+          {
+            "node": "Batch Insert Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Insert Content": {
+      "main": [
+        [
+          {
+            "node": "Prepare Image Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Image Loop Items": {
+      "main": [
+        [
+          {
+            "node": "Image Generation Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Generation Loop": {
+      "main": [
+        [
+          {
+            "node": "Create KIE Task",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Fallback Handler",
+            "node": "Prepare Callback",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Claude -- Write Post Content": {
+    "Create KIE Task": {
       "main": [
         [
           {
-            "node": "Merge All Content",
+            "node": "Init Image Poll",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "KIE -- Generate Content Image": {
+    "Init Image Poll": {
       "main": [
         [
           {
-            "node": "Merge All Content",
+            "node": "Image Initial Wait",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Claude -- Video Script Generator": {
+    "Image Initial Wait": {
       "main": [
         [
           {
-            "node": "Merge All Content",
+            "node": "Poll KIE Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fallback Handler": {
+    "Poll KIE Result": {
       "main": [
         [
           {
-            "node": "Supabase -- INSERT Content",
+            "node": "Check KIE Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Merge All Content": {
+    "Check KIE Result": {
       "main": [
         [
           {
-            "node": "Supabase -- INSERT Content",
+            "node": "IF Complete",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase -- INSERT Content": {
+    "IF Complete": {
       "main": [
         [
           {
-            "node": "Response",
+            "node": "IF Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Image Retry Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Retry Wait": {
+      "main": [
+        [
+          {
+            "node": "Poll KIE Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Success": {
+      "main": [
+        [
+          {
+            "node": "Update Image URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Failed Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Image URL": {
+      "main": [
+        [
+          {
+            "node": "Image Gap Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Failed Image": {
+      "main": [
+        [
+          {
+            "node": "Image Gap Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Gap Wait": {
+      "main": [
+        [
+          {
+            "node": "Image Generation Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Callback": {
+      "main": [
+        [
+          {
+            "node": "Callback to Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback to Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Has Callback URL?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Callback URL?": {
+      "main": [
+        [
+          {
+            "node": "Error Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Callback": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
             "type": "main",
             "index": 0
           }
