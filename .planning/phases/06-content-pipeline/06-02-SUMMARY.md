@@ -126,6 +126,15 @@ The updated workflow JSON must be imported to n8n Cloud. This will be handled du
 - Ready for 06-03 (frontend products card) to display scraped products on Setup tab
 - Ready for 06-04 (theme generator) which reads ICP + products from Supabase
 
+## Self-Check: PASSED
+
+- [x] `workflows/01-icp-analyzer.json` exists (30 nodes)
+- [x] Commit `4ff6a24` exists in git log
+- [x] Verification script passes (Jina, Perplexity, Claude, Callback all detected)
+- [x] JSON is valid and parseable
+- [x] All enriched ICP fields present in Save ICP node
+- [x] All node IDs match `01-icp-*` pattern
+
 ---
 *Phase: 06-content-pipeline*
 *Completed: 2026-03-04*
