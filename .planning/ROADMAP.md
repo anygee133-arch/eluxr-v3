@@ -173,6 +173,14 @@ Plans:
 
 **Pitfalls:** HIGH-5 (state desync), MIN-2 (single file architecture), MIN-3 (generic error messages)
 
+**Plans:** 4 plans in 4 waves
+
+Plans:
+- [ ] 05-01-PLAN.md -- CSS animations, stagger fix, glassmorphism, tab transitions, config.js, Vercel files
+- [ ] 05-02-PLAN.md -- Data layer migration: Supabase replaces localStorage, mock data, n8n webhook reads
+- [ ] 05-03-PLAN.md -- ICP card on Setup tab: load from Supabase, structured display, skeleton loading
+- [ ] 05-04-PLAN.md -- E2E verification of all 5 success criteria + Vercel deployment + user checkpoint
+
 ---
 
 ## Phase 6: Content Pipeline
@@ -329,7 +337,7 @@ Plans:
 | 2 | Authentication | AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, INFRA-04 | Complete |
 | 3 | Workflow Decomposition + Backend Bug Fixes | INFRA-03, INFRA-06, PIPE-07, TOOL-05, TOOL-06 | Complete |
 | 4 | Async Pipeline + Real-Time Progress Tracking | PROG-01, PROG-02, PROG-03, PROG-04, UI-05 | Complete |
-| 5 | Frontend Migration + UI Polish | UI-01, UI-02, UI-03, UI-04, UI-06 | Not Started |
+| 5 | Frontend Migration + UI Polish | UI-01, UI-02, UI-03, UI-04, UI-06 | Complete (UI-06 deferred) |
 | 6 | Content Pipeline | PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 | Not Started |
 | 7 | Approval Queue | APPR-01, APPR-02, APPR-03, APPR-04, APPR-05, APPR-06 | Not Started |
 | 8 | Calendar + Scheduling | CAL-01, CAL-02, CAL-03, CAL-04 | Not Started |
@@ -374,4 +382,4 @@ Phase 2 (Auth)
 
 ---
 *Roadmap created: 2026-02-27*
-*Last updated: 2026-03-03*
+*Last updated: 2026-03-03 (Phase 5 complete)*

@@ -14,7 +14,10 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "eluxr-phase2-themes"
     },
     {
@@ -25,7 +28,10 @@
       "name": "Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [220, 0]
+      "position": [
+        220,
+        0
+      ]
     },
     {
       "parameters": {
@@ -55,7 +61,10 @@
       "name": "Auth OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [440, 0]
+      "position": [
+        440,
+        0
+      ]
     },
     {
       "parameters": {
@@ -69,7 +78,10 @@
       "name": "401 Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [660, 200]
+      "position": [
+        660,
+        200
+      ]
     },
     {
       "parameters": {
@@ -101,7 +113,10 @@
       "name": "Claude -- Netflix Theme Generator",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, -200],
+      "position": [
+        660,
+        -200
+      ],
       "credentials": {
         "anthropicApi": {
           "id": "cZwkXj4ZfHTkpBtT",
@@ -117,7 +132,10 @@
       "name": "Parse & Group Themes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, -200]
+      "position": [
+        880,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -128,7 +146,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
             },
             {
               "name": "apikey",
@@ -155,7 +173,10 @@
       "name": "Supabase -- UPSERT Campaign",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, -200]
+      "position": [
+        1100,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -166,7 +187,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
             },
             {
               "name": "apikey",
@@ -182,7 +203,10 @@
       "name": "Supabase -- Delete Old Themes",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, -200]
+      "position": [
+        1320,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -192,7 +216,10 @@
       "name": "Prepare Theme Rows",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, -200]
+      "position": [
+        1540,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -203,7 +230,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
             },
             {
               "name": "apikey",
@@ -230,7 +257,10 @@
       "name": "Supabase -- INSERT Themes",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, -200]
+      "position": [
+        1760,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -241,7 +271,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
             },
             {
               "name": "apikey",
@@ -268,7 +298,10 @@
       "name": "Supabase -- Activate Campaign",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1980, -200]
+      "position": [
+        1980,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -280,42 +313,129 @@
       "name": "Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2200, -200]
+      "position": [
+        2200,
+        -200
+      ]
     }
   ],
   "connections": {
     "Webhook": {
-      "main": [[{ "node": "Auth Validator", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Auth Validator": {
-      "main": [[{ "node": "Auth OK?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Auth OK?": {
       "main": [
-        [{ "node": "Claude -- Netflix Theme Generator", "type": "main", "index": 0 }],
-        [{ "node": "401 Unauthorized", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Claude -- Netflix Theme Generator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Claude -- Netflix Theme Generator": {
-      "main": [[{ "node": "Parse & Group Themes", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parse & Group Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse & Group Themes": {
-      "main": [[{ "node": "Supabase -- UPSERT Campaign", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Supabase -- UPSERT Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Supabase -- UPSERT Campaign": {
-      "main": [[{ "node": "Supabase -- Delete Old Themes", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Supabase -- Delete Old Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Supabase -- Delete Old Themes": {
-      "main": [[{ "node": "Prepare Theme Rows", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Prepare Theme Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare Theme Rows": {
-      "main": [[{ "node": "Supabase -- INSERT Themes", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Supabase -- INSERT Themes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Supabase -- INSERT Themes": {
-      "main": [[{ "node": "Supabase -- Activate Campaign", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Supabase -- Activate Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Supabase -- Activate Campaign": {
-      "main": [[{ "node": "Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {

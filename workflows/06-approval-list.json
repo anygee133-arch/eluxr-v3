@@ -12,7 +12,10 @@
       "id": "al-webhook-001",
       "name": "List Queue -- Webhook",
       "type": "n8n-nodes-base.webhook",
-      "position": [0, 300],
+      "position": [
+        0,
+        300
+      ],
       "typeVersion": 2,
       "webhookId": "eluxr-approval-list"
     },
@@ -24,7 +27,10 @@
       "name": "Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [220, 300]
+      "position": [
+        220,
+        300
+      ]
     },
     {
       "parameters": {
@@ -54,7 +60,10 @@
       "name": "Auth OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [440, 300]
+      "position": [
+        440,
+        300
+      ]
     },
     {
       "parameters": {
@@ -67,7 +76,10 @@
       "id": "al-401-004",
       "name": "401 Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
-      "position": [660, 500],
+      "position": [
+        660,
+        500
+      ],
       "typeVersion": 1.1
     },
     {
@@ -79,7 +91,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
             },
             {
               "name": "apikey",
@@ -94,7 +106,10 @@
       "id": "al-supabase-005",
       "name": "Supabase -- SELECT Content Items",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [660, 100],
+      "position": [
+        660,
+        100
+      ],
       "typeVersion": 4.2
     },
     {
@@ -104,7 +119,10 @@
       "id": "al-organize-006",
       "name": "Organize by Status",
       "type": "n8n-nodes-base.code",
-      "position": [880, 100],
+      "position": [
+        880,
+        100
+      ],
       "typeVersion": 2
     },
     {
@@ -116,28 +134,75 @@
       "id": "al-response-007",
       "name": "List -- Response",
       "type": "n8n-nodes-base.respondToWebhook",
-      "position": [1100, 100],
+      "position": [
+        1100,
+        100
+      ],
       "typeVersion": 1.1
     }
   ],
   "connections": {
     "List Queue -- Webhook": {
-      "main": [[{"node": "Auth Validator", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Auth Validator": {
-      "main": [[{"node": "Auth OK?", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Auth OK?": {
       "main": [
-        [{"node": "Supabase -- SELECT Content Items", "type": "main", "index": 0}],
-        [{"node": "401 Unauthorized", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Supabase -- SELECT Content Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Supabase -- SELECT Content Items": {
-      "main": [[{"node": "Organize by Status", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Organize by Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Organize by Status": {
-      "main": [[{"node": "List -- Response", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "List -- Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {

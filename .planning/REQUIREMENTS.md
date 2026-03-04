@@ -80,12 +80,12 @@ Requirements for this release. Each maps to roadmap phases.
 
 ### UI/UX
 
-- [ ] **UI-01**: Premium animations -- staggered reveals, glassmorphism touches, smooth transitions
-- [ ] **UI-02**: Keep existing color scheme (#16a34a green, #0f172a dark) and 3-tab layout
-- [ ] **UI-03**: Fix CSS stagger animation classes 5-6 (only 1-4 defined in v1)
-- [ ] **UI-04**: Store ICP summary from Phase 1 response in frontend state (currently lost)
+- [x] **UI-01**: Premium animations -- staggered reveals, glassmorphism touches, smooth transitions
+- [x] **UI-02**: Keep existing color scheme (#16a34a green, #0f172a dark) and 3-tab layout
+- [x] **UI-03**: Fix CSS stagger animation classes 5-6 (only 1-4 defined in v1)
+- [x] **UI-04**: Store ICP summary from Phase 1 response in frontend state (currently lost)
 - [x] **UI-05**: Remove fake "estimated time remaining" from progress bar
-- [ ] **UI-06**: Deploy frontend to Vercel or Netlify as static site
+- [ ] **UI-06**: Deploy frontend to Vercel or Netlify as static site (deferred to project end)
 
 ## Future Requirements (Post-v2)
 
@@ -178,12 +178,12 @@ Requirements for this release. Each maps to roadmap phases.
 | TREND-01 | Phase 11: Trend Intelligence | Pending |
 | TREND-02 | Phase 11: Trend Intelligence | Pending |
 | TREND-03 | Phase 11: Trend Intelligence | Pending |
-| UI-01 | Phase 5: Frontend Migration + UI | Pending |
-| UI-02 | Phase 5: Frontend Migration + UI | Pending |
-| UI-03 | Phase 5: Frontend Migration + UI | Pending |
-| UI-04 | Phase 5: Frontend Migration + UI | Pending |
+| UI-01 | Phase 5: Frontend Migration + UI | Complete |
+| UI-02 | Phase 5: Frontend Migration + UI | Complete |
+| UI-03 | Phase 5: Frontend Migration + UI | Complete |
+| UI-04 | Phase 5: Frontend Migration + UI | Complete |
 | UI-05 | Phase 4: Progress Tracking | Complete |
-| UI-06 | Phase 5: Frontend Migration + UI | Pending |
+| UI-06 | Phase 5: Frontend Migration + UI | Deferred |
 
 **Coverage:**
 - v2 requirements: 50 total
@@ -192,4 +192,4 @@ Requirements for this release. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-03-03 after Phase 4 completion*
+*Last updated: 2026-03-03 after Phase 5 completion*

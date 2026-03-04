@@ -13,7 +13,10 @@
       "id": "aa-webhook-001",
       "name": "Approval Action Webhook",
       "type": "n8n-nodes-base.webhook",
-      "position": [0, 300],
+      "position": [
+        0,
+        300
+      ],
       "typeVersion": 2,
       "webhookId": "eluxr-approval-action"
     },
@@ -25,7 +28,10 @@
       "name": "Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [220, 300]
+      "position": [
+        220,
+        300
+      ]
     },
     {
       "parameters": {
@@ -55,7 +61,10 @@
       "name": "Auth OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [440, 300]
+      "position": [
+        440,
+        300
+      ]
     },
     {
       "parameters": {
@@ -68,7 +77,10 @@
       "id": "aa-401-004",
       "name": "401 Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
-      "position": [660, 500],
+      "position": [
+        660,
+        500
+      ],
       "typeVersion": 1.1
     },
     {
@@ -139,7 +151,10 @@
       "id": "aa-switch-005",
       "name": "Route Action",
       "type": "n8n-nodes-base.switch",
-      "position": [660, 100],
+      "position": [
+        660,
+        100
+      ],
       "typeVersion": 3.2
     },
     {
@@ -151,7 +166,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
             },
             {
               "name": "apikey",
@@ -177,7 +192,10 @@
       "id": "aa-patch-approve-006",
       "name": "Supabase -- PATCH Approve",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [880, -100],
+      "position": [
+        880,
+        -100
+      ],
       "typeVersion": 4.2
     },
     {
@@ -189,7 +207,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
             },
             {
               "name": "apikey",
@@ -215,7 +233,10 @@
       "id": "aa-patch-reject-007",
       "name": "Supabase -- PATCH Reject",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [880, 100],
+      "position": [
+        880,
+        100
+      ],
       "typeVersion": 4.2
     },
     {
@@ -227,7 +248,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
             },
             {
               "name": "apikey",
@@ -253,7 +274,10 @@
       "id": "aa-patch-edit-008",
       "name": "Supabase -- PATCH Edit",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [880, 300],
+      "position": [
+        880,
+        300
+      ],
       "typeVersion": 4.2
     },
     {
@@ -265,7 +289,10 @@
       "id": "aa-response-009",
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
-      "position": [1100, 100],
+      "position": [
+        1100,
+        100
+      ],
       "typeVersion": 1.1
     },
     {
@@ -279,39 +306,118 @@
       "id": "aa-fallback-010",
       "name": "400 Bad Request",
       "type": "n8n-nodes-base.respondToWebhook",
-      "position": [880, 500],
+      "position": [
+        880,
+        500
+      ],
       "typeVersion": 1.1
     }
   ],
   "connections": {
     "Approval Action Webhook": {
-      "main": [[{"node": "Auth Validator", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Auth Validator": {
-      "main": [[{"node": "Auth OK?", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Auth OK?": {
       "main": [
-        [{"node": "Route Action", "type": "main", "index": 0}],
-        [{"node": "401 Unauthorized", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Route Action": {
       "main": [
-        [{"node": "Supabase -- PATCH Approve", "type": "main", "index": 0}],
-        [{"node": "Supabase -- PATCH Reject", "type": "main", "index": 0}],
-        [{"node": "Supabase -- PATCH Edit", "type": "main", "index": 0}],
-        [{"node": "400 Bad Request", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Supabase -- PATCH Approve",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase -- PATCH Reject",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase -- PATCH Edit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "400 Bad Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Supabase -- PATCH Approve": {
-      "main": [[{"node": "Respond Success", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Supabase -- PATCH Reject": {
-      "main": [[{"node": "Respond Success", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Supabase -- PATCH Edit": {
-      "main": [[{"node": "Respond Success", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {

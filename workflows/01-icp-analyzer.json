@@ -14,7 +14,10 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "eluxr-phase1-analyzer"
     },
     {
@@ -25,7 +28,10 @@
       "name": "Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [220, 0]
+      "position": [
+        220,
+        0
+      ]
     },
     {
       "parameters": {
@@ -55,7 +61,10 @@
       "name": "Auth OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [440, 0]
+      "position": [
+        440,
+        0
+      ]
     },
     {
       "parameters": {
@@ -69,7 +78,10 @@
       "name": "401 Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [660, 200]
+      "position": [
+        660,
+        200
+      ]
     },
     {
       "parameters": {
@@ -79,7 +91,10 @@
       "name": "Prepare Perplexity Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, -200]
+      "position": [
+        660,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -89,7 +104,9 @@
         "nodeCredentialType": "perplexityApi",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": [{}]
+          "parameters": [
+            {}
+          ]
         },
         "sendBody": true,
         "specifyBody": "json",
@@ -102,7 +119,10 @@
       "name": "Perplexity -- Market Research",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, -200],
+      "position": [
+        880,
+        -200
+      ],
       "credentials": {
         "perplexityApi": {
           "id": "3rYRY1C2K9o0DDXI",
@@ -118,7 +138,10 @@
       "name": "Prepare ICP Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, -200]
+      "position": [
+        1100,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -151,7 +174,10 @@
       "name": "Claude -- ICP Generator",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, -200],
+      "position": [
+        1320,
+        -200
+      ],
       "credentials": {
         "anthropicApi": {
           "id": "cZwkXj4ZfHTkpBtT",
@@ -167,7 +193,10 @@
       "name": "Parse ICP Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, -200]
+      "position": [
+        1540,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -178,7 +207,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
             },
             {
               "name": "apikey",
@@ -205,7 +234,10 @@
       "name": "Supabase -- UPSERT ICP",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, -200]
+      "position": [
+        1760,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -217,39 +249,118 @@
       "name": "Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1980, -200]
+      "position": [
+        1980,
+        -200
+      ]
     }
   ],
   "connections": {
     "Webhook": {
-      "main": [[{ "node": "Auth Validator", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Auth Validator": {
-      "main": [[{ "node": "Auth OK?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Auth OK?": {
       "main": [
-        [{ "node": "Prepare Perplexity Request", "type": "main", "index": 0 }],
-        [{ "node": "401 Unauthorized", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Prepare Perplexity Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Prepare Perplexity Request": {
-      "main": [[{ "node": "Perplexity -- Market Research", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Perplexity -- Market Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Perplexity -- Market Research": {
-      "main": [[{ "node": "Prepare ICP Prompt", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Prepare ICP Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare ICP Prompt": {
-      "main": [[{ "node": "Claude -- ICP Generator", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Claude -- ICP Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Claude -- ICP Generator": {
-      "main": [[{ "node": "Parse ICP Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parse ICP Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse ICP Response": {
-      "main": [[{ "node": "Supabase -- UPSERT ICP", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Supabase -- UPSERT ICP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Supabase -- UPSERT ICP": {
-      "main": [[{ "node": "Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
