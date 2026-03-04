@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-03-04T03:44:26.110Z"
-last_activity: "2026-03-03 - Completed 06-01: products table migration + orchestrator webhook callback restructure."
+last_updated: "2026-03-04T03:49:57Z"
+last_activity: "2026-03-04 - Completed 06-03: Products card, platform selector, and pipeline trigger updates on Setup tab."
 progress:
   total_phases: 11
   completed_phases: 5
   total_plans: 27
-  completed_plans: 22
-  percent: 81
+  completed_plans: 24
+  percent: 88
 ---
 
 # State: ELUXR Magic Content Engine v2
@@ -19,24 +19,24 @@ progress:
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 6 (Content Pipeline). Plan 01 complete, executing plan 02 next.
+**Current Focus:** Phase 6 (Content Pipeline). Plans 01-03 complete, executing plan 04 next.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 6 of 11 (Content Pipeline)
-**Plan:** 1 of 6 complete
-**Status:** Executing Phase 6. Plan 06-01 (schema + orchestrator) complete.
-**Last activity:** 2026-03-03 - Completed 06-01: products table migration + orchestrator webhook callback restructure.
+**Plan:** 3 of 6 complete
+**Status:** Executing Phase 6. Plan 06-03 (frontend products + platforms) complete.
+**Last activity:** 2026-03-04 - Completed 06-03: Products card, platform selector, and pipeline trigger updates on Setup tab.
 
 **Progress:**
-[████████░░] 81%
+[█████████░] 88%
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
 Phase  3: Workflow Decomposition      [### COMPLETE ######## ] 6/6 plans
 Phase  4: Progress Tracking           [### COMPLETE ######## ] 3/3 plans
 Phase  5: Frontend Migration + UI     [### COMPLETE ######## ] 4/4 plans (Vercel deferred)
-Phase  6: Content Pipeline            [##                    ] 1/6 plans
+Phase  6: Content Pipeline            [######                ] 3/6 plans
 Phase  7: Approval Queue              [ . . . . . . . . . . ] 0%
 Phase  8: Calendar + Scheduling       [ . . . . . . . . . . ] 0%
 Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
@@ -56,6 +56,8 @@ Overall: 25/50 requirements complete (50%)
 | Phases complete | 4 |
 | Current streak | 29 plans |
 | Phase 06 P01 | 4 | 2 tasks | 2 files |
+| Phase 06 P02 | 4 | 1 tasks | 1 files |
+| Phase 06 P03 | 3 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -126,6 +128,12 @@ Overall: 25/50 requirements complete (50%)
 | Shared secret (X-Pipeline-Secret) protects callback endpoint | Callback comes from n8n workflows not browser; Auth Validator not needed; simple header check | 6 |
 | Auth token stored in pipeline_runs metadata for passthrough | Original user JWT recovered from metadata on each callback, forwarded to sub-workflows | 6 |
 | Fire-and-forget with 10s timeout + neverError | Orchestrator does not wait for sub-workflow response; callback triggers next step | 6 |
+| Jina Reader API via HTTP GET for website scraping | Zero-config, free tier 20 RPM, simpler than native n8n node | 6 |
+| Delete-then-insert for products (not UPSERT) | Clean slate per scrape; handles removed products correctly | 6 |
+| Sequential Perplexity research (3 calls) | Stay within rate limits; each call accumulates context for final ICP synthesis | 6 |
+| Platform selector promoted from Advanced Options to primary form element | Users need to see and configure target platforms before generation; should not be hidden | 6 |
+| Products textarea removed; products from Supabase table | Scraped products stored in products table by ICP Analyzer; manual text entry replaced by CRUD card | 6 |
+| Product removal uses is_active=false soft delete | Preserves product history; products can be re-activated if needed | 6 |
 
 ### Known Issues
 
@@ -160,15 +168,15 @@ Overall: 25/50 requirements complete (50%)
 ## Session Continuity
 
 ### Last Session
-- **Date:** 2026-03-03
-- **Activity:** Completed 06-01: products table migration + orchestrator webhook callback restructure.
-- **Outcome:** Products table with RLS created. 12 columns added across 4 tables. Orchestrator restructured from sync chain to callback pattern. Mark Failed error path added.
+- **Date:** 2026-03-04
+- **Activity:** Completed 06-03: Products card, platform selector, and pipeline trigger updates on Setup tab.
+- **Outcome:** Collapsible products dropdown card with inline editing. Platform selector promoted to primary form element. handleFormSubmit sends platforms + month to orchestrator. loadProducts called on login and after ICP analysis step.
 
 ### Next Session
-- **Expected:** Execute Phase 6, Plan 02 (ICP Analyzer overhaul)
-- **Prerequisites:** 06-01 complete (products table + orchestrator callback pattern ready)
-- **Entry point:** `/gsd:execute-phase 06-02`
+- **Expected:** Execute Phase 6, Plan 04 (Theme Generator overhaul)
+- **Prerequisites:** 06-01 complete (schema), 06-02 complete (ICP Analyzer), 06-03 complete (frontend products + platforms)
+- **Entry point:** `/gsd:execute-phase 06-04`
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-03 (06-01 complete)*
+*Last updated: 2026-03-04 (06-03 complete)*

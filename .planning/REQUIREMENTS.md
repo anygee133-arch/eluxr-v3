@@ -38,7 +38,7 @@ Requirements for this release. Each maps to roadmap phases.
 - [x] **PIPE-03**: Daily content generation producing platform-specific posts for LinkedIn, Instagram, X, YouTube
 - [ ] **PIPE-04**: AI image prompt generation for each post via Claude
 - [ ] **PIPE-05**: Video script generation (hook/setup/value/CTA structure) via Claude
-- [ ] **PIPE-06**: One post per platform per day (4 platforms = 4 posts/day max)
+- [x] **PIPE-06**: One post per platform per day (4 platforms = 4 posts/day max)
 - [x] **PIPE-07**: Fix Switch node routing bug -- ensure text/image/video branches are mutually exclusive
 
 ### Approval Queue
@@ -154,7 +154,7 @@ Requirements for this release. Each maps to roadmap phases.
 | PIPE-03 | Phase 6: Content Pipeline | Complete |
 | PIPE-04 | Phase 6: Content Pipeline | Pending |
 | PIPE-05 | Phase 6: Content Pipeline | Pending |
-| PIPE-06 | Phase 6: Content Pipeline | Pending |
+| PIPE-06 | Phase 6: Content Pipeline | Complete |
 | PIPE-07 | Phase 3: Workflow Decomposition | Complete |
 | APPR-01 | Phase 7: Approval Queue | Pending |
 | APPR-02 | Phase 7: Approval Queue | Pending |
