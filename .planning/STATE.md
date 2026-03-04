@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-03-04T03:57:02.917Z"
-last_activity: "2026-03-04 - Completed 06-04: Theme Generator overhauled with Netflix model, product assignment, and orchestrator callback."
+last_updated: "2026-03-04T04:06:24.189Z"
+last_activity: "2026-03-04 - Completed 06-05: Content Studio overhauled with weekly batch generation, KIE images, video scripts, and Perplexity trending audio."
 progress:
   total_phases: 11
   completed_phases: 5
   total_plans: 27
-  completed_plans: 25
-  percent: 93
+  completed_plans: 26
+  percent: 96
 ---
 
 # State: ELUXR Magic Content Engine v2
@@ -19,24 +19,24 @@ progress:
 
 **Core Value:** A business can go from entering their URL to having a full month of platform-specific, trend-aware social media content generated, reviewed, and ready to post -- with zero manual content creation.
 
-**Current Focus:** Phase 6 (Content Pipeline). Plans 01-04 complete, executing plan 05 next.
+**Current Focus:** Phase 6 (Content Pipeline). Plans 01-05 complete, executing plan 06 next.
 
 ## Current Position
 
 **Milestone:** v2 Multi-Tenant SaaS
 **Phase:** 6 of 11 (Content Pipeline)
-**Plan:** 4 of 6 complete
-**Status:** Executing Phase 6. Plan 06-04 (Theme Generator overhaul) complete.
-**Last activity:** 2026-03-04 - Completed 06-04: Theme Generator overhauled with Netflix model, product assignment, and orchestrator callback.
+**Plan:** 5 of 6 complete
+**Status:** Executing Phase 6. Plan 06-05 (Content Studio overhaul) complete.
+**Last activity:** 2026-03-04 - Completed 06-05: Content Studio overhauled with weekly batch generation, KIE images, video scripts, and Perplexity trending audio.
 
 **Progress:**
-[█████████░] 93%
+[██████████] 96%
 Phase  1: Security + DB Foundation    [### COMPLETE ######## ] 3/3 plans
 Phase  2: Authentication              [### COMPLETE ######## ] 5/5 plans
 Phase  3: Workflow Decomposition      [### COMPLETE ######## ] 6/6 plans
 Phase  4: Progress Tracking           [### COMPLETE ######## ] 3/3 plans
 Phase  5: Frontend Migration + UI     [### COMPLETE ######## ] 4/4 plans (Vercel deferred)
-Phase  6: Content Pipeline            [########              ] 4/6 plans
+Phase  6: Content Pipeline            [##########            ] 5/6 plans
 Phase  7: Approval Queue              [ . . . . . . . . . . ] 0%
 Phase  8: Calendar + Scheduling       [ . . . . . . . . . . ] 0%
 Phase  9: AI Chat                     [ . . . . . . . . . . ] 0%
@@ -59,6 +59,7 @@ Overall: 25/50 requirements complete (50%)
 | Phase 06 P02 | 4 | 1 tasks | 1 files |
 | Phase 06 P03 | 3 | 1 tasks | 1 files |
 | Phase 06 P04 | 3 | 1 tasks | 1 files |
+| Phase 06 P05 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,8 @@ Overall: 25/50 requirements complete (50%)
 | Extract Params code node separates auth data from pipeline params | Prevents downstream nodes from complex nested references; clean flat object | 6 |
 | Extract Campaign ID code node after UPSERT | PostgREST UPSERT returns array; safely extracts campaign_id and carries forward context | 6 |
 | Error handling path mirrors 01-ICP-Analyzer pattern across sub-workflows | Consistent failure behavior: Handle Error -> Has Callback URL? -> Error Callback -> Respond Error | 6 |
+| Single Claude call per day generates all platform posts plus image prompt | 7 calls instead of 28 (1 per day, not 1 per platform per day); reduces API usage and rate limit risk | 6 |
+| KIE image polling embedded inside Content Studio loop | Not separate workflow calls; keeps all 7 image generations within single n8n execution; saves execution budget | 6 |
 
 ### Known Issues
 
@@ -173,14 +176,14 @@ Overall: 25/50 requirements complete (50%)
 
 ### Last Session
 - **Date:** 2026-03-04
-- **Activity:** Completed 06-04: Theme Generator overhauled with Netflix model, product assignment, and orchestrator callback.
-- **Outcome:** 02-Theme-Generator overhauled from 12 to 23 nodes. Reads ICP + products from Supabase, generates Netflix model via Claude (show name, 4 seasons, progressive arc, product-per-day), stores campaign with show_name and 4 theme rows with season_arc/inspirational_theme/content_types JSONB, calls orchestrator callback with step=2.
+- **Activity:** Completed 06-05: Content Studio overhauled with weekly batch generation pipeline.
+- **Outcome:** 04-Content-Studio overhauled from 17 to 49 nodes. Weekly batch generation: 7 Claude calls for daily posts (all platforms per call), Perplexity trending audio research, 3-4 video scripts via Claude, batch Supabase insert, 7 KIE hero images with embedded polling loop, orchestrator callback with step=week_number+2.
 
 ### Next Session
-- **Expected:** Execute Phase 6, Plan 05 (Content Studio overhaul)
-- **Prerequisites:** 06-01 complete (schema), 06-02 complete (ICP Analyzer), 06-03 complete (frontend), 06-04 complete (Theme Generator)
-- **Entry point:** `/gsd:execute-phase 06-05`
+- **Expected:** Execute Phase 6, Plan 06 (E2E verification)
+- **Prerequisites:** 06-01 through 06-05 complete
+- **Entry point:** `/gsd:execute-phase 06-06`
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-04 (06-04 complete)*
+*Last updated: 2026-03-04 (06-05 complete)*
