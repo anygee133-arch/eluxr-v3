@@ -14,7 +14,10 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 300],
+      "position": [
+        0,
+        300
+      ],
       "webhookId": "eluxr-generate-content-orch"
     },
     {
@@ -25,7 +28,10 @@
       "name": "Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [220, 300]
+      "position": [
+        220,
+        300
+      ]
     },
     {
       "parameters": {
@@ -55,7 +61,10 @@
       "name": "Auth OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [440, 300]
+      "position": [
+        440,
+        300
+      ]
     },
     {
       "parameters": {
@@ -69,7 +78,10 @@
       "name": "401 Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [660, 500]
+      "position": [
+        660,
+        500
+      ]
     },
     {
       "parameters": {
@@ -100,7 +112,10 @@
       "name": "Check Existing Run",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 100],
+      "position": [
+        660,
+        100
+      ],
       "alwaysOutputData": true
     },
     {
@@ -131,7 +146,10 @@
       "name": "Has Running?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [880, 100]
+      "position": [
+        880,
+        100
+      ]
     },
     {
       "parameters": {
@@ -145,17 +163,23 @@
       "name": "Return Existing Run",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1100, 0]
+      "position": [
+        1100,
+        0
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Reference Auth Validator output by name (HTTP Request replaced $json)\nconst authData = $('Auth Validator').item.json;\nconst userId = authData.user_id;\nconst email = authData.email || '';\nconst body = authData.body || {};\n\n// Capture the original Authorization header for passing to sub-workflows\nconst webhookData = $('Webhook').item.json;\nconst authHeader = (webhookData.headers || {}).authorization || (webhookData.headers || {}).Authorization || '';\n\nreturn {\n  json: {\n    user_id: userId,\n    pipeline_type: 'full_pipeline',\n    status: 'running',\n    current_step: 0,\n    total_steps: 6,\n    step_label: 'Starting...',\n    step_progress: 0,\n    started_at: new Date().toISOString(),\n    metadata: {\n      business_url: body.business_url || '',\n      industry: body.industry || '',\n      month: body.month || '',\n      products: body.products || '',\n      brand_voice: body.brand_voice || '',\n      platforms: body.platforms || [],\n      auth_token: authHeader\n    },\n    body: body,\n    email: email,\n    auth_header: authHeader\n  }\n};"
+        "jsCode": "// Reference Auth Validator output by name (HTTP Request replaced $json)\nconst authData = $('Auth Validator').item.json;\nconst userId = authData.user_id;\nconst email = authData.email || '';\nconst body = authData.body || {};\n\n// Capture the original Authorization header for passing to sub-workflows\nconst webhookData = $('Webhook').item.json;\nconst authHeader = (webhookData.headers || {}).authorization || (webhookData.headers || {}).Authorization || '';\n\nreturn {\n  json: {\n    user_id: userId,\n    pipeline_type: 'full_pipeline',\n    status: 'running',\n    current_step: 0,\n    total_steps: 6,\n    step_label: 'Starting...',\n    step_progress: 0,\n    started_at: new Date().toISOString(),\n    metadata: {\n      business_url: body.business_url || '',\n      industry: body.industry || '',\n      month: body.month || new Date().toISOString().slice(0, 7),\n      products: body.products || '',\n      brand_voice: body.brand_voice || '',\n      platforms: (body.platforms && body.platforms.length > 0) ? body.platforms : ['linkedin', 'instagram', 'x', 'youtube'],\n      auth_token: authHeader\n    },\n    body: body,\n    email: email,\n    auth_header: authHeader\n  }\n};"
       },
       "id": "orch-0001-4000-8000-000000000008",
       "name": "Create Pipeline Run",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 200]
+      "position": [
+        1100,
+        200
+      ]
     },
     {
       "parameters": {
@@ -191,7 +215,10 @@
       "name": "INSERT pipeline_runs",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 200]
+      "position": [
+        1320,
+        200
+      ]
     },
     {
       "parameters": {
@@ -201,7 +228,10 @@
       "name": "Extract Run ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, 200]
+      "position": [
+        1540,
+        200
+      ]
     },
     {
       "parameters": {
@@ -215,7 +245,10 @@
       "name": "Respond 202",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1760, 200]
+      "position": [
+        1760,
+        200
+      ]
     },
     {
       "parameters": {
@@ -251,7 +284,10 @@
       "name": "Update Step 1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1980, 200]
+      "position": [
+        1980,
+        200
+      ]
     },
     {
       "parameters": {
@@ -265,6 +301,10 @@
               "value": "={{ $('Extract Run ID').item.json.auth_header }}"
             },
             {
+              "name": "X-Pipeline-Secret",
+              "value": "eluxr-pipeline-internal-2024"
+            },
+            {
               "name": "Content-Type",
               "value": "application/json"
             }
@@ -274,7 +314,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ business_url: $('Extract Run ID').item.json.body.business_url || '', industry: $('Extract Run ID').item.json.body.industry || '', month: $('Extract Run ID').item.json.body.month || '', products: $('Extract Run ID').item.json.body.products || '', brand_voice: $('Extract Run ID').item.json.body.brand_voice || '', platforms: $('Extract Run ID').item.json.body.platforms || [], pipeline_run_id: $('Extract Run ID').item.json.pipeline_run_id, callback_url: $('Extract Run ID').item.json.callback_url, user_id: $('Extract Run ID').item.json.user_id }) }}",
         "options": {
-          "timeout": 10000,
+          "timeout": 300000,
           "response": {
             "response": {
               "neverError": true
@@ -286,21 +326,27 @@
       "name": "Fire 01-ICP-Analyzer",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2200, 200],
+      "position": [
+        2200,
+        200
+      ],
       "alwaysOutputData": true
     },
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "eluxr-pipeline-callback",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "id": "orch-0001-4000-8000-000000000030",
       "name": "Callback Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 800],
+      "position": [
+        0,
+        800
+      ],
       "webhookId": "eluxr-pipeline-callback-orch"
     },
     {
@@ -331,7 +377,10 @@
       "name": "Valid Secret?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [220, 800]
+      "position": [
+        220,
+        800
+      ]
     },
     {
       "parameters": {
@@ -341,7 +390,10 @@
       "name": "403 Forbidden",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 1000]
+      "position": [
+        440,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -351,7 +403,10 @@
       "name": "Route Next Stage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 800]
+      "position": [
+        440,
+        800
+      ]
     },
     {
       "parameters": {
@@ -433,7 +488,10 @@
       "name": "Action Switch",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
-      "position": [660, 800]
+      "position": [
+        660,
+        800
+      ]
     },
     {
       "parameters": {
@@ -463,23 +521,35 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ current_step: $json.next_step, step_label: $json.step_label, step_progress: 0, status: 'running', updated_at: new Date().toISOString() }) }}",
-        "options": {}
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "orch-0001-4000-8000-000000000035",
       "name": "Update Next Step Progress",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, 600]
+      "position": [
+        880,
+        600
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Fetch pipeline_runs metadata to recover auth_token and context\nconst runId = $json.pipeline_run_id;\nconst nextStep = $('Route Next Stage').item.json.next_step;\nconst webhookPath = $('Route Next Stage').item.json.webhook_path;\nconst weekNumber = $('Route Next Stage').item.json.week_number;\nconst authToken = $('Route Next Stage').item.json.auth_token;\nconst context = $('Route Next Stage').item.json.context;\n\n// Get pipeline_runs row to recover metadata\nconst patchResult = $input.item.json;\nconst row = Array.isArray(patchResult) ? patchResult[0] : patchResult;\nconst metadata = row.metadata || {};\n\nreturn {\n  json: {\n    webhook_url: 'https://flowbound.app.n8n.cloud/webhook/' + webhookPath,\n    fire_body: {\n      pipeline_run_id: runId,\n      callback_url: 'https://flowbound.app.n8n.cloud/webhook/eluxr-pipeline-callback',\n      user_id: row.user_id || metadata.user_id || '',\n      business_url: metadata.business_url || context.business_url || '',\n      industry: metadata.industry || context.industry || '',\n      month: metadata.month || context.month || '',\n      platforms: metadata.platforms || context.platforms || [],\n      brand_voice: metadata.brand_voice || context.brand_voice || '',\n      week_number: weekNumber\n    },\n    auth_token: authToken || metadata.auth_token || ''\n  }\n};"
+        "jsCode": "// Recover pipeline_run_id from Route Next Stage (callback body), NOT from PATCH response\n// PATCH response has 'id' field, not 'pipeline_run_id' \u2014 this was causing undefined propagation\nconst routeData = $('Route Next Stage').item.json;\nconst runId = routeData.pipeline_run_id;\nconst nextStep = routeData.next_step;\nconst webhookPath = routeData.webhook_path;\nconst weekNumber = routeData.week_number;\nconst authToken = routeData.auth_token;\nconst context = routeData.context || {};\n\n// Get pipeline_runs row to recover metadata\nconst patchResult = $input.item.json;\nconst row = Array.isArray(patchResult) ? patchResult[0] : patchResult;\nconst metadata = row.metadata || {};\n\nreturn {\n  json: {\n    webhook_url: 'https://flowbound.app.n8n.cloud/webhook/' + webhookPath,\n    fire_body: {\n      pipeline_run_id: runId,\n      callback_url: 'https://flowbound.app.n8n.cloud/webhook/eluxr-pipeline-callback',\n      user_id: row.user_id || metadata.user_id || '',\n      business_url: metadata.business_url || context.business_url || '',\n      industry: metadata.industry || context.industry || '',\n      month: metadata.month || context.month || new Date().toISOString().slice(0, 7),\n      platforms: (metadata.platforms && metadata.platforms.length > 0) ? metadata.platforms : (context.platforms && context.platforms.length > 0) ? context.platforms : ['linkedin', 'instagram', 'x', 'youtube'],\n      brand_voice: metadata.brand_voice || context.brand_voice || '',\n      week_number: weekNumber\n    },\n    auth_token: authToken || metadata.auth_token || ''\n  }\n};"
       },
       "id": "orch-0001-4000-8000-000000000036",
       "name": "Prepare Fire Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 600]
+      "position": [
+        1100,
+        600
+      ]
     },
     {
       "parameters": {
@@ -493,6 +563,10 @@
               "value": "={{ $json.auth_token }}"
             },
             {
+              "name": "X-Pipeline-Secret",
+              "value": "eluxr-pipeline-internal-2024"
+            },
+            {
               "name": "Content-Type",
               "value": "application/json"
             }
@@ -502,7 +576,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.fire_body) }}",
         "options": {
-          "timeout": 10000,
+          "timeout": 300000,
           "response": {
             "response": {
               "neverError": true
@@ -514,7 +588,10 @@
       "name": "Fire Next Stage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 600],
+      "position": [
+        1320,
+        600
+      ],
       "alwaysOutputData": true
     },
     {
@@ -525,7 +602,10 @@
       "name": "Callback Response OK",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, 600]
+      "position": [
+        1540,
+        600
+      ]
     },
     {
       "parameters": {
@@ -561,7 +641,10 @@
       "name": "Mark Complete",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, 800]
+      "position": [
+        880,
+        800
+      ]
     },
     {
       "parameters": {
@@ -571,7 +654,10 @@
       "name": "Callback Response Complete",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 800]
+      "position": [
+        1100,
+        800
+      ]
     },
     {
       "parameters": {
@@ -607,7 +693,10 @@
       "name": "Mark Failed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, 1000]
+      "position": [
+        880,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -617,155 +706,254 @@
       "name": "Callback Response Failed",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 1000]
+      "position": [
+        1100,
+        1000
+      ]
     }
   ],
   "connections": {
     "Webhook": {
       "main": [
         [
-          { "node": "Auth Validator", "type": "main", "index": 0 }
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Auth Validator": {
       "main": [
         [
-          { "node": "Auth OK?", "type": "main", "index": 0 }
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Auth OK?": {
       "main": [
         [
-          { "node": "Check Existing Run", "type": "main", "index": 0 }
+          {
+            "node": "Check Existing Run",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "401 Unauthorized", "type": "main", "index": 0 }
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Check Existing Run": {
       "main": [
         [
-          { "node": "Has Running?", "type": "main", "index": 0 }
+          {
+            "node": "Has Running?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Has Running?": {
       "main": [
         [
-          { "node": "Return Existing Run", "type": "main", "index": 0 }
+          {
+            "node": "Return Existing Run",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Create Pipeline Run", "type": "main", "index": 0 }
+          {
+            "node": "Create Pipeline Run",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Create Pipeline Run": {
       "main": [
         [
-          { "node": "INSERT pipeline_runs", "type": "main", "index": 0 }
+          {
+            "node": "INSERT pipeline_runs",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "INSERT pipeline_runs": {
       "main": [
         [
-          { "node": "Extract Run ID", "type": "main", "index": 0 }
+          {
+            "node": "Extract Run ID",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Run ID": {
       "main": [
         [
-          { "node": "Respond 202", "type": "main", "index": 0 }
+          {
+            "node": "Respond 202",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Respond 202": {
       "main": [
         [
-          { "node": "Update Step 1", "type": "main", "index": 0 }
+          {
+            "node": "Update Step 1",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Update Step 1": {
       "main": [
         [
-          { "node": "Fire 01-ICP-Analyzer", "type": "main", "index": 0 }
+          {
+            "node": "Fire 01-ICP-Analyzer",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Callback Webhook": {
       "main": [
         [
-          { "node": "Valid Secret?", "type": "main", "index": 0 }
+          {
+            "node": "Valid Secret?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Valid Secret?": {
       "main": [
         [
-          { "node": "Route Next Stage", "type": "main", "index": 0 }
+          {
+            "node": "Route Next Stage",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "403 Forbidden", "type": "main", "index": 0 }
+          {
+            "node": "403 Forbidden",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Route Next Stage": {
       "main": [
         [
-          { "node": "Action Switch", "type": "main", "index": 0 }
+          {
+            "node": "Action Switch",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Action Switch": {
       "main": [
         [
-          { "node": "Update Next Step Progress", "type": "main", "index": 0 }
+          {
+            "node": "Update Next Step Progress",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Mark Complete", "type": "main", "index": 0 }
+          {
+            "node": "Mark Complete",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Mark Failed", "type": "main", "index": 0 }
+          {
+            "node": "Mark Failed",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Update Next Step Progress": {
       "main": [
         [
-          { "node": "Prepare Fire Payload", "type": "main", "index": 0 }
+          {
+            "node": "Prepare Fire Payload",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Prepare Fire Payload": {
       "main": [
         [
-          { "node": "Fire Next Stage", "type": "main", "index": 0 }
+          {
+            "node": "Fire Next Stage",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fire Next Stage": {
       "main": [
         [
-          { "node": "Callback Response OK", "type": "main", "index": 0 }
+          {
+            "node": "Callback Response OK",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Mark Complete": {
       "main": [
         [
-          { "node": "Callback Response Complete", "type": "main", "index": 0 }
+          {
+            "node": "Callback Response Complete",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Mark Failed": {
       "main": [
         [
-          { "node": "Callback Response Failed", "type": "main", "index": 0 }
+          {
+            "node": "Callback Response Failed",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
