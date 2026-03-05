@@ -213,7 +213,10 @@
       "name": "Read Weekly Topics",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 200],
+      "position": [
+        1320,
+        200
+      ],
       "alwaysOutputData": true
     },
     {
@@ -891,7 +894,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// After batch insert, prepare callback to orchestrator\nconst batchData = $('Prepare Batch Insert').item.json;\n\nreturn {\n  json: {\n    pipeline_run_id: batchData.pipeline_run_id,\n    callback_url: batchData.callback_url,\n    step: batchData.step,\n    week_number: batchData.week_number,\n    batch_count: batchData.batch_count\n  }\n};"
+        "jsCode": "// After batch insert, prepare callback to orchestrator\nconst batchData = $('Prepare Batch Insert').item.json;\n\n// If no callback_url (called directly from frontend, not orchestrator), skip callback\nif (!batchData.callback_url) {\n  return [];\n}\n\nreturn {\n  json: {\n    pipeline_run_id: batchData.pipeline_run_id,\n    callback_url: batchData.callback_url,\n    step: batchData.step,\n    week_number: batchData.week_number,\n    batch_count: batchData.batch_count\n  }\n};"
       },
       "id": "04-studio-0070",
       "name": "Prepare Callback",

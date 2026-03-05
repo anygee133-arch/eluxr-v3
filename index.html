@@ -6316,26 +6316,21 @@ async function generateTopics() {
 
     const data = await safeJson(response);
 
-    if (data.success && data.topics) {
-      weekTopics[currentWeek] = data.topics;
+    // Always read from Supabase to get topics with real IDs
+    const { data: { user } } = await window.supabase.auth.getUser();
+    const { data: topics } = await window.supabase
+      .from('weekly_topics')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('campaign_id', campaignId)
+      .eq('week_number', currentWeek)
+      .order('day_number', { ascending: true });
+
+    if (topics && topics.length > 0) {
+      weekTopics[currentWeek] = topics;
       showToast('Topics generated! Review and approve each one.', 'success');
     } else {
-      // Try to read from Supabase directly
-      const { data: { user } } = await window.supabase.auth.getUser();
-      const { data: topics } = await window.supabase
-        .from('weekly_topics')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('campaign_id', campaignId)
-        .eq('week_number', currentWeek)
-        .order('day_number', { ascending: true });
-
-      if (topics && topics.length > 0) {
-        weekTopics[currentWeek] = topics;
-        showToast('Topics generated!', 'success');
-      } else {
-        showToast('Failed to generate topics. Please try again.', 'error');
-      }
+      showToast('Failed to generate topics. Please try again.', 'error');
     }
   } catch (err) {
     console.error('generateTopics error:', err);
@@ -6438,8 +6433,18 @@ async function lockInAndGenerate() {
   document.getElementById('week-progress-text').textContent = 'Starting content generation for Week ' + currentWeek + '...';
 
   try {
-    // Call content studio for this week
-    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
+    // Get user for polling
+    const { data: { user } } = await window.supabase.auth.getUser();
+
+    // Count existing content before generation
+    const { count: existingCount } = await window.supabase
+      .from('content_items')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('campaign_id', campaignId);
+
+    // Fire off content studio (async — returns immediately)
+    await authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
       method: 'POST',
       body: JSON.stringify({
         campaign_id: campaignId,
@@ -6449,19 +6454,47 @@ async function lockInAndGenerate() {
       })
     });
 
-    // Simulate progress while waiting
+    // Poll Supabase for new content items (workflow runs in background)
     let progress = 10;
-    const progressInterval = setInterval(() => {
-      progress = Math.min(progress + 5, 90);
-      document.getElementById('week-progress-bar').style.width = progress + '%';
-    }, 3000);
+    const expectedItems = 7; // 7 days of content
+    const maxPolls = 60; // 5 minutes max (60 * 5s)
+    let polls = 0;
 
-    const data = await safeJson(response);
-    clearInterval(progressInterval);
+    document.getElementById('week-progress-text').textContent = 'Generating content for Week ' + currentWeek + '... This takes a few minutes.';
+
+    const pollForContent = () => new Promise((resolve, reject) => {
+      const interval = setInterval(async () => {
+        polls++;
+        try {
+          const { count: currentCount } = await window.supabase
+            .from('content_items')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('campaign_id', campaignId);
+
+          const newItems = (currentCount || 0) - (existingCount || 0);
+          progress = Math.min(10 + (newItems / expectedItems) * 85, 95);
+          document.getElementById('week-progress-bar').style.width = progress + '%';
+          document.getElementById('week-progress-text').textContent = 'Generating content... ' + newItems + ' of ' + expectedItems + ' days complete';
+
+          if (newItems >= expectedItems) {
+            clearInterval(interval);
+            resolve(true);
+          } else if (polls >= maxPolls) {
+            clearInterval(interval);
+            resolve(newItems > 0); // partial success if some items generated
+          }
+        } catch (e) {
+          console.error('Poll error:', e);
+        }
+      }, 5000);
+    });
+
+    const success = await pollForContent();
 
     // Complete
     document.getElementById('week-progress-bar').style.width = '100%';
-    document.getElementById('week-progress-text').textContent = 'Content generation complete!';
+    document.getElementById('week-progress-text').textContent = success ? 'Content generation complete!' : 'Content generation may still be running. Check the calendar shortly.';
 
     // Update campaign current_week in Supabase
     await window.supabase
@@ -6478,16 +6511,13 @@ async function lockInAndGenerate() {
       document.getElementById('week-complete').style.display = 'block';
       document.getElementById('completed-week-num').textContent = currentWeek;
 
-      // Mark current week tab as completed
       const tab = document.querySelector(`.week-tab[data-week="${currentWeek}"]`);
       if (tab) {
         tab.classList.remove('active');
         tab.classList.add('completed');
       }
 
-      // Refresh calendar data
       if (window.fetchAndDisplayCalendar) fetchAndDisplayCalendar();
-
       showToast('Week ' + currentWeek + ' content generated!', 'success');
     }, 1000);
   } catch (err) {
