@@ -742,64 +742,6 @@ details .details-content { padding: 20px; }
 .selected-count { font-weight: 600; color: var(--green); }
 .batch-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
-/* CHATBOX */
-.chatbox {
-  background: rgba(255, 255, 255, 0.42); border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: var(--radius-lg); overflow: hidden;
-  margin-top: 24px; transition: all 0.35s var(--transition);
-  backdrop-filter: blur(20px) saturate(1.3);
-  -webkit-backdrop-filter: blur(20px) saturate(1.3);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.04), 0 0 0 1px rgba(255,255,255,0.6) inset;
-}
-.chatbox:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.06), 0 0 0 1px rgba(255,255,255,0.7) inset; transform: translateY(-1px); }
-.chatbox-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px; background: rgba(248, 250, 253, 0.4); border-bottom: 1px solid rgba(241, 245, 249, 0.4);
-}
-.chatbox-header-left { display: flex; align-items: center; gap: 10px; }
-.chatbox-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--green-light); animation: pulse-dot 2s infinite;
-}
-@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-.chatbox-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.chatbox-messages {
-  height: 240px; overflow-y: auto; padding: 16px;
-  display: flex; flex-direction: column; gap: 12px;
-}
-.chat-msg {
-  max-width: 85%; padding: 12px 16px; border-radius: 12px;
-  font-size: 13px; line-height: 1.5; animation: msgSlideIn 0.3s var(--transition);
-}
-@keyframes msgSlideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.chat-msg.ai {
-  background: rgba(248, 250, 253, 0.6); color: var(--text-primary);
-  border-bottom-left-radius: 4px; align-self: flex-start;
-  border: 1px solid rgba(226, 232, 240, 0.3);
-}
-.chat-msg.user {
-  background: linear-gradient(135deg, var(--green), var(--green-light)); color: #fff;
-  border-bottom-right-radius: 4px; align-self: flex-end;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2);
-}
-.chatbox-input {
-  display: flex; gap: 8px; padding: 14px 16px;
-  border-top: 1px solid rgba(241, 245, 249, 0.4); background: rgba(255, 255, 255, 0.3);
-}
-.chatbox-input input {
-  flex: 1; padding: 10px 14px; border: 1px solid var(--border);
-  border-radius: 8px; font-family: 'DM Sans', sans-serif;
-  font-size: 13px; outline: none; transition: border-color 0.2s;
-}
-.chatbox-input input:focus { border-color: var(--green); }
-.chatbox-input button {
-  padding: 10px 18px; background: linear-gradient(135deg, var(--green), var(--green-light)); color: #fff;
-  border: none; border-radius: 10px; font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all 0.3s var(--transition); font-family: 'DM Sans', sans-serif;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
-}
-.chatbox-input button:hover { box-shadow: 0 4px 16px rgba(22, 163, 74, 0.35); transform: translateY(-1px); }
-
 /* EDIT TEXTAREA */
 .edit-textarea {
   width: 100%; min-height: 200px; padding: 16px;
@@ -1296,6 +1238,140 @@ details .details-content { padding: 20px; }
   color: var(--text-muted);
   font-size: 14px;
 }
+
+/* WEEK TABS & TOPIC CARDS */
+.week-tabs {
+  display: flex; gap: 4px; padding: 16px 20px; border-bottom: 1px solid rgba(226, 232, 240, 0.4);
+}
+.week-tab {
+  flex: 1; padding: 10px 16px; border: 1px solid rgba(226, 232, 240, 0.4);
+  border-radius: 10px; background: rgba(248, 250, 253, 0.4); color: var(--text-secondary);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.25s var(--transition); text-align: center;
+}
+.week-tab:hover:not(.locked):not(.active) { background: rgba(248, 250, 253, 0.7); color: var(--text-primary); }
+.week-tab.active {
+  background: linear-gradient(135deg, var(--green), var(--green-light)); color: #fff;
+  border-color: transparent; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+}
+.week-tab.locked { opacity: 0.4; cursor: not-allowed; }
+.week-tab.completed {
+  background: rgba(22, 163, 74, 0.1); color: var(--green);
+  border-color: rgba(22, 163, 74, 0.2);
+}
+.topic-card {
+  background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(226, 232, 240, 0.4);
+  border-radius: var(--radius-lg); padding: 16px; margin-bottom: 10px;
+  transition: all 0.3s var(--transition); display: flex; gap: 14px; align-items: flex-start;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+.topic-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.04); transform: translateY(-1px); }
+.topic-card.approved {
+  border-color: rgba(22, 163, 74, 0.3); background: rgba(240, 253, 244, 0.4);
+}
+.topic-card.regenerating { opacity: 0.6; pointer-events: none; }
+.topic-day-badge {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; background: rgba(248, 250, 253, 0.6);
+  color: var(--text-secondary); border: 1px solid rgba(226, 232, 240, 0.4);
+}
+.topic-card.approved .topic-day-badge {
+  background: var(--green); color: #fff; border-color: var(--green);
+}
+.topic-body { flex: 1; min-width: 0; }
+.topic-body h4 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
+.topic-body p { font-size: 13px; color: var(--text-secondary); margin: 0 0 8px; line-height: 1.4; }
+.topic-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.topic-tag {
+  display: inline-block; padding: 2px 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 600;
+}
+.topic-tag.angle { background: rgba(124, 58, 237, 0.1); color: var(--purple); }
+.topic-tag.product { background: rgba(22, 163, 74, 0.1); color: var(--green); }
+.topic-actions { display: flex; gap: 8px; }
+.topic-actions button {
+  padding: 6px 14px; border-radius: 8px; font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s var(--transition);
+  border: 1px solid transparent;
+}
+.btn-approve-topic {
+  background: var(--green); color: #fff; border-color: var(--green);
+}
+.btn-approve-topic:hover { background: var(--green-light); box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2); }
+.btn-regen-topic {
+  background: transparent; color: var(--text-secondary); border-color: rgba(226, 232, 240, 0.5);
+}
+.btn-regen-topic:hover { background: rgba(248, 250, 253, 0.6); color: var(--text-primary); }
+.topic-approved-label {
+  font-size: 12px; font-weight: 600; color: var(--green);
+  display: flex; align-items: center; gap: 4px;
+}
+
+/* PRODUCT IMAGE GALLERY */
+.product-thumb {
+  width: 48px; height: 48px; border-radius: 10px; overflow: hidden;
+  flex-shrink: 0; cursor: pointer; border: 2px solid rgba(226, 232, 240, 0.4);
+  transition: all 0.25s var(--transition); background: rgba(248, 250, 253, 0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+.product-thumb:hover { border-color: var(--green); transform: scale(1.05); box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15); }
+.product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.product-thumb .thumb-placeholder { font-size: 20px; opacity: 0.4; }
+.gallery-modal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(15, 18, 34, 0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  z-index: 1500; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s var(--transition);
+}
+.gallery-modal.visible { opacity: 1; pointer-events: auto; }
+.gallery-modal-content {
+  background: rgba(255, 255, 255, 0.92); border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-lg); padding: 28px; max-width: 700px; width: 90%;
+  max-height: 85vh; overflow-y: auto; position: relative;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.6) inset;
+  animation: modalSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes modalSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.gallery-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.gallery-header h3 { font-size: 18px; font-weight: 700; color: var(--text-primary); margin: 0; }
+.gallery-close {
+  width: 36px; height: 36px; border: none; background: rgba(248, 250, 253, 0.6);
+  border-radius: 10px; font-size: 18px; cursor: pointer; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+}
+.gallery-close:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.gallery-main-image {
+  position: relative; width: 100%; aspect-ratio: 4/3; border-radius: 12px;
+  overflow: hidden; background: rgba(248, 250, 253, 0.6); margin-bottom: 16px;
+}
+.gallery-main-image img { width: 100%; height: 100%; object-fit: contain; }
+.gallery-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: rgba(255, 255, 255, 0.85); color: var(--text-primary);
+  font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.2s;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.gallery-nav:hover { background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+.gallery-nav.prev { left: 12px; }
+.gallery-nav.next { right: 12px; }
+.gallery-counter { text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+.gallery-thumbs {
+  display: flex; gap: 8px; overflow-x: auto; padding: 4px 0;
+  scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.1) transparent;
+}
+.gallery-thumb {
+  width: 60px; height: 60px; border-radius: 8px; overflow: hidden;
+  flex-shrink: 0; cursor: pointer; border: 2px solid transparent;
+  transition: all 0.2s var(--transition); opacity: 0.6;
+}
+.gallery-thumb:hover { opacity: 0.9; }
+.gallery-thumb.active { border-color: var(--green); opacity: 1; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2); }
+.gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.gallery-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
 
 /* PLATFORM SELECTOR (promoted) */
 .platform-selector {
@@ -2039,7 +2115,7 @@ details .details-content { padding: 20px; }
     <span class="phase-num">01</span> Setup
   </div>
   <div class="phase-nav-item" data-phase="2" onclick="goToPhase(2)">
-    <span class="phase-num">02</span> Generate
+    <span class="phase-num">02</span> Topics &amp; Content
   </div>
   <div class="phase-nav-item" data-phase="3" onclick="goToPhase(3)">
     <span class="phase-num">03</span> Calendar
@@ -2106,7 +2182,7 @@ details .details-content { padding: 20px; }
         </details>
 
         <div class="nav-buttons">
-          <button type="submit" class="btn btn-primary btn-lg">Generate My Content Calendar</button>
+          <button type="submit" class="btn btn-primary btn-lg">Analyze My Business</button>
         </div>
       </form>
     </div>
@@ -2170,32 +2246,16 @@ details .details-content { padding: 20px; }
       </div>
     </div>
 
-    <div class="chatbox fade-in-up stagger-2">
-      <div class="chatbox-header">
-        <div class="chatbox-header-left">
-          <div class="chatbox-dot"></div>
-          <span class="chatbox-title">ELUXR AI - Setup Assistant</span>
-        </div>
-        <span style="font-size:11px; color:var(--text-muted);">Powered by Claude</span>
-      </div>
-      <div class="chatbox-messages" id="chat-1">
-        <div class="chat-msg ai">Hi! I'm your content generation assistant. Share your business details and I'll help you create a month of engaging social media content. What does your business do?</div>
-      </div>
-      <div class="chatbox-input">
-        <input placeholder="Ask me about content strategy, best practices..." onkeydown="if(event.key==='Enter')sendChat(1, this)">
-        <button onclick="sendChat(1, this.previousElementSibling)">Send</button>
-      </div>
-    </div>
   </div>
 </section>
 
-<!-- PHASE 2: PROGRESS + TOOLS -->
+<!-- PHASE 2: TOPICS & CONTENT -->
 <section class="page-section" id="phase-2">
   <div class="section-inner">
     <div class="phase-header fade-in-up">
       <div class="phase-tag">Step 2</div>
-      <h2>Creating Your Content Magic</h2>
-      <p>Sit back while our AI analyzes your business, creates themes, writes posts, generates images, and syncs your calendar.</p>
+      <h2>Topics &amp; Content</h2>
+      <p>Review and approve your weekly topics, then generate content week by week.</p>
     </div>
 
     <div class="card progress-card card-glass fade-in-up stagger-1">
@@ -2215,22 +2275,60 @@ details .details-content { padding: 20px; }
           <span class="phase-icon">2</span>
           <span>Creating content themes</span>
         </div>
-        <div class="phase-item" data-step="3">
-          <span class="phase-icon">3</span>
-          <span>Writing posts</span>
+      </div>
+    </div>
+
+    <!-- WEEKLY TOPICS UI -->
+    <div id="topics-section" class="card card-glass fade-in-up stagger-2" style="display:none;">
+      <!-- Week Tabs -->
+      <div class="week-tabs" id="week-tabs">
+        <button class="week-tab active" data-week="1" onclick="selectWeek(1)">Week 1</button>
+        <button class="week-tab locked" data-week="2" onclick="selectWeek(2)" disabled>Week 2</button>
+        <button class="week-tab locked" data-week="3" onclick="selectWeek(3)" disabled>Week 3</button>
+        <button class="week-tab locked" data-week="4" onclick="selectWeek(4)" disabled>Week 4</button>
+      </div>
+
+      <!-- Generate Topics Button (shown when week has no topics) -->
+      <div id="topics-generate-section" style="text-align:center; padding:40px 20px;">
+        <p style="color:var(--text-secondary); margin-bottom:16px;">Generate 7 daily content topics for this week.</p>
+        <button class="btn btn-primary" id="btn-generate-topics" onclick="generateTopics()">
+          Generate Topics for Week <span id="generate-week-num">1</span>
+        </button>
+      </div>
+
+      <!-- Topics Loading -->
+      <div id="topics-loading" style="display:none; text-align:center; padding:40px;">
+        <span class="spinner"></span>
+        <p style="color:var(--text-muted); margin-top:12px;">Generating your topics...</p>
+      </div>
+
+      <!-- Topics Grid -->
+      <div id="topics-grid" style="display:none; padding:20px;">
+        <div id="topics-cards"></div>
+
+        <!-- Approval Counter -->
+        <div id="topics-approval" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid rgba(226,232,240,0.4);">
+          <span id="approval-count" style="font-size:14px; font-weight:600; color:var(--text-secondary);">0 / 7 topics approved</span>
+          <button class="btn btn-primary" id="btn-lock-in" onclick="lockInAndGenerate()" disabled>
+            Lock In &amp; Generate Content
+          </button>
         </div>
-        <div class="phase-item" data-step="4">
-          <span class="phase-icon">4</span>
-          <span>Generating images</span>
+      </div>
+
+      <!-- Content Generation Progress -->
+      <div id="week-content-progress" style="display:none; padding:20px; text-align:center;">
+        <div class="progress-container" style="margin-bottom:12px;">
+          <div id="week-progress-bar" class="progress-bar" style="width:0%"></div>
         </div>
-        <div class="phase-item" data-step="5">
-          <span class="phase-icon">5</span>
-          <span>Creating videos</span>
-        </div>
-        <div class="phase-item" data-step="6">
-          <span class="phase-icon">6</span>
-          <span>Syncing calendar</span>
-        </div>
+        <p id="week-progress-text" style="color:var(--text-muted); font-size:13px;">Generating content for approved topics...</p>
+      </div>
+
+      <!-- Week Completion Preview -->
+      <div id="week-complete" style="display:none; text-align:center; padding:40px 20px;">
+        <div style="font-size:48px; margin-bottom:12px;">&#10003;</div>
+        <h3 style="color:var(--text-primary); margin-bottom:8px;">Week <span id="completed-week-num">1</span> Complete!</h3>
+        <p style="color:var(--text-secondary); margin-bottom:20px;">Content has been generated and added to your calendar.</p>
+        <button class="btn btn-outline" onclick="goToPhase(3)">View in Calendar</button>
       </div>
     </div>
 
@@ -2580,22 +2678,6 @@ details .details-content { padding: 20px; }
       </div>
     </div>
 
-    <div class="chatbox fade-in-up stagger-6">
-      <div class="chatbox-header">
-        <div class="chatbox-header-left">
-          <div class="chatbox-dot"></div>
-          <span class="chatbox-title">ELUXR AI - Content Assistant</span>
-        </div>
-        <span style="font-size:11px; color:var(--text-muted);">Powered by Claude</span>
-      </div>
-      <div class="chatbox-messages" id="chat-2">
-        <div class="chat-msg ai">Your content is being generated! While you wait, you can use the Video Script Builder, Image Generator, Video Creator, or Content Generator tools above. Ask me anything about content creation!</div>
-      </div>
-      <div class="chatbox-input">
-        <input placeholder="Ask about video tips, content ideas..." onkeydown="if(event.key==='Enter')sendChat(2, this)">
-        <button onclick="sendChat(2, this.previousElementSibling)">Send</button>
-      </div>
-    </div>
   </div>
 </section>
 
@@ -2703,22 +2785,6 @@ details .details-content { padding: 20px; }
       </div>
     </div>
 
-    <div class="chatbox fade-in-up stagger-3">
-      <div class="chatbox-header">
-        <div class="chatbox-header-left">
-          <div class="chatbox-dot"></div>
-          <span class="chatbox-title">ELUXR AI - Calendar Assistant</span>
-        </div>
-        <span style="font-size:11px; color:var(--text-muted);">Powered by Claude</span>
-      </div>
-      <div class="chatbox-messages" id="chat-3">
-        <div class="chat-msg ai">Your content calendar is ready! Click on any day to preview content, approve posts, or make edits. What would you like to do?</div>
-      </div>
-      <div class="chatbox-input">
-        <input placeholder="Ask about your content, request changes..." onkeydown="if(event.key==='Enter')sendChat(3, this)">
-        <button onclick="sendChat(3, this.previousElementSibling)">Send</button>
-      </div>
-    </div>
   </div>
 </section>
 
@@ -2762,6 +2828,24 @@ details .details-content { padding: 20px; }
       <button onclick="regenerateContent()" class="btn-regenerate">Regenerate</button>
       <button onclick="rejectContent()" class="btn-reject">Reject</button>
     </div>
+  </div>
+</div>
+
+<!-- PRODUCT IMAGE GALLERY MODAL -->
+<div id="gallery-modal" class="gallery-modal" onclick="if(event.target===this)closeGallery()">
+  <div class="gallery-modal-content">
+    <div class="gallery-header">
+      <h3 id="gallery-product-name">Product Images</h3>
+      <button class="gallery-close" onclick="closeGallery()">&times;</button>
+    </div>
+    <div id="gallery-empty" class="gallery-empty" style="display:none;">No images available for this product.</div>
+    <div id="gallery-main-wrapper" class="gallery-main-image">
+      <img id="gallery-main-img" src="" alt="Product image">
+      <button class="gallery-nav prev" onclick="galleryPrev()">&#8249;</button>
+      <button class="gallery-nav next" onclick="galleryNext()">&#8250;</button>
+    </div>
+    <div id="gallery-counter" class="gallery-counter"></div>
+    <div id="gallery-thumbs" class="gallery-thumbs"></div>
   </div>
 </div>
 
@@ -3423,21 +3507,19 @@ function renderProductsCard(products) {
     const descVal = escapeHTML(p.description || '');
     const priceVal = p.price ? escapeHTML(String(p.price)) : '';
     const catVal = escapeHTML(p.category || '');
-    const imgUrl = p.image_url || '';
-    const imgHtml = imgUrl
-      ? '<img class="product-thumb" src="' + escapeHTML(imgUrl) + '" alt="' + nameVal + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'" /><div class="product-thumb-placeholder" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>'
-      : '<div class="product-thumb-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>';
+    const images = p.image_urls || (p.image_url ? [p.image_url] : []);
+    const thumbHtml = images.length > 0
+      ? '<div class="product-thumb" onclick="openGallery(\'' + escapeHTML(p.id || '') + '\')" title="View images (' + images.length + ')"><img src="' + escapeHTML(images[0]) + '" alt="' + nameVal + '"></div>'
+      : '<div class="product-thumb" style="cursor:default"><span class="thumb-placeholder">&#128247;</span></div>';
     return '<div class="product-item" data-product-id="' + (p.id || '') + '" data-index="' + idx + '">' +
-      imgHtml +
-      '<div class="product-info">' +
-        '<div class="product-name">' +
-          '<input type="text" value="' + nameVal + '" placeholder="Product name" onchange="markProductsModified()" />' +
-        '</div>' +
-        '<div class="product-meta">' +
-          (descVal ? '<span class="product-desc" title="' + descVal + '">' + descVal + '</span>' : '') +
-          (priceVal ? '<span class="product-price">' + priceVal + '</span>' : '') +
-          (catVal ? '<span class="product-category">' + catVal + '</span>' : '') +
-        '</div>' +
+      thumbHtml +
+      '<div class="product-name">' +
+        '<input type="text" value="' + nameVal + '" placeholder="Product name" onchange="markProductsModified()" />' +
+      '</div>' +
+      '<div class="product-meta">' +
+        (descVal ? '<span class="product-desc" title="' + descVal + '">' + descVal + '</span>' : '') +
+        (priceVal ? '<span class="product-price">' + priceVal + '</span>' : '') +
+        (catVal ? '<span class="product-category">' + catVal + '</span>' : '') +
       '</div>' +
       '<button type="button" class="product-remove" onclick="removeProduct(this)" title="Remove product">&times;</button>' +
     '</div>';
@@ -3663,6 +3745,11 @@ function goToPhase(n) {
         target.classList.add('visible', 'slide-in-right');
       });
     });
+  }
+
+  // Load existing topics when entering Phase 2
+  if (n === 2) {
+    loadExistingTopics();
   }
 
   // Start auto-refresh when on calendar tab
@@ -4624,11 +4711,7 @@ let currentPipelineRunId = null;
 
 const STEP_LABELS = [
   'Analyzing your business...',
-  'Creating content themes...',
-  'Writing posts...',
-  'Generating images...',
-  'Creating videos...',
-  'Syncing calendar...'
+  'Creating content themes...'
 ];
 
 function resetProgressUI() {
@@ -4722,14 +4805,15 @@ function renderProgress(run) {
   // Handle completion
   if (run.status === 'completed') {
     cleanupProgress();
-    showToast('Content generation complete!', 'success');
+    showToast('Business analysis complete! Now review your weekly topics.', 'success');
     // Re-enable generate button
     const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
     if (generateBtn) generateBtn.disabled = false;
-    // Fetch and display the generated content
-    fetchAndDisplayCalendar();
-    // Navigate to calendar tab after a brief delay to show 100%
-    setTimeout(() => goToPhase(3), 1500);
+    // Show topics section (pipeline now only does ICP + Themes)
+    const topicsSection = document.getElementById('topics-section');
+    if (topicsSection) topicsSection.style.display = 'block';
+    // Load any existing topics
+    loadExistingTopics();
   } else if (run.status === 'failed') {
     cleanupProgress();
     showToast(`Generation failed: ${run.error_message || 'Unknown error'}`, 'error');
@@ -6010,66 +6094,504 @@ function showToast(message, type = 'success') {
   }, 3000);
 }
 
-// Chat
-async function sendChat(phase, el) {
-  const text = el.value.trim();
-  if (!text) return;
+// ============================================================
+// WEEKLY TOPICS SYSTEM
+// ============================================================
+let currentWeek = 1;
+let weekTopics = {}; // { 1: [...], 2: [...], ... }
+let currentCampaignId = null;
 
-  const container = document.getElementById(`chat-${phase}`);
-
-  const userMsg = document.createElement('div');
-  userMsg.className = 'chat-msg user';
-  userMsg.textContent = text;
-  container.appendChild(userMsg);
-  el.value = '';
-  container.scrollTop = container.scrollHeight;
-
-  const typing = document.createElement('div');
-  typing.className = 'chat-msg ai';
-  typing.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:1.5px;"></span> Thinking...';
-  container.appendChild(typing);
-  container.scrollTop = container.scrollHeight;
-
+async function ensureCampaign() {
+  if (currentCampaignId) return currentCampaignId;
   try {
-    const data = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-chat`, {
-      method: 'POST',
-      body: JSON.stringify({ phase, message: text, session_id: currentSessionId || `session_${Date.now()}`, context: {} })
-    }).then(r => r.json());
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return null;
 
-    let responseText = '';
-    if (data.content && Array.isArray(data.content)) {
-      responseText = data.content.map(c => c.text || '').join('\n');
-    } else if (data.response) {
-      responseText = data.response;
-    } else if (typeof data === 'string') {
-      responseText = data;
-    } else {
-      responseText = JSON.stringify(data, null, 2);
+    // Look for existing campaign for current month
+    const month = getSelectedMonth ? getSelectedMonth() : new Date().toISOString().slice(0, 7);
+    const { data: campaigns } = await window.supabase
+      .from('campaigns')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('month', month)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (campaigns && campaigns.length > 0) {
+      currentCampaignId = campaigns[0].id;
+      return currentCampaignId;
     }
 
-    responseText = responseText
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n\n/g, '<br><br>')
-      .replace(/\n/g, '<br>');
-    typing.innerHTML = responseText || 'I received your message but had trouble generating a response.';
+    // Create new campaign
+    const { data: newCampaign } = await window.supabase
+      .from('campaigns')
+      .insert({ user_id: user.id, month, current_week: 0 })
+      .select('id')
+      .single();
+
+    if (newCampaign) {
+      currentCampaignId = newCampaign.id;
+    }
+    return currentCampaignId;
   } catch (err) {
-    typing.innerHTML = getFallbackResponse(phase, text);
+    console.error('ensureCampaign error:', err);
+    return null;
   }
-  container.scrollTop = container.scrollHeight;
 }
 
-function getFallbackResponse(phase, text) {
-  const fallbacks = {
-    1: "I'm here to help you get started! Fill out the form above with your business details, and I'll generate a full month of content for you.",
-    2: "While your content is generating, you can use the Video Script Builder, Image Generator, or Video Creator tools above. Ask me anything about content creation!",
-    3: "Your calendar is ready! Click on any day to preview content, approve posts, download images, or make edits. You can also export everything to CSV or sync with Google Calendar."
-  };
-  return fallbacks[phase] || "I'm here to help! What would you like to know?";
+async function loadExistingTopics() {
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+
+    const campaignId = await ensureCampaign();
+    if (!campaignId) return;
+
+    const { data: topics } = await window.supabase
+      .from('weekly_topics')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('campaign_id', campaignId)
+      .order('week_number', { ascending: true })
+      .order('day_number', { ascending: true });
+
+    if (!topics || topics.length === 0) {
+      const topicsSection = document.getElementById('topics-section');
+      if (topicsSection) topicsSection.style.display = 'block';
+      renderWeekView(currentWeek);
+      return;
+    }
+
+    // Group by week
+    weekTopics = {};
+    for (const t of topics) {
+      if (!weekTopics[t.week_number]) weekTopics[t.week_number] = [];
+      weekTopics[t.week_number].push(t);
+    }
+
+    // Determine week unlock states
+    const { data: campaign } = await window.supabase
+      .from('campaigns')
+      .select('current_week')
+      .eq('id', campaignId)
+      .single();
+
+    const completedWeek = (campaign && campaign.current_week) || 0;
+
+    // Update week tab states
+    for (let w = 1; w <= 4; w++) {
+      const tab = document.querySelector(`.week-tab[data-week="${w}"]`);
+      if (!tab) continue;
+      tab.classList.remove('locked', 'completed', 'active');
+      tab.disabled = false;
+
+      if (w <= completedWeek) {
+        tab.classList.add('completed');
+      } else if (w === completedWeek + 1) {
+        // Next unlocked week
+      } else if (w > completedWeek + 1 && !weekTopics[w]) {
+        tab.classList.add('locked');
+        tab.disabled = true;
+      }
+    }
+
+    // Set current week to first non-completed
+    if (completedWeek > 0 && completedWeek < 4) {
+      currentWeek = completedWeek + 1;
+    }
+
+    const topicsSection = document.getElementById('topics-section');
+    if (topicsSection) topicsSection.style.display = 'block';
+    selectWeek(currentWeek);
+  } catch (err) {
+    console.error('loadExistingTopics error:', err);
+  }
+}
+
+function selectWeek(n) {
+  const tab = document.querySelector(`.week-tab[data-week="${n}"]`);
+  if (tab && (tab.disabled || tab.classList.contains('locked'))) return;
+
+  currentWeek = n;
+
+  // Update active tab
+  document.querySelectorAll('.week-tab').forEach(t => t.classList.remove('active'));
+  if (tab) tab.classList.add('active');
+
+  renderWeekView(n);
+}
+
+function renderWeekView(n) {
+  const generateSection = document.getElementById('topics-generate-section');
+  const loadingSection = document.getElementById('topics-loading');
+  const gridSection = document.getElementById('topics-grid');
+  const progressSection = document.getElementById('week-content-progress');
+  const completeSection = document.getElementById('week-complete');
+
+  // Hide all sub-sections
+  [generateSection, loadingSection, gridSection, progressSection, completeSection].forEach(el => {
+    if (el) el.style.display = 'none';
+  });
+
+  const topics = weekTopics[n];
+  document.getElementById('generate-week-num').textContent = n;
+
+  if (!topics || topics.length === 0) {
+    // Show generate button
+    generateSection.style.display = 'block';
+  } else {
+    // Check if all approved and content generated
+    const allApproved = topics.every(t => t.status === 'approved');
+    const tab = document.querySelector(`.week-tab[data-week="${n}"]`);
+    if (tab && tab.classList.contains('completed')) {
+      completeSection.style.display = 'block';
+      document.getElementById('completed-week-num').textContent = n;
+    } else {
+      gridSection.style.display = 'block';
+      renderTopicCards(topics);
+      updateApprovalCount(topics);
+    }
+  }
+}
+
+function renderTopicCards(topics) {
+  const container = document.getElementById('topics-cards');
+  if (!container) return;
+
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  container.innerHTML = topics.map(t => {
+    const isApproved = t.status === 'approved';
+    const isRegen = t.status === 'regenerating';
+    const cardClass = 'topic-card' + (isApproved ? ' approved' : '') + (isRegen ? ' regenerating' : '');
+    const dayLabel = dayNames[(t.day_number || 1) - 1] || 'Day ' + t.day_number;
+
+    return '<div class="' + cardClass + '" data-topic-id="' + t.id + '">' +
+      '<div class="topic-day-badge">' + (isApproved ? '&#10003;' : t.day_number) + '</div>' +
+      '<div class="topic-body">' +
+        '<h4>' + escapeHTML(t.topic || '') + '</h4>' +
+        '<p>' + escapeHTML(t.description || '') + '</p>' +
+        '<div class="topic-tags">' +
+          (t.content_angle ? '<span class="topic-tag angle">' + escapeHTML(t.content_angle) + '</span>' : '') +
+          (t.product_name ? '<span class="topic-tag product">' + escapeHTML(t.product_name) + '</span>' : '') +
+        '</div>' +
+        '<div class="topic-actions">' +
+          (isApproved
+            ? '<span class="topic-approved-label">&#10003; Approved</span>'
+            : '<button class="btn-approve-topic" onclick="approveTopic(\'' + t.id + '\')">Approve</button>' +
+              '<button class="btn-regen-topic" onclick="regenerateTopic(\'' + t.id + '\')">Regenerate</button>'
+          ) +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function updateApprovalCount(topics) {
+  const approved = topics.filter(t => t.status === 'approved').length;
+  const total = topics.length;
+  const countEl = document.getElementById('approval-count');
+  const lockBtn = document.getElementById('btn-lock-in');
+
+  if (countEl) countEl.textContent = approved + ' / ' + total + ' topics approved';
+  if (lockBtn) lockBtn.disabled = approved < total;
+}
+
+async function generateTopics() {
+  const campaignId = await ensureCampaign();
+  if (!campaignId) {
+    showToast('No campaign found. Please run the analysis first.', 'error');
+    return;
+  }
+
+  // Show loading
+  document.getElementById('topics-generate-section').style.display = 'none';
+  document.getElementById('topics-loading').style.display = 'block';
+
+  try {
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-generate-topics`, {
+      method: 'POST',
+      body: JSON.stringify({ campaign_id: campaignId, week_number: currentWeek })
+    });
+
+    const data = await safeJson(response);
+
+    if (data.success && data.topics) {
+      weekTopics[currentWeek] = data.topics;
+      showToast('Topics generated! Review and approve each one.', 'success');
+    } else {
+      // Try to read from Supabase directly
+      const { data: { user } } = await window.supabase.auth.getUser();
+      const { data: topics } = await window.supabase
+        .from('weekly_topics')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('campaign_id', campaignId)
+        .eq('week_number', currentWeek)
+        .order('day_number', { ascending: true });
+
+      if (topics && topics.length > 0) {
+        weekTopics[currentWeek] = topics;
+        showToast('Topics generated!', 'success');
+      } else {
+        showToast('Failed to generate topics. Please try again.', 'error');
+      }
+    }
+  } catch (err) {
+    console.error('generateTopics error:', err);
+    showToast('Error generating topics: ' + err.message, 'error');
+  }
+
+  document.getElementById('topics-loading').style.display = 'none';
+  renderWeekView(currentWeek);
+}
+
+async function approveTopic(topicId) {
+  const topics = weekTopics[currentWeek];
+  if (!topics) return;
+
+  // Optimistic UI update
+  const topic = topics.find(t => t.id === topicId);
+  if (topic) topic.status = 'approved';
+  renderTopicCards(topics);
+  updateApprovalCount(topics);
+
+  // Persist to Supabase
+  try {
+    await window.supabase
+      .from('weekly_topics')
+      .update({ status: 'approved', updated_at: new Date().toISOString() })
+      .eq('id', topicId);
+  } catch (err) {
+    console.error('approveTopic error:', err);
+    // Revert on error
+    if (topic) topic.status = 'pending';
+    renderTopicCards(topics);
+    updateApprovalCount(topics);
+    showToast('Failed to approve topic', 'error');
+  }
+}
+
+async function regenerateTopic(topicId) {
+  const topics = weekTopics[currentWeek];
+  if (!topics) return;
+
+  // Mark as regenerating
+  const topic = topics.find(t => t.id === topicId);
+  if (topic) topic.status = 'regenerating';
+  renderTopicCards(topics);
+
+  try {
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-regenerate-topic`, {
+      method: 'POST',
+      body: JSON.stringify({ topic_id: topicId })
+    });
+
+    const data = await safeJson(response);
+
+    if (data.success && data.topic) {
+      // Replace topic in local state
+      const idx = topics.findIndex(t => t.id === topicId);
+      if (idx >= 0) {
+        // Merge the new data while keeping the id
+        topics[idx] = { ...topics[idx], ...data.topic, status: 'pending' };
+      }
+      showToast('Topic regenerated!', 'success');
+    } else {
+      // Reload from Supabase
+      const { data: updated } = await window.supabase
+        .from('weekly_topics')
+        .select('*')
+        .eq('id', topicId)
+        .single();
+
+      if (updated) {
+        const idx = topics.findIndex(t => t.id === topicId);
+        if (idx >= 0) topics[idx] = updated;
+      }
+    }
+  } catch (err) {
+    console.error('regenerateTopic error:', err);
+    showToast('Error regenerating topic: ' + err.message, 'error');
+    if (topic) topic.status = 'pending';
+  }
+
+  renderTopicCards(topics);
+  updateApprovalCount(topics);
+}
+
+async function lockInAndGenerate() {
+  const campaignId = await ensureCampaign();
+  if (!campaignId) return;
+
+  const topics = weekTopics[currentWeek];
+  if (!topics || topics.filter(t => t.status === 'approved').length < topics.length) {
+    showToast('Please approve all topics first', 'error');
+    return;
+  }
+
+  // Show content generation progress
+  document.getElementById('topics-grid').style.display = 'none';
+  const progressSection = document.getElementById('week-content-progress');
+  progressSection.style.display = 'block';
+  document.getElementById('week-progress-bar').style.width = '10%';
+  document.getElementById('week-progress-text').textContent = 'Starting content generation for Week ' + currentWeek + '...';
+
+  try {
+    // Call content studio for this week
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
+      method: 'POST',
+      body: JSON.stringify({
+        campaign_id: campaignId,
+        week_number: currentWeek,
+        month: getSelectedMonth ? getSelectedMonth() : new Date().toISOString().slice(0, 7),
+        platforms: getSelectedPlatforms ? getSelectedPlatforms() : ['linkedin', 'instagram']
+      })
+    });
+
+    // Simulate progress while waiting
+    let progress = 10;
+    const progressInterval = setInterval(() => {
+      progress = Math.min(progress + 5, 90);
+      document.getElementById('week-progress-bar').style.width = progress + '%';
+    }, 3000);
+
+    const data = await safeJson(response);
+    clearInterval(progressInterval);
+
+    // Complete
+    document.getElementById('week-progress-bar').style.width = '100%';
+    document.getElementById('week-progress-text').textContent = 'Content generation complete!';
+
+    // Update campaign current_week in Supabase
+    await window.supabase
+      .from('campaigns')
+      .update({ current_week: currentWeek })
+      .eq('id', campaignId);
+
+    // Unlock next week
+    unlockNextWeek(currentWeek);
+
+    // Show completion
+    setTimeout(() => {
+      progressSection.style.display = 'none';
+      document.getElementById('week-complete').style.display = 'block';
+      document.getElementById('completed-week-num').textContent = currentWeek;
+
+      // Mark current week tab as completed
+      const tab = document.querySelector(`.week-tab[data-week="${currentWeek}"]`);
+      if (tab) {
+        tab.classList.remove('active');
+        tab.classList.add('completed');
+      }
+
+      // Refresh calendar data
+      if (window.fetchAndDisplayCalendar) fetchAndDisplayCalendar();
+
+      showToast('Week ' + currentWeek + ' content generated!', 'success');
+    }, 1000);
+  } catch (err) {
+    console.error('lockInAndGenerate error:', err);
+    showToast('Error generating content: ' + err.message, 'error');
+    progressSection.style.display = 'none';
+    document.getElementById('topics-grid').style.display = 'block';
+  }
+}
+
+function unlockNextWeek(completedWeek) {
+  const nextWeek = completedWeek + 1;
+  if (nextWeek > 4) return;
+
+  const tab = document.querySelector(`.week-tab[data-week="${nextWeek}"]`);
+  if (tab) {
+    tab.classList.remove('locked');
+    tab.disabled = false;
+  }
+}
+
+// Product Image Gallery
+let galleryImages = [];
+let galleryIndex = 0;
+
+function openGallery(productId) {
+  const product = (productsData || []).find(p => p.id === productId);
+  if (!product) return;
+
+  const images = product.image_urls || (product.image_url ? [product.image_url] : []);
+  const modal = document.getElementById('gallery-modal');
+  const nameEl = document.getElementById('gallery-product-name');
+  const emptyEl = document.getElementById('gallery-empty');
+  const mainWrapper = document.getElementById('gallery-main-wrapper');
+
+  nameEl.textContent = product.name || 'Product Images';
+  galleryImages = images;
+  galleryIndex = 0;
+
+  if (images.length === 0) {
+    emptyEl.style.display = 'block';
+    mainWrapper.style.display = 'none';
+    document.getElementById('gallery-counter').textContent = '';
+    document.getElementById('gallery-thumbs').innerHTML = '';
+  } else {
+    emptyEl.style.display = 'none';
+    mainWrapper.style.display = 'block';
+    renderGallery();
+  }
+
+  modal.classList.add('visible');
+}
+
+function renderGallery() {
+  const mainImg = document.getElementById('gallery-main-img');
+  const counter = document.getElementById('gallery-counter');
+  const thumbsEl = document.getElementById('gallery-thumbs');
+
+  mainImg.src = galleryImages[galleryIndex] || '';
+  counter.textContent = (galleryIndex + 1) + ' / ' + galleryImages.length;
+
+  thumbsEl.innerHTML = galleryImages.map((url, i) =>
+    '<div class="gallery-thumb' + (i === galleryIndex ? ' active' : '') + '" onclick="galleryGoTo(' + i + ')">' +
+      '<img src="' + escapeHTML(url) + '" alt="Thumbnail ' + (i + 1) + '">' +
+    '</div>'
+  ).join('');
+}
+
+function galleryPrev() {
+  if (galleryImages.length === 0) return;
+  galleryIndex = (galleryIndex - 1 + galleryImages.length) % galleryImages.length;
+  renderGallery();
+}
+
+function galleryNext() {
+  if (galleryImages.length === 0) return;
+  galleryIndex = (galleryIndex + 1) % galleryImages.length;
+  renderGallery();
+}
+
+function galleryGoTo(idx) {
+  galleryIndex = idx;
+  renderGallery();
+}
+
+function closeGallery() {
+  document.getElementById('gallery-modal').classList.remove('visible');
+  galleryImages = [];
+  galleryIndex = 0;
 }
 
 // Keyboard
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') {
+    if (document.getElementById('gallery-modal').classList.contains('visible')) {
+      closeGallery();
+    } else {
+      closeModal();
+    }
+  }
+  if (document.getElementById('gallery-modal').classList.contains('visible')) {
+    if (e.key === 'ArrowLeft') galleryPrev();
+    if (e.key === 'ArrowRight') galleryNext();
+  }
 });
 </script>
 </body>

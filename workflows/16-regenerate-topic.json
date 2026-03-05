@@ -1,0 +1,423 @@
+{
+  "name": "16-Regenerate-Topic",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-regenerate-topic",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "16-reg-0001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "eluxr-regenerate-topic"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "16-reg-0002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "16-reg-0003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "16-reg-0004",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nreturn {\n  json: {\n    topic_id: body.topic_id || '',\n    user_id: authData.user_id || ''\n  }\n};"
+      },
+      "id": "16-reg-0100",
+      "name": "Extract Params",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, -200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?id=eq.{{ $json.topic_id }}&select=*",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "16-reg-0200",
+      "name": "Read Current Topic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const topicRaw = $input.item.json;\nconst params = $('Extract Params').item.json;\n\nlet topic = {};\ntry {\n  topic = Array.isArray(topicRaw) ? topicRaw[0] || {} : topicRaw || {};\n} catch(e) { topic = {}; }\n\nreturn {\n  json: {\n    ...topic,\n    user_id: params.user_id,\n    topic_id: params.topic_id\n  }\n};"
+      },
+      "id": "16-reg-0250",
+      "name": "Parse Current Topic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, -200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?user_id=eq.{{ $json.user_id }}&campaign_id=eq.{{ $json.campaign_id }}&week_number=eq.{{ $json.week_number }}&id=neq.{{ $json.topic_id }}&select=topic,content_angle",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "16-reg-0300",
+      "name": "Read Sibling Topics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $('Parse Current Topic').item.json.user_id }}&select=*&order=created_at.desc&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "16-reg-0400",
+      "name": "Read ICP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const currentTopic = $('Parse Current Topic').item.json;\nconst siblingsRaw = $('Read Sibling Topics').item.json;\nconst icpRaw = $('Read ICP').item.json;\n\nlet siblings = [];\ntry { siblings = Array.isArray(siblingsRaw) ? siblingsRaw : []; } catch(e) { siblings = []; }\n\nlet icp = {};\ntry { icp = Array.isArray(icpRaw) ? icpRaw[0] || {} : icpRaw || {}; } catch(e) { icp = {}; }\n\nconst siblingTopics = siblings.map(s => s.topic + ' (' + s.content_angle + ')').join(', ');\n\nconst dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];\nconst dayName = dayNames[(currentTopic.day_number || 1) - 1] || 'Day ' + currentTopic.day_number;\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 1024,\n  system: 'You are a social media content strategist. Generate a replacement topic that is different from existing topics.',\n  messages: [{\n    role: 'user',\n    content: 'Generate 1 NEW replacement topic for ' + dayName + ' (Day ' + currentTopic.day_number + ') of Week ' + currentTopic.week_number + '.\\n\\nCURRENT TOPIC TO REPLACE: ' + currentTopic.topic + '\\n\\nOTHER TOPICS THIS WEEK (avoid duplicating): ' + (siblingTopics || 'none') + '\\n\\nBUSINESS CONTEXT:\\n- Industry: ' + (icp.industry || 'General') + '\\n- Target Audience: ' + (icp.target_audience || 'General audience') + '\\n- Content Pillars: ' + JSON.stringify(icp.content_pillars || []) + '\\n\\nReturn ONLY a single JSON object with keys: topic, description, content_angle, product_name. Must be completely different from the current topic and siblings. No markdown.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    topic_id: currentTopic.topic_id || currentTopic.id,\n    user_id: currentTopic.user_id,\n    campaign_id: currentTopic.campaign_id,\n    week_number: currentTopic.week_number,\n    day_number: currentTopic.day_number\n  }\n};"
+      },
+      "id": "16-reg-0500",
+      "name": "Prepare Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.apiBody }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "16-reg-0600",
+      "name": "Claude Regenerate Topic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1980, -200],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Claude Prompt').item.json;\n\nlet raw = '';\ntry { raw = input.content[0].text; } catch(e) { raw = '{}'; }\n\nlet newTopic = {};\ntry {\n  newTopic = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { newTopic = JSON.parse(stripped); } catch(e2) { newTopic = {}; }\n}\n\nconst updateBody = JSON.stringify({\n  topic: (newTopic.topic || 'New Topic').substring(0, 255),\n  description: (newTopic.description || '').substring(0, 500),\n  content_angle: (newTopic.content_angle || 'General').substring(0, 100),\n  product_name: newTopic.product_name || null,\n  status: 'pending',\n  updated_at: new Date().toISOString()\n});\n\nreturn {\n  json: {\n    updateBody: updateBody,\n    topic_id: prepData.topic_id,\n    newTopic: newTopic\n  }\n};"
+      },
+      "id": "16-reg-0700",
+      "name": "Parse New Topic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2200, -200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?id=eq.{{ $json.topic_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.updateBody }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "16-reg-0800",
+      "name": "Update Topic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2420, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const updated = $input.item.json;\nconst parseData = $('Parse New Topic').item.json;\n\nlet topic = {};\ntry {\n  topic = Array.isArray(updated) ? updated[0] || {} : updated || {};\n} catch(e) { topic = {}; }\n\nreturn {\n  json: {\n    success: true,\n    topic: topic.id ? topic : { ...parseData.newTopic, id: parseData.topic_id }\n  }\n};"
+      },
+      "id": "16-reg-0900",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, -200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "16-reg-1000",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2860, -200]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Auth Validator", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Auth Validator": {
+      "main": [
+        [
+          { "node": "Auth OK?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [
+          { "node": "Extract Params", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "401 Unauthorized", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Params": {
+      "main": [
+        [
+          { "node": "Read Current Topic", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Read Current Topic": {
+      "main": [
+        [
+          { "node": "Parse Current Topic", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Current Topic": {
+      "main": [
+        [
+          { "node": "Read Sibling Topics", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Read Sibling Topics": {
+      "main": [
+        [
+          { "node": "Read ICP", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Read ICP": {
+      "main": [
+        [
+          { "node": "Prepare Claude Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Claude Prompt": {
+      "main": [
+        [
+          { "node": "Claude Regenerate Topic", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Regenerate Topic": {
+      "main": [
+        [
+          { "node": "Parse New Topic", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse New Topic": {
+      "main": [
+        [
+          { "node": "Update Topic", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Topic": {
+      "main": [
+        [
+          { "node": "Prepare Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Response": {
+      "main": [
+        [
+          { "node": "Respond Success", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

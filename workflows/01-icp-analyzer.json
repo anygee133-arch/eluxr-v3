@@ -112,7 +112,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const jinaOutput = $input.item.json;\nconst prepData = $('Prepare Jina URL').item.json;\n\n// Extract content from Jina response\n// Jina returns { data: { content: '...' } } in JSON mode\nlet siteContent = '';\ntry {\n  if (jinaOutput.data && jinaOutput.data.content) {\n    siteContent = jinaOutput.data.content;\n  } else if (jinaOutput.content) {\n    siteContent = jinaOutput.content;\n  } else if (typeof jinaOutput === 'string') {\n    siteContent = jinaOutput;\n  } else {\n    siteContent = JSON.stringify(jinaOutput);\n  }\n} catch(e) {\n  siteContent = JSON.stringify(jinaOutput);\n}\n\n// Truncate to 12000 chars for Claude\nconst truncated = siteContent.substring(0, 12000);\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  system: 'You are a product/service extractor. Analyze website content and extract ALL products, services, or offerings. If the site is not e-commerce, treat service packages, consulting tiers, software plans, or menu items as products.',\n  messages: [{\n    role: 'user',\n    content: 'Analyze this website content and extract ALL products, services, or offerings mentioned.\\n\\nWEBSITE CONTENT:\\n' + truncated + '\\n\\nReturn a JSON array of products. Each product should have:\\n- name: string (product/service name)\\n- description: string (brief description, max 100 chars)\\n- price: string or null (if price is visible)\\n- features: string[] (key features, max 5)\\n- image_url: string or null (product image URL if found)\\n- category: string (product category)\\n\\nIf the site is not e-commerce, treat service packages, consulting tiers, software plans, or menu items as \"products.\"\\n\\nReturn ONLY a valid JSON array. No markdown, no explanation.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    site_content: siteContent.substring(0, 3000),\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    month: prepData.month,\n    platforms: prepData.platforms,\n    pipeline_run_id: prepData.pipeline_run_id,\n    callback_url: prepData.callback_url\n  }\n};"
+        "jsCode": "const jinaOutput = $input.item.json;\nconst prepData = $('Prepare Jina URL').item.json;\n\n// Extract content from Jina response\nlet siteContent = '';\ntry {\n  if (jinaOutput.data && jinaOutput.data.content) {\n    siteContent = jinaOutput.data.content;\n  } else if (jinaOutput.content) {\n    siteContent = jinaOutput.content;\n  } else if (typeof jinaOutput === 'string') {\n    siteContent = jinaOutput;\n  } else {\n    siteContent = JSON.stringify(jinaOutput);\n  }\n} catch(e) {\n  siteContent = JSON.stringify(jinaOutput);\n}\n\n// Truncate to 12000 chars for Claude\nconst truncated = siteContent.substring(0, 12000);\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  system: 'You are a product/service extractor. Analyze website content and extract ALL products, services, or offerings. If the site is not e-commerce, treat service packages, consulting tiers, software plans, or menu items as products.',\n  messages: [{\n    role: 'user',\n    content: 'Analyze this website content and extract ALL products, services, or offerings mentioned.\\n\\nWEBSITE CONTENT:\\n' + truncated + '\\n\\nReturn a JSON array of products. Each product should have:\\n- name: string (product/service name)\\n- description: string (brief description, max 100 chars)\\n- price: string or null (if price is visible)\\n- features: string[] (key features, max 5)\\n- image_url: string or null (product image URL if found in page)\\n- image_urls: string[] (ALL product image URLs found, including variants/angles)\\n- product_url: string or null (link to individual product page if found)\\n- category: string (product category)\\n\\nFor product_url, look for links to individual product/service detail pages. For image_urls, include every image URL you can find associated with the product.\\n\\nIf the site is not e-commerce, treat service packages, consulting tiers, software plans, or menu items as \"products.\"\\n\\nReturn ONLY a valid JSON array. No markdown, no explanation.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    site_content: siteContent.substring(0, 3000),\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    month: prepData.month,\n    platforms: prepData.platforms,\n    pipeline_run_id: prepData.pipeline_run_id,\n    callback_url: prepData.callback_url\n  }\n};"
       },
       "id": "01-icp-0300",
       "name": "Prepare Extract Products",
@@ -167,7 +167,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Extract Products').item.json;\n\n// Extract Claude response text\nlet raw = '';\ntry {\n  raw = input.content[0].text;\n} catch(e) {\n  raw = '';\n}\n\n// Robust JSON parsing\nlet products = [];\ntry {\n  products = JSON.parse(raw);\n} catch(e) {\n  // Strip markdown fences\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try {\n    products = JSON.parse(stripped);\n  } catch(e2) {\n    // Extract first JSON array\n    const match = stripped.match(/\\[[\\s\\S]*\\]/);\n    if (match) {\n      try {\n        products = JSON.parse(match[0]);\n      } catch(e3) {\n        products = [];\n      }\n    }\n  }\n}\n\nif (!Array.isArray(products)) {\n  products = [];\n}\n\n// Map to products table schema\nconst mapped = products.map(p => ({\n  user_id: prepData.user_id,\n  name: (p.name || 'Unknown Product').substring(0, 255),\n  description: (p.description || '').substring(0, 500),\n  price: p.price || null,\n  features: p.features || [],\n  image_url: p.image_url || null,\n  category: (p.category || 'General').substring(0, 100),\n  source_url: prepData.business_url,\n  is_active: true\n}));\n\nreturn {\n  json: {\n    products: mapped,\n    products_count: mapped.length,\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    month: prepData.month,\n    platforms: prepData.platforms,\n    pipeline_run_id: prepData.pipeline_run_id,\n    callback_url: prepData.callback_url,\n    site_content: prepData.site_content\n  }\n};"
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Extract Products').item.json;\n\n// Extract Claude response text\nlet raw = '';\ntry {\n  raw = input.content[0].text;\n} catch(e) {\n  raw = '';\n}\n\n// Robust JSON parsing\nlet products = [];\ntry {\n  products = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try {\n    products = JSON.parse(stripped);\n  } catch(e2) {\n    const match = stripped.match(/\\[[\\s\\S]*\\]/);\n    if (match) {\n      try {\n        products = JSON.parse(match[0]);\n      } catch(e3) {\n        products = [];\n      }\n    }\n  }\n}\n\nif (!Array.isArray(products)) {\n  products = [];\n}\n\n// Map to products table schema (now includes image_urls + product_url)\nconst mapped = products.map(p => {\n  // Build image_urls: merge image_url + image_urls from Claude\n  let imageUrls = [];\n  if (Array.isArray(p.image_urls)) {\n    imageUrls = p.image_urls.filter(u => typeof u === 'string' && u.length > 0);\n  }\n  if (p.image_url && !imageUrls.includes(p.image_url)) {\n    imageUrls.unshift(p.image_url);\n  }\n  return {\n    user_id: prepData.user_id,\n    name: (p.name || 'Unknown Product').substring(0, 255),\n    description: (p.description || '').substring(0, 500),\n    price: p.price || null,\n    features: p.features || [],\n    image_url: p.image_url || null,\n    image_urls: imageUrls,\n    product_url: p.product_url || null,\n    category: (p.category || 'General').substring(0, 100),\n    source_url: prepData.business_url,\n    is_active: true\n  };\n});\n\nreturn {\n  json: {\n    products: mapped,\n    products_count: mapped.length,\n    user_id: prepData.user_id,\n    business_url: prepData.business_url,\n    industry: prepData.industry,\n    month: prepData.month,\n    platforms: prepData.platforms,\n    pipeline_run_id: prepData.pipeline_run_id,\n    callback_url: prepData.callback_url,\n    site_content: prepData.site_content\n  }\n};"
       },
       "id": "01-icp-0400",
       "name": "Parse Products",
@@ -290,6 +290,172 @@
       "typeVersion": 4.2,
       "position": [2420, -400],
       "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter to products that have a product_url for deep scraping\nconst data = $('Prepare Save Products').item.json;\nconst products = (data.products || []).filter(p => p.product_url && p.product_url.length > 0);\n\nif (products.length === 0) {\n  return { json: { items: [], done: true, user_id: data.user_id } };\n}\n\n// Return each product as a separate item for SplitInBatches\nreturn products.map(p => ({ json: { ...p, _passthrough_user_id: data.user_id } }));"
+      },
+      "id": "01-icp-0610",
+      "name": "Filter Products with URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, -600]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "01-icp-0620",
+      "name": "Loop Products",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [2860, -600]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://r.jina.ai/{{ $json.product_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-0630",
+      "name": "Jina Scrape Product Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3080, -600],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const jinaOutput = $input.item.json;\nconst batchItem = $('Loop Products').item.json;\n\nlet pageContent = '';\ntry {\n  if (jinaOutput.data && jinaOutput.data.content) {\n    pageContent = jinaOutput.data.content;\n  } else if (jinaOutput.content) {\n    pageContent = jinaOutput.content;\n  } else {\n    pageContent = JSON.stringify(jinaOutput);\n  }\n} catch(e) {\n  pageContent = '';\n}\n\n// Truncate for Claude\nconst truncated = pageContent.substring(0, 8000);\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 2048,\n  system: 'You extract product image URLs from webpage content. Return ONLY a JSON array of image URL strings.',\n  messages: [{\n    role: 'user',\n    content: 'Extract ALL product image URLs from this page content for the product: ' + (batchItem.name || 'unknown') + '\\n\\nPAGE CONTENT:\\n' + truncated + '\\n\\nReturn a JSON array of image URL strings. Include product photos, gallery images, variant images, and lifestyle shots. Exclude icons, logos, and UI elements. Return ONLY the JSON array, no markdown or explanation.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    product_name: batchItem.name,\n    product_user_id: batchItem._passthrough_user_id || batchItem.user_id,\n    existing_image_urls: batchItem.image_urls || []\n  }\n};"
+      },
+      "id": "01-icp-0635",
+      "name": "Prepare Image Extraction",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3300, -600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.apiBody }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-0640",
+      "name": "Claude Extract Images",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3520, -600],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Image Extraction').item.json;\n\nlet raw = '';\ntry {\n  raw = input.content[0].text;\n} catch(e) {\n  raw = '[]';\n}\n\nlet newUrls = [];\ntry {\n  newUrls = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { newUrls = JSON.parse(stripped); } catch(e2) { newUrls = []; }\n}\n\nif (!Array.isArray(newUrls)) newUrls = [];\nnewUrls = newUrls.filter(u => typeof u === 'string' && u.startsWith('http'));\n\n// Merge with existing, deduplicate\nconst existing = prepData.existing_image_urls || [];\nconst merged = [...new Set([...existing, ...newUrls])];\n\nreturn {\n  json: {\n    image_urls: merged,\n    product_name: prepData.product_name,\n    product_user_id: prepData.product_user_id\n  }\n};"
+      },
+      "id": "01-icp-0645",
+      "name": "Parse Deep Images",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3740, -600]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?user_id=eq.{{ $json.product_user_id }}&name=eq.{{ encodeURIComponent($json.product_name) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ image_urls: $json.image_urls }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "01-icp-0650",
+      "name": "Update Product Images",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3960, -600],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "seconds"
+      },
+      "id": "01-icp-0660",
+      "name": "Wait 1s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [4180, -600]
     },
     {
       "parameters": {
@@ -789,7 +955,66 @@
     "Save Products": {
       "main": [
         [
+          { "node": "Filter Products with URLs", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Filter Products with URLs": {
+      "main": [
+        [
+          { "node": "Loop Products", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Loop Products": {
+      "main": [
+        [
+          { "node": "Jina Scrape Product Page", "type": "main", "index": 0 }
+        ],
+        [
           { "node": "Prepare Research 1", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Jina Scrape Product Page": {
+      "main": [
+        [
+          { "node": "Prepare Image Extraction", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Image Extraction": {
+      "main": [
+        [
+          { "node": "Claude Extract Images", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Extract Images": {
+      "main": [
+        [
+          { "node": "Parse Deep Images", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Deep Images": {
+      "main": [
+        [
+          { "node": "Update Product Images", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update Product Images": {
+      "main": [
+        [
+          { "node": "Wait 1s", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Wait 1s": {
+      "main": [
+        [
+          { "node": "Loop Products", "type": "main", "index": 0 }
         ]
       ]
     },

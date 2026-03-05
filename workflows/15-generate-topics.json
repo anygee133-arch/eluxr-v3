@@ -1,0 +1,406 @@
+{
+  "name": "15-Generate-Topics",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-generate-topics",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "15-top-0001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "eluxr-generate-topics"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "15-top-0002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "15-top-0003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "15-top-0004",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nreturn {\n  json: {\n    campaign_id: body.campaign_id || '',\n    week_number: parseInt(body.week_number) || 1,\n    user_id: authData.user_id || ''\n  }\n};"
+      },
+      "id": "15-top-0100",
+      "name": "Extract Params",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, -200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $json.user_id }}&select=*&order=created_at.desc&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "15-top-0200",
+      "name": "Read ICP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?user_id=eq.{{ $('Extract Params').item.json.user_id }}&is_active=eq.true&select=id,name,description,category",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "15-top-0300",
+      "name": "Read Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('Extract Params').item.json;\nconst icpRaw = $('Read ICP').item.json;\nconst productsRaw = $('Read Products').item.json;\n\n// Parse ICP\nlet icp = {};\ntry {\n  icp = Array.isArray(icpRaw) ? icpRaw[0] || {} : icpRaw || {};\n} catch(e) { icp = {}; }\n\n// Parse products\nlet products = [];\ntry {\n  products = Array.isArray(productsRaw) ? productsRaw : [];\n} catch(e) { products = []; }\n\nconst productsList = products.map(p => p.name + ' (' + (p.category || 'General') + '): ' + (p.description || '')).join('\\n');\n\nconst weekNum = params.week_number;\nconst dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  system: 'You are a social media content strategist. Generate engaging daily topics for a weekly content calendar.',\n  messages: [{\n    role: 'user',\n    content: 'Generate 7 daily social media content topics for WEEK ' + weekNum + ' of a monthly campaign.\\n\\nBUSINESS CONTEXT:\\n- Industry: ' + (icp.industry || 'General') + '\\n- Target Audience: ' + (icp.target_audience || icp.demographics || 'General audience') + '\\n- Brand Voice: ' + (icp.brand_voice || icp.tone || 'Professional and engaging') + '\\n- Content Pillars: ' + JSON.stringify(icp.content_pillars || []) + '\\n- Pain Points: ' + JSON.stringify(icp.pain_points || []) + '\\n\\nPRODUCTS/SERVICES:\\n' + (productsList || 'No specific products listed') + '\\n\\nFor each of the 7 days (' + dayNames.join(', ') + '), provide:\\n1. topic: A compelling topic title (max 60 chars)\\n2. description: Brief description of the post angle (max 150 chars)\\n3. content_angle: The content format/approach (e.g., \"Educational Tip\", \"Behind the Scenes\", \"Customer Story\", \"Product Spotlight\", \"Industry Insight\", \"Engagement Post\", \"Weekend Inspiration\")\\n4. product_name: Name of a relevant product/service to feature (or null if not product-focused)\\n\\nMake topics diverse across content types. Week ' + weekNum + ' should feel fresh and distinct.\\n\\nReturn ONLY a valid JSON array of 7 objects with keys: day_number (1-7), topic, description, content_angle, product_name. No markdown.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    user_id: params.user_id,\n    campaign_id: params.campaign_id,\n    week_number: weekNum,\n    products: products\n  }\n};"
+      },
+      "id": "15-top-0400",
+      "name": "Prepare Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.apiBody }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "15-top-0500",
+      "name": "Claude Generate Topics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, -200],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Claude Prompt').item.json;\n\nlet raw = '';\ntry {\n  raw = input.content[0].text;\n} catch(e) { raw = '[]'; }\n\nlet topics = [];\ntry {\n  topics = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { topics = JSON.parse(stripped); } catch(e2) {\n    const match = stripped.match(/\\[[\\s\\S]*\\]/);\n    if (match) { try { topics = JSON.parse(match[0]); } catch(e3) { topics = []; } }\n  }\n}\n\nif (!Array.isArray(topics)) topics = [];\n\n// Map product_name to product_id\nconst products = prepData.products || [];\nconst mapped = topics.slice(0, 7).map((t, i) => {\n  let productId = null;\n  let productName = t.product_name || null;\n  if (productName) {\n    const match = products.find(p => p.name.toLowerCase() === productName.toLowerCase());\n    if (match) productId = match.id;\n  }\n  return {\n    user_id: prepData.user_id,\n    campaign_id: prepData.campaign_id,\n    week_number: prepData.week_number,\n    day_number: t.day_number || (i + 1),\n    topic: (t.topic || 'Topic ' + (i + 1)).substring(0, 255),\n    description: (t.description || '').substring(0, 500),\n    content_angle: (t.content_angle || 'General').substring(0, 100),\n    product_id: productId,\n    product_name: productName,\n    status: 'pending'\n  };\n});\n\nreturn {\n  json: {\n    topics: mapped,\n    topics_body: JSON.stringify(mapped),\n    user_id: prepData.user_id,\n    campaign_id: prepData.campaign_id,\n    week_number: prepData.week_number\n  }\n};"
+      },
+      "id": "15-top-0600",
+      "name": "Parse Topics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, -200]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?user_id=eq.{{ $json.user_id }}&campaign_id=eq.{{ $json.campaign_id }}&week_number=eq.{{ $json.week_number }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "15-top-0700",
+      "name": "Delete Old Topics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1980, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $('Parse Topics').item.json.topics_body }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "15-top-0800",
+      "name": "Save Topics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, -200],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $input.item.json;\nconst parseData = $('Parse Topics').item.json;\n\n// Return the saved topics (or original if save didn't return them)\nlet topics = [];\ntry {\n  topics = Array.isArray(saved) ? saved : parseData.topics;\n} catch(e) {\n  topics = parseData.topics;\n}\n\nreturn {\n  json: {\n    success: true,\n    topics: topics,\n    week_number: parseData.week_number,\n    campaign_id: parseData.campaign_id\n  }\n};"
+      },
+      "id": "15-top-0900",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2420, -200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "15-top-1000",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2640, -200]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Auth Validator", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Auth Validator": {
+      "main": [
+        [
+          { "node": "Auth OK?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [
+          { "node": "Extract Params", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "401 Unauthorized", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Params": {
+      "main": [
+        [
+          { "node": "Read ICP", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Read ICP": {
+      "main": [
+        [
+          { "node": "Read Products", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Read Products": {
+      "main": [
+        [
+          { "node": "Prepare Claude Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Claude Prompt": {
+      "main": [
+        [
+          { "node": "Claude Generate Topics", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Generate Topics": {
+      "main": [
+        [
+          { "node": "Parse Topics", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Topics": {
+      "main": [
+        [
+          { "node": "Delete Old Topics", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Delete Old Topics": {
+      "main": [
+        [
+          { "node": "Save Topics", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Save Topics": {
+      "main": [
+        [
+          { "node": "Prepare Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Response": {
+      "main": [
+        [
+          { "node": "Respond Success", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
