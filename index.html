@@ -4823,9 +4823,11 @@ function renderCalendar(month, data) {
   const grid = document.getElementById('calendar-grid');
   grid.innerHTML = '';
 
-  const date = new Date(month + '-01');
-  const year = date.getFullYear();
-  const monthNum = date.getMonth();
+  // Parse YYYY-MM without timezone issues
+  const [yearStr, monthStr] = month.split('-');
+  const year = parseInt(yearStr);
+  const monthNum = parseInt(monthStr) - 1; // 0-indexed
+  const date = new Date(year, monthNum, 1);
   const daysInMonth = new Date(year, monthNum + 1, 0).getDate();
   const firstDayOfWeek = date.getDay();
 
@@ -4833,17 +4835,10 @@ function renderCalendar(month, data) {
   document.getElementById('calendar-title').textContent = `${monthNames[monthNum]} ${year} Content Calendar`;
 
   // Filter content for this specific month only
+  const monthPrefix = month; // "YYYY-MM"
   const monthContent = data.filter(c => {
-    // Check if content has a date field that matches this month
-    if (c.date) {
-      const contentDate = new Date(c.date);
-      return contentDate.getFullYear() === year && contentDate.getMonth() === monthNum;
-    }
-    // Check month field (YYYY-MM format)
-    if (c.month) {
-      return c.month === month;
-    }
-    // No date/month field - exclude from other months to prevent dots on every month
+    if (c.date) return c.date.startsWith(monthPrefix);
+    if (c.month) return c.month === month;
     return false;
   });
 
@@ -4862,34 +4857,39 @@ function renderCalendar(month, data) {
   }
 
   for (let day = 1; day <= daysInMonth; day++) {
-    // Find content by day_number OR by date
-    let content = monthContent.find(c => c.day_number === day);
-    if (!content) {
-      // Try to find by date
-      const dateStr = `${year}-${String(monthNum + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      content = monthContent.find(c => c.date === dateStr);
-    }
+    const dateStr = `${year}-${String(monthNum + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    // Find ALL content for this day
+    const dayContent = monthContent.filter(c => c.date === dateStr || c.day_number === day);
     const dayCell = document.createElement('div');
     dayCell.className = 'cal-day';
     dayCell.dataset.day = day;
 
-    if (content) {
-      const isSelected = selectedItems.has(content.id);
+    if (dayContent.length > 0) {
+      const firstItem = dayContent[0];
+      const isSelected = selectedItems.has(firstItem.id);
       if (isSelected) dayCell.classList.add('selected');
       dayCell.classList.add('has-content');
 
-      // Get platform class for dot color
-      const platformClass = (content.platform || 'linkedin').toLowerCase().replace('/', '');
+      const approvedCount = dayContent.filter(c => c.status === 'approved').length;
+      const hasVideo = dayContent.some(c => c.video_url);
+      const statusClass = approvedCount === dayContent.length ? 'approved' : (approvedCount > 0 ? 'pending' : 'pending');
+
+      // Platform dots for each content item
+      const platformDots = dayContent.map(c => {
+        const pc = (c.platform || '').toLowerCase().replace('/', '');
+        const approved = c.status === 'approved';
+        return `<div class="platform-dot ${pc}" title="${c.platform}${approved ? ' (approved)' : ''}" style="${approved ? 'opacity:1;' : 'opacity:0.4;'}"></div>`;
+      }).join('');
 
       dayCell.innerHTML = `
         <input type="checkbox" style="position:absolute;top:6px;left:6px;width:14px;height:14px;accent-color:var(--green);cursor:pointer;"
           ${isSelected ? 'checked' : ''}
-          onclick="event.stopPropagation(); toggleSelection('${content.id}')">
+          onclick="event.stopPropagation(); toggleSelection('${firstItem.id}')">
         <span style="font-weight:600;">${day}</span>
-        <div class="status-badge status-${content.status || 'pending'}"></div>
+        ${approvedCount > 0 ? `<div class="status-badge status-approved" title="${approvedCount}/${dayContent.length} approved"></div>` : ''}
         <div class="platform-dots">
-          <div class="platform-dot ${platformClass}"></div>
-          ${content.video_url ? '<div class="platform-dot video"></div>' : ''}
+          ${platformDots}
+          ${hasVideo ? '<div class="platform-dot video"></div>' : ''}
         </div>
       `;
       dayCell.onclick = (e) => {
@@ -5299,20 +5299,9 @@ function updateStats() {
 // Helper to get content for a specific month
 function getContentForMonth(month) {
   if (!month) return contentData;
-
-  const date = new Date(month + '-01');
-  const year = date.getFullYear();
-  const monthNum = date.getMonth();
-
   return contentData.filter(c => {
-    if (c.date) {
-      const contentDate = new Date(c.date);
-      return contentDate.getFullYear() === year && contentDate.getMonth() === monthNum;
-    }
-    if (c.month) {
-      return c.month === month;
-    }
-    // No date/month field - exclude to prevent showing on every month
+    if (c.date) return c.date.startsWith(month);
+    if (c.month) return c.month === month;
     return false;
   });
 }
