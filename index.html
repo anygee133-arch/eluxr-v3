@@ -1159,6 +1159,19 @@ details .details-content { padding: 20px; }
 .product-name {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.product-link {
+  text-decoration: none;
+  font-size: 16px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+.product-link:hover {
+  opacity: 1;
 }
 .product-name input {
   width: 100%;
@@ -3376,14 +3389,19 @@ function renderProductsCard(products) {
     const descVal = escapeHTML(p.description || '');
     const priceVal = p.price ? escapeHTML(String(p.price)) : '';
     const catVal = escapeHTML(p.category || '');
+    const prodUrl = p.product_url || '';
     const images = p.image_urls || (p.image_url ? [p.image_url] : []);
     const thumbHtml = images.length > 0
       ? '<div class="product-thumb" onclick="openGallery(\'' + escapeHTML(p.id || '') + '\')" title="View images (' + images.length + ')"><img src="' + escapeHTML(images[0]) + '" alt="' + nameVal + '"></div>'
       : '<div class="product-thumb" style="cursor:default"><span class="thumb-placeholder">&#128247;</span></div>';
+    const linkHtml = prodUrl
+      ? '<a href="' + escapeHTML(prodUrl) + '" target="_blank" rel="noopener" class="product-link" title="View product page">&#x1F517;</a>'
+      : '';
     return '<div class="product-item" data-product-id="' + (p.id || '') + '" data-index="' + idx + '">' +
       thumbHtml +
       '<div class="product-name">' +
         '<input type="text" value="' + nameVal + '" placeholder="Product name" onchange="markProductsModified()" />' +
+        linkHtml +
       '</div>' +
       '<div class="product-meta">' +
         (descVal ? '<span class="product-desc" title="' + descVal + '">' + descVal + '</span>' : '') +
