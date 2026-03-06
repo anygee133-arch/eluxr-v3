@@ -3932,12 +3932,23 @@ function parseContentText(content) {
         result = parsed.content;
       } else if (parsed.hook || parsed.title) {
         // Video script format (YouTube/Instagram)
-        result = (parsed.hook || parsed.title || '');
+        result = '🎬 ' + (parsed.title || 'Video Script') + '\n';
+        if (parsed.hook) result += '🪝 Hook: ' + parsed.hook + '\n';
         if (parsed.scenes && Array.isArray(parsed.scenes)) {
-          result += '\n\n' + parsed.scenes.map(s =>
-            '[' + (s.timing || '') + '] ' + (s.narration || s.on_screen_text || s.visual || '')
-          ).join('\n');
+          result += '\n' + parsed.scenes.map((s, i) => {
+            let scene = '--- Scene ' + (i + 1) + ' [' + (s.timing || '') + '] ---';
+            if (s.camera) scene += '\nCamera: ' + s.camera;
+            if (s.narration) scene += '\nNarration: ' + s.narration;
+            if (s.on_screen_text) scene += '\nOn Screen: ' + s.on_screen_text;
+            if (s.visual_description) scene += '\nVisual: ' + s.visual_description;
+            else if (s.visual) scene += '\nVisual: ' + s.visual;
+            if (s.ai_image_prompt) scene += '\nAI Image Prompt: ' + s.ai_image_prompt;
+            return scene;
+          }).join('\n\n');
         }
+        if (parsed.music_mood) result += '\n\nMusic Mood: ' + parsed.music_mood;
+        if (parsed.color_grading) result += '\nColor Grading: ' + parsed.color_grading;
+        if (parsed.thumbnail_concept) result += '\nThumbnail: ' + parsed.thumbnail_concept;
         if (parsed.cta) result += '\n\nCTA: ' + parsed.cta;
       }
 
@@ -4123,7 +4134,7 @@ function subscribeToProgress(runId) {
 function renderProgress(run) {
   const currentStep = run.current_step || 0;
   const totalSteps = run.total_steps || 6;
-  const percentage = Math.round((currentStep / totalSteps) * 100);
+  const percentage = Math.min(Math.round((currentStep / totalSteps) * 100), 100);
 
   // Update progress bar
   document.getElementById('progress-bar').style.width = `${percentage}%`;
@@ -4995,10 +5006,17 @@ function showContentPreviewById(itemId) {
     .replace(/\n/g, '<br>');
   previewTextEl.innerHTML = formattedText;
 
-  // Product images for this day's topic
+  // Product images for this item (prefer item's product_id, fall back to date-level)
   const productImagesEl = document.getElementById('preview-product-images');
   if (productImagesEl) {
-    const productImgs = getProductImagesForDate(content.date);
+    let productImgs = [];
+    if (content.product_id && window.productsData) {
+      const itemProduct = window.productsData.find(p => p.id === content.product_id);
+      if (itemProduct) {
+        productImgs = itemProduct.image_urls || (itemProduct.image_url ? [itemProduct.image_url] : []);
+      }
+    }
+    if (productImgs.length === 0) productImgs = getProductImagesForDate(content.date);
     if (productImgs.length > 0) {
       productImagesEl.innerHTML = '<div style="padding:0 24px 0;"><p style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">PRODUCT IMAGES</p><div class="card-product-images">' +
         productImgs.map(url => '<img src="' + escapeHTML(url) + '" alt="Product" onclick="window.open(this.src)">').join('') +
@@ -6250,11 +6268,20 @@ async function renderContentReview() {
             const hasVideo = item.video_url && item.video_url.length > 0;
             const postPreview = parseContentText(item).substring(0, 120);
 
-            // Product images strip for script platforms
+            // Product images for this item (lookup by item's product_id first, then fall back to date-level)
+            let itemProductImgs = productImgs;
+            if (item.product_id && productsData) {
+              const itemProduct = productsData.find(p => p.id === item.product_id);
+              if (itemProduct) {
+                const imgs = itemProduct.image_urls || (itemProduct.image_url ? [itemProduct.image_url] : []);
+                if (imgs.length > 0) itemProductImgs = imgs;
+              }
+            }
+
             let productImgsHtml = '';
-            if (isScript && productImgs.length > 0) {
+            if (itemProductImgs.length > 0) {
               productImgsHtml = '<div class="card-product-images">' +
-                productImgs.slice(0, 4).map(url => '<img src="' + escapeHTML(url) + '" alt="Product" onclick="event.stopPropagation();window.open(this.src)">').join('') +
+                itemProductImgs.slice(0, 4).map(url => '<img src="' + escapeHTML(url) + '" alt="Product" onclick="event.stopPropagation();window.open(this.src)">').join('') +
                 '</div>';
             }
 
