@@ -2115,6 +2115,7 @@ details .details-content { padding: 20px; }
   }
 }
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -2939,6 +2940,7 @@ details .details-content { padding: 20px; }
       console.log('Auth event:', event)
 
       switch (event) {
+        case 'INITIAL_SESSION':
         case 'SIGNED_IN':
           if (session) {
             currentUser = session.user
@@ -2949,6 +2951,16 @@ details .details-content { padding: 20px; }
             if (window.loadICP) window.loadICP();
             // Load scraped products from Supabase
             if (window.loadProducts) window.loadProducts();
+            // Load content calendar and review after auth confirmed
+            if (window.fetchAndDisplayCalendar) {
+              window.fetchAndDisplayCalendar(true).then(calData => {
+                if (calData && calData.all && calData.all.length > 0) {
+                  ['step-products', 'step-topics', 'step-content', 'step-calendar'].forEach(id => window.unlockStep && window.unlockStep(id));
+                  if (window.renderContentReview) window.renderContentReview();
+                  if (window.loadScheduleThemes) window.loadScheduleThemes();
+                }
+              }).catch(() => {});
+            }
             // Check for active pipeline run after login confirmed
             if (window.checkActivePipeline) {
               window.checkActivePipeline();
@@ -3999,7 +4011,8 @@ let calendarRefreshInterval = null;
 function startCalendarAutoRefresh() {
   if (calendarRefreshInterval) clearInterval(calendarRefreshInterval);
   calendarRefreshInterval = setInterval(() => {
-    if (document.getElementById('phase-3').classList.contains('active')) {
+    const phase3El = document.getElementById('phase-3');
+    if (phase3El && phase3El.classList.contains('active')) {
       fetchAndDisplayCalendar(true); // silent refresh
     }
   }, 30000);
@@ -4025,11 +4038,13 @@ async function fetchAndDisplayCalendar(silent = false) {
       renderCalendar(currentMonth, contentData);
     }
     updateStats();
+    return data;
   } catch (error) {
     console.log('Fetch calendar error:', error);
     if (!silent) {
       showCalendarEmptyState();
     }
+    return null;
   }
 }
 
@@ -4269,7 +4284,19 @@ async function loadScheduleThemes() {
     } else {
       weeklyThemes = [];
     }
-    await fetchAndDisplayCalendar(true);
+    const calData = await fetchAndDisplayCalendar(true);
+    // Render the schedule grid (This Week's Content Schedule)
+    if (calData) {
+      // Build theme-like objects with dates from content data for the grid
+      const contentThemes = (calData.all || []).map(item => ({
+        date: item.date || item.scheduled_date,
+        theme: item.theme || '',
+        platform: item.platform || '',
+        content_type: item.content_type || '',
+        post_text: item.post_text || ''
+      }));
+      renderScheduleGrid(contentThemes, calData);
+    }
     // Also render the week view strip
     renderWeekViewStrip();
   } catch (err) {
@@ -5249,40 +5276,191 @@ function exportToCSV() {
   showToast('CSV exported successfully!', 'success');
 }
 
+// Google Calendar OAuth state
+let googleAccessToken = null;
+let googleTokenClient = null;
+
+function buildCalendarEvents() {
+  const monthData = getContentForMonth(currentMonth);
+  if (!monthData || monthData.length === 0) return null;
+
+  const postsToSync = monthData.filter(c => c.scheduled_date || c.date);
+  if (postsToSync.length === 0) return null;
+
+  // Group posts by date
+  const byDate = {};
+  postsToSync.forEach(post => {
+    const d = post.scheduled_date || post.date;
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(post);
+  });
+
+  const dayThemes = ['', 'Curiosity Hook', 'Craftsmanship', 'Meaning & Symbolism', 'Transformation', 'Hidden Detail / Surprise', 'Lifestyle Aspiration', 'Legacy & Timelessness'];
+
+  const events = [];
+  Object.keys(byDate).sort().forEach(dateStr => {
+    const posts = byDate[dateStr];
+    const dt = new Date(dateStr + 'T00:00:00');
+    const dow = dt.getDay();
+    const dayIndex = dow === 0 ? 7 : dow;
+    const theme = dayThemes[dayIndex] || '';
+    const platforms = [...new Set(posts.map(p => (p.platform || '').toUpperCase()))].join(', ');
+    const statusCounts = posts.reduce((acc, p) => { acc[p.status || 'pending'] = (acc[p.status || 'pending'] || 0) + 1; return acc; }, {});
+    const statusText = Object.entries(statusCounts).map(([k, v]) => v + ' ' + k).join(', ');
+    const preview = (posts[0].post_text || posts[0].content || '').substring(0, 300);
+
+    events.push({
+      summary: 'Post: ' + (theme ? theme + ' — ' : '') + platforms,
+      description: 'ELUXR Content Reminder\n\n' +
+        'Theme: ' + (theme || 'N/A') + '\n' +
+        'Platforms: ' + platforms + '\n' +
+        'Posts: ' + posts.length + ' (' + statusText + ')\n\n' +
+        'Preview:\n' + preview,
+      start: { date: dateStr },
+      end: { date: dateStr },
+      reminders: {
+        useDefault: false,
+        overrides: [
+          { method: 'popup', minutes: 540 },
+          { method: 'popup', minutes: 60 }
+        ]
+      }
+    });
+  });
+
+  return events;
+}
+
+async function createGoogleCalendarEvents(accessToken, events) {
+  let created = 0;
+  let errors = 0;
+
+  for (const event of events) {
+    try {
+      const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + accessToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(event)
+      });
+      if (resp.ok) {
+        created++;
+      } else {
+        const err = await resp.json().catch(() => ({}));
+        console.error('Google Calendar API error:', err);
+        errors++;
+      }
+    } catch (e) {
+      console.error('Google Calendar create event error:', e);
+      errors++;
+    }
+  }
+
+  return { created, errors };
+}
+
 async function syncToGoogleCalendar() {
-  if (!currentSessionId) {
+  const events = buildCalendarEvents();
+  if (!events) {
     showToast('No content to sync. Generate content first.', 'error');
     return;
   }
 
-  showToast('Syncing approved content to Google Calendar...', 'success');
-  try {
-    // FIXED: Send approved content_ids to Phase 3
-    const approvedIds = contentData.filter(c => c.status === 'approved').map(c => c.id);
+  const clientId = window.ELUXR_CONFIG.GOOGLE_CLIENT_ID;
 
-    if (approvedIds.length === 0) {
-      showToast('No approved content to sync. Approve some posts first.', 'error');
-      return;
-    }
-
-    const response = await authenticatedFetch(`${API_BASE}/eluxr-phase3-calendar`, {
-      method: 'POST',
-      body: JSON.stringify({
-        session_id: currentSessionId,
-        month: currentMonth,
-        content_ids: approvedIds
-      })
-    });
-    const result = await safeJson(response, {});
-    if (result.success || result.events_created) {
-      showToast(`Google Calendar sync complete! ${result.events_created || approvedIds.length} events created.`, 'success');
-    } else {
-      showToast('Sync completed', 'success');
-    }
-  } catch (error) {
-    console.log('Calendar sync error:', error);
-    showToast('Calendar sync failed. Check n8n workflow.', 'error');
+  // Fallback to .ics download if no Google Client ID configured
+  if (!clientId) {
+    downloadIcsFile(events);
+    return;
   }
+
+  // Check if Google Identity Services is loaded
+  if (typeof google === 'undefined' || !google.accounts) {
+    showToast('Google sign-in is loading. Please try again in a moment.', 'error');
+    return;
+  }
+
+  // If we already have a token, use it
+  if (googleAccessToken) {
+    showToast('Syncing ' + events.length + ' events to Google Calendar...', 'success');
+    const result = await createGoogleCalendarEvents(googleAccessToken, events);
+    if (result.created > 0) {
+      showToast(result.created + ' events created in Google Calendar!' + (result.errors > 0 ? ' (' + result.errors + ' failed)' : ''), 'success');
+    } else {
+      // Token may have expired — clear and retry
+      googleAccessToken = null;
+      syncToGoogleCalendar();
+    }
+    return;
+  }
+
+  // Initialize token client and request authorization
+  if (!googleTokenClient) {
+    googleTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: 'https://www.googleapis.com/auth/calendar.events',
+      callback: async (tokenResponse) => {
+        if (tokenResponse.error) {
+          showToast('Google authorization failed: ' + tokenResponse.error, 'error');
+          return;
+        }
+        googleAccessToken = tokenResponse.access_token;
+        showToast('Syncing ' + events.length + ' events to Google Calendar...', 'success');
+        const result = await createGoogleCalendarEvents(googleAccessToken, events);
+        if (result.created > 0) {
+          showToast(result.created + ' events created in Google Calendar!' + (result.errors > 0 ? ' (' + result.errors + ' failed)' : ''), 'success');
+        } else {
+          showToast('Failed to create events. Please try again.', 'error');
+          googleAccessToken = null;
+        }
+      }
+    });
+  }
+
+  // This opens the Google consent popup
+  googleTokenClient.requestAccessToken();
+}
+
+function downloadIcsFile(events) {
+  const dayThemes = ['', 'Curiosity Hook', 'Craftsmanship', 'Meaning & Symbolism', 'Transformation', 'Hidden Detail / Surprise', 'Lifestyle Aspiration', 'Legacy & Timelessness'];
+
+  let icsEvents = '';
+  events.forEach(event => {
+    const dateStr = event.start.date;
+    const icsDate = dateStr.replace(/-/g, '');
+    const uid = 'eluxr-' + dateStr + '-' + Date.now() + '@eluxr.app';
+    const desc = (event.description || '').replace(/\n/g, '\\n');
+    const dt = new Date(dateStr + 'T00:00:00');
+    const dow = dt.getDay();
+    const dayIndex = dow === 0 ? 7 : dow;
+    const theme = dayThemes[dayIndex] || event.summary;
+
+    icsEvents += 'BEGIN:VEVENT\r\n' +
+      'UID:' + uid + '\r\n' +
+      'DTSTART;VALUE=DATE:' + icsDate + '\r\n' +
+      'DTEND;VALUE=DATE:' + icsDate + '\r\n' +
+      'SUMMARY:' + event.summary + '\r\n' +
+      'DESCRIPTION:' + desc + '\r\n' +
+      'BEGIN:VALARM\r\nTRIGGER:-PT540M\r\nACTION:DISPLAY\r\nDESCRIPTION:Time to post: ' + theme + '\r\nEND:VALARM\r\n' +
+      'BEGIN:VALARM\r\nTRIGGER:-PT60M\r\nACTION:DISPLAY\r\nDESCRIPTION:Post soon: ' + theme + '\r\nEND:VALARM\r\n' +
+      'END:VEVENT\r\n';
+  });
+
+  const icsContent = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//ELUXR//Content Calendar//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nX-WR-CALNAME:ELUXR Content Calendar\r\n' + icsEvents + 'END:VCALENDAR\r\n';
+
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'eluxr-content-' + currentMonth + '.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast(events.length + ' calendar events downloaded! Open the .ics file to import into Google Calendar.', 'success');
 }
 
 // Stats
@@ -5881,7 +6059,8 @@ async function lockInAndGenerate() {
 
     // Poll Supabase for new content items (workflow runs in background)
     let progress = 10;
-    const expectedItems = 7; // 7 days of content
+    const platforms = getSelectedPlatforms ? getSelectedPlatforms() : ['linkedin', 'instagram', 'x', 'youtube'];
+    const expectedItems = 7 * platforms.length; // 7 days × platforms
     const maxPolls = 60; // 5 minutes max (60 * 5s)
     let polls = 0;
 
@@ -5898,9 +6077,10 @@ async function lockInAndGenerate() {
             .eq('campaign_id', campaignId);
 
           const newItems = (currentCount || 0) - (existingCount || 0);
+          const daysComplete = Math.floor(newItems / platforms.length);
           progress = Math.min(10 + (newItems / expectedItems) * 85, 95);
           document.getElementById('week-progress-bar').style.width = progress + '%';
-          document.getElementById('week-progress-text').textContent = 'Generating content... ' + newItems + ' of ' + expectedItems + ' days complete';
+          document.getElementById('week-progress-text').textContent = 'Generating content... ' + daysComplete + ' of 7 days complete (' + newItems + '/' + expectedItems + ' posts)';
 
           if (newItems >= expectedItems) {
             clearInterval(interval);
@@ -6100,6 +6280,8 @@ async function renderContentReview() {
   }
 }
 window.renderContentReview = renderContentReview;
+window.fetchAndDisplayCalendar = fetchAndDisplayCalendar;
+window.unlockStep = unlockStep;
 
 // === PRODUCT IMAGE HELPERS ===
 // Look up product images for a given content date via content_items.product_id or weekly_topics
