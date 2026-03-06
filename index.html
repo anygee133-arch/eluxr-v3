@@ -3866,7 +3866,7 @@ async function submitApproval(action, contentId, feedback = '') {
   if (feedback) updateData.feedback = feedback;
   if (action === 'edit' && feedback) { updateData.content = feedback; updateData.status = 'pending_review'; }
 
-  await supabase.from('content_items').update(updateData).eq('id', contentId);
+  await window.supabase.from('content_items').update(updateData).eq('id', contentId);
 
   // Also try n8n workflow (non-blocking)
   try {
@@ -3957,7 +3957,7 @@ function parseContentText(content) {
       // Add first_comment with hashtags for Instagram (separate section)
       if (parsed.first_comment) {
         result += '\n\n---\n📝 First Comment (copy this):\n' + parsed.first_comment;
-      } else if (parsed.hashtags && parsed.hashtags.trim()) {
+      } else if (parsed.hashtags && typeof parsed.hashtags === 'string' && parsed.hashtags.trim()) {
         // Add hashtags if no first_comment
         result += '\n\n---\nHashtags:\n' + parsed.hashtags;
       }
@@ -4093,7 +4093,7 @@ function resetProgressUI() {
   document.getElementById('progress-text').textContent = '0%';
   document.getElementById('phase-text').textContent = 'Starting pipeline...';
 
-  document.querySelectorAll('#phase-2 .phase-item').forEach((item) => {
+  document.querySelectorAll('.phase-list .phase-item').forEach((item) => {
     item.classList.remove('active', 'completed');
     const icon = item.querySelector('.phase-icon');
     const step = item.getAttribute('data-step');
@@ -4157,7 +4157,7 @@ function renderProgress(run) {
   }
 
   // Update step list checkmarks
-  document.querySelectorAll('#phase-2 .phase-item').forEach((item) => {
+  document.querySelectorAll('.phase-list .phase-item').forEach((item) => {
     const stepNum = parseInt(item.getAttribute('data-step'));
     item.classList.remove('active', 'completed');
     const icon = item.querySelector('.phase-icon');
@@ -6348,7 +6348,7 @@ function getProductImagesForDate(dateStr) {
     // Fallback: match via weekly_topics (flat array)
     const dateObj = new Date(dateStr + 'T00:00:00');
     const dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
-    const topicsArr = Array.isArray(weekTopics) ? weekTopics : [];
+    const topicsArr = Array.isArray(weekTopics) ? weekTopics : Object.values(weekTopics || {}).flat();
 
     const topic = topicsArr.find(t => t.day_number === dayOfWeek && t.product_id);
     if (topic) {
