@@ -3393,7 +3393,9 @@ function renderProductsCard(products) {
     const images = p.image_urls || (p.image_url ? [p.image_url] : []);
     const thumbHtml = images.length > 0
       ? '<div class="product-thumb" onclick="openGallery(\'' + escapeHTML(p.id || '') + '\')" title="View images (' + images.length + ')"><img src="' + escapeHTML(images[0]) + '" alt="' + nameVal + '"></div>'
-      : '<div class="product-thumb" style="cursor:default"><span class="thumb-placeholder">&#128247;</span></div>';
+      : (prodUrl
+        ? '<div class="product-thumb" onclick="window.open(\'' + escapeHTML(prodUrl) + '\',\'_blank\')" title="View product page"><span class="thumb-placeholder">&#128247;</span></div>'
+        : '<div class="product-thumb" style="cursor:default"><span class="thumb-placeholder">&#128247;</span></div>');
     const linkHtml = prodUrl
       ? '<a href="' + escapeHTML(prodUrl) + '" target="_blank" rel="noopener" class="product-link" title="View product page">&#x1F517;</a>'
       : '';
