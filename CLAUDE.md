@@ -6,8 +6,8 @@ Multi-tenant SaaS social media content platform. Businesses enter their URL, get
 
 ## Tech Stack
 
-- **Frontend:** Vanilla HTML/CSS/JS — single `index.html` (~5400 lines), no framework
-- **Backend:** n8n Cloud (flowbound.app.n8n.cloud) — 13 decomposed sub-workflows + 1 orchestrator
+- **Frontend:** Vanilla HTML/CSS/JS — single `index.html` (~6600 lines), no framework
+- **Backend:** n8n Cloud (flowbound.app.n8n.cloud) — 16 workflows + 1 orchestrator
 - **Database:** Supabase (PostgreSQL + Auth + Realtime + RLS)
 - **Hosting:** Vercel (static site)
 - **AI:** Claude (content), Perplexity (research/trends), image/video generation
@@ -35,14 +35,17 @@ tests/              — Verification docs
 
 ## Key Workflows (n8n)
 
-01-icp-analyzer, 02-theme-generator, 03-themes-list, 04-content-studio, 05-content-submit, 06-approval-list, 07-approval-action, 08-clear-pending, 09-calendar-sync, 10-chat, 11-image-generator, 12-video-script-builder, 13-video-creator, 14-pipeline-orchestrator
+01-icp-analyzer, 02-theme-generator, 03-themes-list, 04-content-studio, 05-content-submit, 06-approval-list, 07-approval-action, 08-clear-pending, 09-calendar-sync, 10-chat, 11-image-generator, 12-video-script-builder, 13-video-creator, 14-pipeline-orchestrator, 15-generate-topics, 16-regenerate-topic
 
-## Current State
+## Current State (March 2026)
 
-- Phase 5 of 11 (Frontend Migration + UI Polish) — 3/4 plans complete
-- Phases 1-4 complete (Security, Auth, Workflow Decomposition, Progress Tracking)
-- ~50% overall (25/50 requirements done)
-- Next: Plan 05-04 (E2E verification + Vercel deployment), then Phase 6 (Content Pipeline)
+- **Content pipeline fully working end-to-end**
+- All 16 n8n workflows operational
+- Single-page 5-step app flow: Login → Setup → Products/ICP → Weekly Topics → Content Review → Calendar
+- ICP generation: Jina scraping → Perplexity research ×3 → Claude synthesis → Supabase
+- Content generation: 7 topics/week × 4 platforms/day = 28 content items per week
+- Product rotation: workflow 15 excludes products used in prior weeks
+- Pending: Vercel production deployment, full E2E browser testing
 
 ## Coding Conventions
 
@@ -52,7 +55,7 @@ tests/              — Verification docs
 - Smooth transitions: `cubic-bezier(0.22, 1, 0.36, 1)`, GPU-accelerated with `will-change`
 - Functions are vanilla JS, no modules — all in `<script>` tags in index.html
 - Supabase client loaded via CDN
-- Test with `python3 -m http.server 8080` or `npx serve .`
+- Test with `python3 -m http.server 8888` or `npx serve .`
 
 ## Services
 
