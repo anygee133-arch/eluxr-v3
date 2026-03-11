@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELUXR Magic Content Engine</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>ELUXR</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f6f8fb;
+  --bg: #ffffff;
   --bg-subtle: rgba(248, 250, 253, 0.7);
-  --bg-card: rgba(255, 255, 255, 0.72);
+  --bg-card: rgba(255, 255, 255, 0.9);
   --sidebar-bg: #0c1222;
   --sidebar-hover: #1e293b;
-  --sidebar-active: #16a34a;
+  --sidebar-active: #000000;
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
   --text-on-dark: #f1f5f9;
-  --green: #16a34a;
-  --green-light: #22c55e;
-  --green-bg: rgba(240, 253, 244, 0.8);
-  --green-border: rgba(187, 247, 208, 0.6);
+  --green: #000000;
+  --green-light: #000000;
+  --green-bg: rgba(0, 0, 0, 0.05);
+  --green-border: rgba(0, 0, 0, 0.15);
   --border: rgba(226, 232, 240, 0.6);
   --border-light: rgba(241, 245, 249, 0.5);
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.04);
@@ -31,19 +31,19 @@
   --radius-lg: 18px;
   --radius-xl: 22px;
   --transition: cubic-bezier(0.22, 1, 0.36, 1);
-  --purple: #7c3aed;
-  --purple-light: #a78bfa;
-  --purple-bg: rgba(245, 243, 255, 0.8);
-  --purple-border: rgba(221, 214, 254, 0.6);
-  --glass-bg: rgba(255, 255, 255, 0.52);
+  --purple: #000000;
+  --purple-light: #000000;
+  --purple-bg: rgba(0, 0, 0, 0.05);
+  --purple-border: rgba(0, 0, 0, 0.15);
+  --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(255, 255, 255, 0.45);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255,255,255,0.7) inset;
-  --glow-green: 0 0 20px rgba(22, 163, 74, 0.15), 0 0 40px rgba(22, 163, 74, 0.05);
+  --glow-green: none;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   color: var(--text-primary);
   overflow-x: hidden;
@@ -51,20 +51,14 @@ body {
   min-height: 100vh;
   position: relative;
 }
-/* Ambient gradient mesh background - visible orbs */
+/* Ambient gradient mesh background - removed for B&W theme */
 body::before {
   content: '';
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background:
-    radial-gradient(ellipse 600px 500px at 5% 15%, rgba(22, 163, 74, 0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 500px 400px at 95% 5%, rgba(124, 58, 237, 0.10) 0%, transparent 65%),
-    radial-gradient(ellipse 700px 500px at 50% 100%, rgba(34, 197, 94, 0.08) 0%, transparent 70%),
-    radial-gradient(ellipse 400px 350px at 75% 50%, rgba(167, 139, 250, 0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 350px 300px at 20% 70%, rgba(22, 163, 74, 0.06) 0%, transparent 60%);
+  background: none;
   z-index: -2;
   pointer-events: none;
-  animation: meshFloat 25s ease-in-out infinite alternate;
 }
 @keyframes meshFloat {
   0% { transform: translate(0, 0) scale(1); }
@@ -84,11 +78,7 @@ body::after {
 
 /* FLOATING GRADIENT ORBS */
 .orb-container {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 .orb {
   position: absolute;
@@ -149,7 +139,7 @@ body::after {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(22, 163, 74, 0.5), rgba(124, 58, 237, 0.3), rgba(22, 163, 74, 0.5), transparent);
+  background: linear-gradient(90deg, transparent, rgba(15, 23, 41, 0.5), transparent);
 }
 .header-logo h1 {
   font-family: 'Cormorant', serif;
@@ -168,10 +158,7 @@ body::after {
   50% { background-position: 100% 50%; }
 }
 .header-logo span {
-  display: block; font-family: 'Montserrat', sans-serif;
-  font-size: 11px; font-weight: 500; color: var(--green-light);
-  letter-spacing: 3px; text-transform: uppercase; margin-top: 4px;
-  opacity: 0.85;
+  display: none;
 }
 
 /* FLOATING PROGRESS DOTS */
@@ -200,22 +187,22 @@ body::after {
   text-decoration: none;
   cursor: pointer; transition: all 0.35s var(--transition);
   border: 2px solid transparent;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'DM Sans', sans-serif;
 }
 .step-dot:hover {
-  background: rgba(240, 253, 244, 0.6);
-  border-color: rgba(22, 163, 74, 0.2);
-  color: var(--green);
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #0f172a;
   transform: scale(1.1);
 }
 .step-dot.active {
-  background: var(--green); color: #fff;
-  border-color: var(--green);
-  box-shadow: 0 0 16px rgba(22, 163, 74, 0.3);
+  background: #000; color: #fff;
+  border-color: #000;
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.15);
 }
 .step-dot.completed {
-  background: rgba(240, 253, 244, 0.9); color: var(--green);
-  border-color: var(--green);
+  background: #e2e8f0; color: #000;
+  border-color: #e2e8f0;
 }
 .step-dot.disabled {
   opacity: 0.4; cursor: not-allowed; pointer-events: none;
@@ -250,13 +237,13 @@ body::after {
 .phase-header { margin-bottom: 32px; text-align: center; }
 .phase-tag {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 16px; background: rgba(240, 253, 244, 0.5); color: var(--green);
+  padding: 6px 16px; background: rgba(0, 0, 0, 0.04); color: #000;
   font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
   text-transform: uppercase; border-radius: 20px;
-  border: 1px solid rgba(22, 163, 74, 0.15); margin-bottom: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1); margin-bottom: 14px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 0 16px rgba(22, 163, 74, 0.06), 0 0 0 1px rgba(255,255,255,0.5) inset;
+  box-shadow: none;
 }
 .phase-header h2 {
   font-family: 'Cormorant', serif;
@@ -283,14 +270,14 @@ body::after {
 }
 .card::after {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--green), var(--green-light), transparent);
+  background: linear-gradient(90deg, transparent, rgba(15, 23, 41, 0.5), transparent);
   transform: scaleX(0); transform-origin: left;
   transition: transform 0.5s var(--transition);
   z-index: 2;
 }
 .card:hover {
-  border-color: rgba(22, 163, 74, 0.2);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(255,255,255,0.75) inset, var(--glow-green);
+  border-color: #e2e8f0;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(255,255,255,0.75) inset;
   transform: translateY(-3px);
   background: rgba(255, 255, 255, 0.6);
 }
@@ -304,7 +291,7 @@ body::after {
 }
 .form-input, .form-textarea, .form-select {
   width: 100%; padding: 13px 16px; border: 1px solid rgba(226, 232, 240, 0.5);
-  border-radius: 12px; font-family: 'Montserrat', sans-serif;
+  border-radius: 12px; font-family: 'DM Sans', sans-serif;
   font-size: 14px; color: var(--text-primary);
   background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(8px);
@@ -322,7 +309,7 @@ body::after {
 /* BUTTONS */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 14px 28px; border-radius: 12px; font-family: 'Montserrat', sans-serif;
+  padding: 14px 28px; border-radius: 12px; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; border: none;
   transition: all 0.3s var(--transition);
   position: relative;
@@ -334,9 +321,10 @@ body::after {
   transform: translateY(0) scale(0.98);
 }
 .btn-primary {
-  background: linear-gradient(135deg, var(--green) 0%, var(--green-light) 100%);
+  background: #0f1729;
   color: #fff;
-  box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3), 0 0 0 1px rgba(22, 163, 74, 0.05) inset;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   position: relative;
   overflow: hidden;
 }
@@ -349,7 +337,7 @@ body::after {
 }
 .btn-primary:hover::before { left: 100%; }
 .btn-primary:hover {
-  box-shadow: 0 8px 28px rgba(22, 163, 74, 0.4), 0 0 0 1px rgba(22, 163, 74, 0.1) inset;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 }
 .btn-outline {
   background: rgba(255, 255, 255, 0.5); color: var(--text-secondary);
@@ -358,17 +346,18 @@ body::after {
   -webkit-backdrop-filter: blur(8px);
 }
 .btn-outline:hover {
-  border-color: rgba(22, 163, 74, 0.3); color: var(--green);
-  background: rgba(240, 253, 244, 0.6);
-  box-shadow: 0 2px 12px rgba(22, 163, 74, 0.08);
+  border-color: rgba(0, 0, 0, 0.2); color: var(--text-primary);
+  background: rgba(248, 250, 253, 0.6);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 .btn-purple {
-  background: linear-gradient(135deg, var(--purple) 0%, var(--purple-light) 100%);
+  background: #0f1729;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .btn-purple:hover {
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.35), 0 0 0 1px rgba(124, 58, 237, 0.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 }
 .btn-sm { padding: 10px 18px; font-size: 13px; }
 .btn-lg { padding: 16px 32px; font-size: 15px; }
@@ -383,11 +372,11 @@ details {
   -webkit-backdrop-filter: blur(8px);
 }
 details summary {
-  cursor: pointer; font-weight: 600; color: var(--green);
+  cursor: pointer; font-weight: 600; color: #0f172a;
   padding: 16px 20px; background: rgba(248, 250, 253, 0.5);
   transition: all 0.25s var(--transition);
 }
-details summary:hover { background: rgba(240, 253, 244, 0.5); }
+details summary:hover { background: rgba(248, 250, 253, 0.7); }
 details[open] summary { border-bottom: 1px solid rgba(226, 232, 240, 0.4); }
 details .details-content { padding: 20px; }
 
@@ -405,17 +394,17 @@ details .details-content { padding: 20px; }
   -webkit-backdrop-filter: blur(4px);
 }
 .platforms-group label:hover {
-  border-color: rgba(22, 163, 74, 0.2);
+  border-color: rgba(0, 0, 0, 0.15);
   background: rgba(255, 255, 255, 0.6);
 }
 .platforms-group label:has(input:checked) {
-  border-color: rgba(22, 163, 74, 0.3);
-  background: rgba(240, 253, 244, 0.7);
-  color: var(--green);
-  box-shadow: 0 0 12px rgba(22, 163, 74, 0.06);
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(248, 250, 253, 0.7);
+  color: #0f172a;
+  box-shadow: none;
 }
 .platforms-group input[type="checkbox"] {
-  width: 16px; height: 16px; accent-color: var(--green);
+  width: 16px; height: 16px; accent-color: #000;
 }
 
 /* PROGRESS */
@@ -427,16 +416,16 @@ details .details-content { padding: 20px; }
 }
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #16a34a, #22c55e, #4ade80, #22c55e, #16a34a);
+  background: #0f1729;
   background-size: 300% 100%;
   border-radius: 20px; width: 0%;
   transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
-  box-shadow: 0 0 12px rgba(22, 163, 74, 0.3), 0 0 24px rgba(22, 163, 74, 0.15);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
   animation: progressGlow 3s ease-in-out infinite;
 }
 @keyframes progressGlow {
-  0%, 100% { background-position: 0% 0; box-shadow: 0 0 12px rgba(22, 163, 74, 0.3), 0 0 24px rgba(22, 163, 74, 0.15); }
-  50% { background-position: 100% 0; box-shadow: 0 0 20px rgba(22, 163, 74, 0.5), 0 0 40px rgba(22, 163, 74, 0.25); }
+  0%, 100% { background-position: 0% 0; box-shadow: 0 0 12px rgba(0, 0, 0, 0.1); }
+  50% { background-position: 100% 0; box-shadow: 0 0 16px rgba(0, 0, 0, 0.15); }
 }
 .progress-bar::after {
   content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -446,7 +435,7 @@ details .details-content { padding: 20px; }
 @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
 .progress-text {
-  font-family: 'Cormorant', serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 36px; font-weight: 600; color: var(--green); margin-bottom: 8px;
 }
 .phase-text {
@@ -465,22 +454,22 @@ details .details-content { padding: 20px; }
   width: 28px; height: 28px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   background: rgba(226, 232, 240, 0.4); font-size: 12px; font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'DM Sans', sans-serif;
   transition: all 0.3s var(--transition);
 }
 .phase-item.active .phase-icon {
-  background: linear-gradient(135deg, var(--green), var(--green-light));
+  background: #0f1729;
   color: white; animation: pulseGlow 2s ease-in-out infinite;
-  box-shadow: 0 0 12px rgba(22, 163, 74, 0.3);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
 }
 .phase-item.completed .phase-icon {
-  background: linear-gradient(135deg, var(--green), var(--green-light));
+  background: #0f1729;
   color: white;
-  box-shadow: 0 0 8px rgba(22, 163, 74, 0.15);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.08);
 }
 @keyframes pulseGlow {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(22, 163, 74, 0.3); }
-  50% { transform: scale(1.08); box-shadow: 0 0 20px rgba(22, 163, 74, 0.45); }
+  0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(0, 0, 0, 0.1); }
+  50% { transform: scale(1.08); box-shadow: 0 0 14px rgba(0, 0, 0, 0.15); }
 }
 
 /* STATS */
@@ -494,17 +483,17 @@ details .details-content { padding: 20px; }
   box-shadow: 0 2px 12px rgba(0,0,0,0.03), 0 0 0 1px rgba(255,255,255,0.5) inset;
 }
 .stat-card:hover {
-  border-color: rgba(22, 163, 74, 0.2);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.05), 0 0 0 1px rgba(255,255,255,0.6) inset, 0 0 16px rgba(22,163,74,0.06);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.05), 0 0 0 1px rgba(255,255,255,0.6) inset;
   transform: translateY(-3px);
 }
 .stat-card.active {
-  border-color: rgba(22, 163, 74, 0.25);
-  background: rgba(240, 253, 244, 0.7);
-  box-shadow: 0 4px 16px rgba(22,163,74,0.1), 0 0 0 1px rgba(22,163,74,0.08) inset;
+  border-color: rgba(0, 0, 0, 0.15);
+  background: rgba(248, 250, 253, 0.7);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04) inset;
 }
 .stat-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
-.stat-value { font-family: 'Cormorant', serif; font-size: 28px; font-weight: 600; color: var(--green); }
+.stat-value { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 600; color: #0f172a; }
 
 /* CONTENT LIST PANEL */
 .content-list-panel {
@@ -530,9 +519,9 @@ details .details-content { padding: 20px; }
 }
 .content-list-item:hover { background: rgba(248, 250, 253, 0.5); }
 .content-list-item:last-child { border-bottom: none; }
-.content-list-day { width: 36px; height: 36px; border-radius: 10px; background: rgba(240, 253, 244, 0.7);
-  display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--green); font-size: 14px;
-  border: 1px solid rgba(22, 163, 74, 0.1); }
+.content-list-day { width: 36px; height: 36px; border-radius: 10px; background: rgba(0, 0, 0, 0.04);
+  display: flex; align-items: center; justify-content: center; font-weight: 600; color: #0f172a; font-size: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08); }
 .content-list-info { flex: 1; }
 .content-list-title { font-weight: 500; font-size: 14px; color: var(--text-primary); margin-bottom: 2px; }
 .content-list-meta { font-size: 12px; color: var(--text-muted); }
@@ -580,7 +569,7 @@ details .details-content { padding: 20px; }
   display: flex; align-items: center; gap: 16px;
 }
 .calendar-title {
-  font-family: 'Cormorant', serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 20px; font-weight: 600; color: var(--text-primary);
   min-width: 280px; text-align: center;
 }
@@ -601,9 +590,9 @@ details .details-content { padding: 20px; }
   -webkit-backdrop-filter: blur(4px);
 }
 .cal-day:hover:not(.empty) {
-  background: rgba(240, 253, 244, 0.7);
-  border-color: rgba(22, 163, 74, 0.2);
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.06);
+  background: rgba(248, 250, 253, 0.7);
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transform: scale(1.05);
 }
 .cal-day .platform-dots {
@@ -622,16 +611,16 @@ details .details-content { padding: 20px; }
 .cal-day .platform-dot.tiktok { background: #333333; box-shadow: 0 0 4px rgba(0,0,0,0.2); }
 .cal-day .platform-dot.video { background: var(--purple); box-shadow: 0 0 4px rgba(124,58,237,0.3); }
 .cal-day.today {
-  background: linear-gradient(135deg, var(--green), var(--green-light));
+  background: #0f1729;
   color: #fff; font-weight: 600;
-  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25), 0 0 0 2px rgba(22, 163, 74, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 .cal-day.today::after { background: #fff; }
 .cal-day.empty { background: transparent; pointer-events: none; opacity: 0.2; border-color: transparent; }
 .cal-day.selected {
-  border-color: rgba(22, 163, 74, 0.4);
-  box-shadow: 0 0 0 2px rgba(22,163,74,0.15), 0 4px 12px rgba(22,163,74,0.08);
-  background: rgba(240, 253, 244, 0.6);
+  border-color: rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
+  background: rgba(248, 250, 253, 0.6);
 }
 
 /* PLATFORM BADGES */
@@ -703,7 +692,7 @@ details .details-content { padding: 20px; }
 }
 .download-btn:hover { background: rgba(0,0,0,0.85); }
 .preview-content { padding: 24px; }
-.preview-content h3 { color: var(--green); margin-bottom: 16px; font-family: 'Cormorant', serif; }
+.preview-content h3 { color: #0f172a; margin-bottom: 16px; font-family: 'DM Sans', sans-serif; }
 .preview-content p {
   color: var(--text-primary); white-space: pre-wrap; margin-bottom: 16px;
   line-height: 1.7; max-height: 400px; overflow-y: auto;
@@ -713,14 +702,14 @@ details .details-content { padding: 20px; }
 .preview-content p hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .preview-hashtags { display: flex; flex-wrap: wrap; gap: 8px; max-height: 150px; overflow-y: auto; padding: 4px 0; }
 .hashtag {
-  background: rgba(240, 253, 244, 0.6); color: var(--green);
+  background: rgba(0, 0, 0, 0.04); color: #475569;
   padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
-  border: 1px solid rgba(22, 163, 74, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   transition: all 0.2s var(--transition);
 }
 .hashtag:hover {
-  background: rgba(240, 253, 244, 0.85);
-  border-color: rgba(22, 163, 74, 0.2);
+  background: rgba(248, 250, 253, 0.85);
+  border-color: rgba(0, 0, 0, 0.15);
 }
 .preview-actions {
   display: flex; gap: 12px; padding: 24px; border-top: 1px solid rgba(241, 245, 249, 0.4); flex-wrap: wrap;
@@ -730,8 +719,8 @@ details .details-content { padding: 20px; }
   border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
   cursor: pointer; transition: all 0.2s;
 }
-.btn-approve { background: linear-gradient(135deg, var(--green), var(--green-light)); color: white; box-shadow: 0 2px 8px rgba(22,163,74,0.2); }
-.btn-approve:hover { box-shadow: 0 4px 16px rgba(22,163,74,0.3); transform: translateY(-1px); }
+.btn-approve { background: #0f1729; color: white; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.btn-approve:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); transform: translateY(-1px); }
 .btn-edit { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: white; box-shadow: 0 2px 8px rgba(245,158,11,0.2); }
 .btn-edit:hover { box-shadow: 0 4px 16px rgba(245,158,11,0.3); transform: translateY(-1px); }
 .btn-regenerate { background: linear-gradient(135deg, #6366f1, #818cf8); color: white; box-shadow: 0 2px 8px rgba(99,102,241,0.2); }
@@ -758,7 +747,7 @@ details .details-content { padding: 20px; }
 .edit-textarea {
   width: 100%; min-height: 200px; padding: 16px;
   border: 1px solid var(--border); border-radius: 10px;
-  font-size: 14px; font-family: 'Montserrat', sans-serif;
+  font-size: 14px; font-family: 'DM Sans', sans-serif;
   line-height: 1.6; resize: vertical;
   resize: vertical; margin-bottom: 16px; line-height: 1.6;
 }
@@ -799,60 +788,87 @@ details .details-content { padding: 20px; }
 
 /* CONTENT REVIEW CARDS */
 /* CONTENT REVIEW DAY GROUPS */
-.content-day-group {
-  margin-bottom: 28px;
+/* Content Review - Day Cards Stacked */
+.content-days-grid {
+  display: flex; flex-direction: column; gap: 12px;
 }
-.content-day-header {
-  display: flex; align-items: center; gap: 14px;
-  padding: 14px 18px; margin-bottom: 14px;
-  background: rgba(240, 253, 244, 0.4);
-  border-radius: 14px; cursor: pointer;
-  border: 1px solid rgba(22, 163, 74, 0.1);
+.content-day-card {
+  background: var(--glass-bg); border: 1px solid rgba(226, 232, 240, 0.5);
+  border-radius: var(--radius-lg); padding: 16px 20px; cursor: pointer;
   transition: all 0.3s var(--transition);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  display: flex; align-items: center; gap: 16px;
 }
-.content-day-header:hover {
-  background: rgba(240, 253, 244, 0.6);
-  border-color: rgba(22, 163, 74, 0.2);
+.content-day-card:hover {
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  transform: translateY(-2px);
 }
-.content-day-header .day-badge {
-  width: 44px; height: 44px; border-radius: 11px;
-  background: var(--green); color: #fff;
+.content-day-card .day-badge {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: #0f1729; color: #fff;
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
   flex-shrink: 0;
 }
-.content-day-header .day-info { flex: 1; min-width: 0; }
-.content-day-header .day-info h4 {
-  font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0;
+.content-day-card .day-info {
+  flex: 1; min-width: 0;
 }
-.content-day-header .day-info span {
-  font-size: 12px; color: var(--text-muted);
+.content-day-card .day-title {
+  font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px;
 }
-.content-day-header .day-product-thumb {
-  width: 44px; height: 44px; border-radius: 10px;
+.content-day-card .day-date {
+  font-size: 12px; color: var(--text-muted); margin-bottom: 4px;
+}
+.content-day-card .day-stats {
+  font-size: 12px; color: var(--text-secondary);
+}
+.content-day-card .day-stats .approved-count {
+  font-weight: 600; color: #0f172a;
+}
+.content-day-card .day-product-thumb {
+  width: 52px; height: 52px; border-radius: 10px;
   object-fit: cover; border: 2px solid rgba(255,255,255,0.6);
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  flex-shrink: 0; cursor: pointer;
-  transition: transform 0.2s;
+  flex-shrink: 0;
 }
-.content-day-header .day-product-thumb:hover { transform: scale(1.1); }
-.content-day-header .day-chevron {
-  margin-left: auto; font-size: 18px; color: var(--text-muted);
-  transition: transform 0.3s; flex-shrink: 0;
+
+/* Content Review - Day Popup Modal */
+.content-day-modal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(15, 23, 41, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  z-index: 1500; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s var(--transition);
 }
-.content-day-group.expanded .day-chevron { transform: rotate(180deg); }
-.content-day-posts {
-  display: none; padding: 0 8px; gap: 12px;
+.content-day-modal.visible { opacity: 1; pointer-events: auto; }
+.content-day-modal-content {
+  background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-lg); padding: 28px; max-width: 900px; width: 92%;
+  max-height: 85vh; overflow-y: auto; position: relative;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.6) inset;
+  animation: modalSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.content-day-group.expanded .content-day-posts {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+.content-day-modal-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+  padding-bottom: 16px; border-bottom: 1px solid #e2e8f0;
 }
-@media (max-width: 768px) {
-  .content-day-group.expanded .content-day-posts {
-    grid-template-columns: 1fr;
-  }
+.content-day-modal-header h3 {
+  font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0;
+  font-family: 'DM Sans', sans-serif;
 }
+.content-day-modal-close {
+  width: 36px; height: 36px; border: none; background: rgba(248, 250, 253, 0.6);
+  border-radius: 10px; font-size: 20px; cursor: pointer; color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.content-day-modal-close:hover { background: rgba(0,0,0,0.06); }
+.content-day-modal-posts {
+  display: flex; flex-direction: column; gap: 16px;
+}
+/* Keep existing content-platform-card styles */
 /* Platform cards */
 .content-platform-card {
   background: var(--glass-bg); border: 1px solid var(--glass-border);
@@ -861,7 +877,7 @@ details .details-content { padding: 20px; }
   display: flex; flex-direction: column;
 }
 .content-platform-card:hover {
-  border-color: rgba(22, 163, 74, 0.2);
+  border-color: rgba(0, 0, 0, 0.12);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 .content-platform-card .platform-label {
@@ -875,7 +891,7 @@ details .details-content { padding: 20px; }
 .content-platform-card .platform-label.youtube { background: rgba(255, 0, 0, 0.1); color: #ff0000; }
 .content-platform-card .post-preview {
   font-size: 13px; color: var(--text-secondary); line-height: 1.6;
-  max-height: 80px; overflow: hidden; margin-bottom: 12px; flex: 1;
+  margin-bottom: 12px; flex: 1; white-space: pre-wrap;
 }
 .content-platform-card .card-actions {
   display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
@@ -884,7 +900,7 @@ details .details-content { padding: 20px; }
 .script-badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600;
-  background: rgba(124, 58, 237, 0.1); color: var(--purple);
+  background: rgba(0, 0, 0, 0.06); color: #0f172a;
   letter-spacing: 0.3px; margin-bottom: 8px;
 }
 /* Product image strip in card */
@@ -904,14 +920,14 @@ details .details-content { padding: 20px; }
 }
 /* Video generation button */
 .btn-generate-video {
-  background: linear-gradient(135deg, var(--purple), var(--purple-light));
+  background: #0f1729;
   color: white; border: none; border-radius: 8px;
   padding: 8px 14px; font-size: 12px; font-weight: 600;
   cursor: pointer; transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .btn-generate-video:hover {
-  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   transform: translateY(-1px);
 }
 .btn-generate-video:disabled {
@@ -935,7 +951,7 @@ details .details-content { padding: 20px; }
   font-size: 11px; font-weight: 600; text-transform: capitalize;
 }
 .status-badge.pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-.status-badge.approved { background: rgba(22, 163, 74, 0.1); color: var(--green); }
+.status-badge.approved { background: rgba(0, 0, 0, 0.06); color: #0f172a; }
 .status-badge.rejected { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 .status-badge.draft { background: rgba(148, 163, 184, 0.1); color: var(--text-muted); }
 
@@ -967,11 +983,10 @@ details .details-content { padding: 20px; }
 .card-glass:hover {
   background: rgba(255, 255, 255, 0.55) !important;
   box-shadow:
-    0 20px 60px rgba(22, 163, 74, 0.1),
+    0 20px 60px rgba(0, 0, 0, 0.06),
     0 0 0 1px rgba(255,255,255,0.85) inset,
-    0 0 30px rgba(22, 163, 74, 0.06),
     0 1px 0 rgba(255,255,255,0.9) inset;
-  border-color: rgba(22, 163, 74, 0.2) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
   transform: translateY(-4px);
 }
 
@@ -1016,7 +1031,7 @@ details .details-content { padding: 20px; }
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #16a34a;
+  color: #000;
   margin-bottom: 6px;
 }
 .icp-section-value {
@@ -1050,11 +1065,10 @@ details .details-content { padding: 20px; }
 .products-card:hover {
   background: rgba(255, 255, 255, 0.55);
   box-shadow:
-    0 20px 60px rgba(22, 163, 74, 0.1),
+    0 20px 60px rgba(0, 0, 0, 0.06),
     0 0 0 1px rgba(255,255,255,0.85) inset,
-    0 0 30px rgba(22, 163, 74, 0.06),
     0 1px 0 rgba(255,255,255,0.9) inset;
-  border-color: rgba(22, 163, 74, 0.2);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 .products-card-header {
   display: flex;
@@ -1066,7 +1080,7 @@ details .details-content { padding: 20px; }
   transition: background 0.25s var(--transition);
 }
 .products-card-header:hover {
-  background: rgba(240, 253, 244, 0.3);
+  background: rgba(248, 250, 253, 0.4);
 }
 .products-card-header h3 {
   display: flex;
@@ -1084,8 +1098,8 @@ details .details-content { padding: 20px; }
   min-width: 24px;
   height: 24px;
   padding: 0 8px;
-  background: rgba(22, 163, 74, 0.15);
-  color: #16a34a;
+  background: rgba(0, 0, 0, 0.08);
+  color: #0f172a;
   border-radius: 12px;
   font-size: 12px;
   font-weight: 700;
@@ -1178,7 +1192,7 @@ details .details-content { padding: 20px; }
   border: 1px solid transparent;
   border-radius: 8px;
   padding: 6px 10px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
@@ -1192,8 +1206,8 @@ details .details-content { padding: 20px; }
 .product-name input:focus {
   outline: none;
   background: rgba(255, 255, 255, 0.8);
-  border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.08);
+  border-color: #000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
 }
 .product-meta {
   display: flex;
@@ -1212,14 +1226,14 @@ details .details-content { padding: 20px; }
 .product-price {
   font-size: 12px;
   font-weight: 600;
-  color: var(--green);
+  color: #0f172a;
   white-space: nowrap;
 }
 .product-category {
   display: inline-block;
   padding: 2px 8px;
-  background: rgba(124, 58, 237, 0.1);
-  color: var(--purple);
+  background: rgba(0, 0, 0, 0.06);
+  color: #475569;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
@@ -1256,19 +1270,19 @@ details .details-content { padding: 20px; }
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border: 1px dashed rgba(22, 163, 74, 0.3);
+  border: 1px dashed rgba(0, 0, 0, 0.2);
   border-radius: 8px;
   background: transparent;
-  color: var(--green);
-  font-family: 'Montserrat', sans-serif;
+  color: #0f172a;
+  font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.25s var(--transition);
 }
 .btn-add-product:hover {
-  background: rgba(240, 253, 244, 0.5);
-  border-color: rgba(22, 163, 74, 0.5);
+  background: rgba(248, 250, 253, 0.5);
+  border-color: rgba(0, 0, 0, 0.3);
 }
 .btn-save-products {
   display: none;
@@ -1277,16 +1291,15 @@ details .details-content { padding: 20px; }
   border-radius: 8px;
   background: var(--green);
   color: #fff;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s var(--transition);
 }
 .btn-save-products:hover {
-  background: var(--green-light);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 .btn-save-products.visible {
   display: inline-flex;
@@ -1305,18 +1318,18 @@ details .details-content { padding: 20px; }
 .week-tab {
   flex: 1; padding: 10px 16px; border: 1px solid rgba(226, 232, 240, 0.4);
   border-radius: 10px; background: rgba(248, 250, 253, 0.4); color: var(--text-secondary);
-  font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 600;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
   cursor: pointer; transition: all 0.25s var(--transition); text-align: center;
 }
 .week-tab:hover:not(.locked):not(.active) { background: rgba(248, 250, 253, 0.7); color: var(--text-primary); }
 .week-tab.active {
-  background: linear-gradient(135deg, var(--green), var(--green-light)); color: #fff;
-  border-color: transparent; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+  background: #0f1729; color: #fff;
+  border-color: transparent; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .week-tab.locked { opacity: 0.4; cursor: not-allowed; }
 .week-tab.completed {
-  background: rgba(22, 163, 74, 0.1); color: var(--green);
-  border-color: rgba(22, 163, 74, 0.2);
+  background: rgba(0, 0, 0, 0.06); color: #0f172a;
+  border-color: rgba(0, 0, 0, 0.1);
 }
 .topic-card {
   background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(226, 232, 240, 0.4);
@@ -1326,7 +1339,7 @@ details .details-content { padding: 20px; }
 }
 .topic-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.04); transform: translateY(-1px); }
 .topic-card.approved {
-  border-color: rgba(22, 163, 74, 0.3); background: rgba(240, 253, 244, 0.4);
+  border-color: rgba(0, 0, 0, 0.15); background: rgba(248, 250, 253, 0.5);
 }
 .topic-card.regenerating { opacity: 0.6; pointer-events: none; }
 .topic-day-badge {
@@ -1336,40 +1349,42 @@ details .details-content { padding: 20px; }
   color: var(--text-secondary); border: 1px solid rgba(226, 232, 240, 0.4);
 }
 .topic-card.approved .topic-day-badge {
-  background: var(--green); color: #fff; border-color: var(--green);
+  background: #000; color: #fff; border-color: #000;
 }
-.topic-body { flex: 1; min-width: 0; }
+.topic-body { flex: 1; min-width: 0; overflow: visible; }
 .topic-day-theme {
   display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
 }
 .topic-day-theme .day-name {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.5px; color: var(--green); font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px; color: #0f172a; font-family: 'DM Sans', sans-serif;
 }
 .topic-day-theme .theme-label {
-  font-size: 11px; font-weight: 600; color: var(--purple);
-  padding: 2px 8px; background: rgba(124, 58, 237, 0.08);
+  font-size: 11px; font-weight: 600; color: #475569;
+  padding: 2px 8px; background: rgba(0, 0, 0, 0.05);
   border-radius: 6px;
 }
 .topic-body h4 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
 .topic-body p { font-size: 13px; color: var(--text-secondary); margin: 0 0 8px; line-height: 1.4; }
-.topic-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.topic-tags { margin-bottom: 10px; }
 .topic-tag {
-  display: inline-block; padding: 2px 8px; border-radius: 6px;
-  font-size: 11px; font-weight: 600;
+  display: block; padding: 4px 10px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; line-height: 1.4;
+  word-break: break-word; overflow-wrap: break-word;
+  margin-bottom: 6px;
 }
-.topic-tag.angle { background: rgba(124, 58, 237, 0.1); color: var(--purple); }
-.topic-tag.product { background: rgba(22, 163, 74, 0.1); color: var(--green); }
+.topic-tag.angle { background: rgba(0, 0, 0, 0.06); color: #475569; }
+.topic-tag.product { background: rgba(0, 0, 0, 0.06); color: #475569; }
 .topic-actions { display: flex; gap: 8px; }
 .topic-actions button {
-  padding: 6px 14px; border-radius: 8px; font-family: 'Montserrat', sans-serif;
+  padding: 6px 14px; border-radius: 8px; font-family: 'DM Sans', sans-serif;
   font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s var(--transition);
   border: 1px solid transparent;
 }
 .btn-approve-topic {
-  background: var(--green); color: #fff; border-color: var(--green);
+  background: #0f1729; color: #fff; border-color: transparent;
 }
-.btn-approve-topic:hover { background: var(--green-light); box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2); }
+.btn-approve-topic:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 .btn-regen-topic {
   background: transparent; color: var(--text-secondary); border-color: rgba(226, 232, 240, 0.5);
 }
@@ -1386,7 +1401,7 @@ details .details-content { padding: 20px; }
   transition: all 0.25s var(--transition); background: rgba(248, 250, 253, 0.6);
   display: flex; align-items: center; justify-content: center;
 }
-.product-thumb:hover { border-color: var(--green); transform: scale(1.05); box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15); }
+.product-thumb:hover { border-color: #000; transform: scale(1.05); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
 .product-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .product-thumb .thumb-placeholder { font-size: 20px; opacity: 0.4; }
 .gallery-modal {
@@ -1440,7 +1455,7 @@ details .details-content { padding: 20px; }
   transition: all 0.2s var(--transition); opacity: 0.6;
 }
 .gallery-thumb:hover { opacity: 0.9; }
-.gallery-thumb.active { border-color: var(--green); opacity: 1; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2); }
+.gallery-thumb.active { border-color: #000; opacity: 1; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
 .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .gallery-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
 
@@ -1461,7 +1476,7 @@ details .details-content { padding: 20px; }
   background: rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
@@ -1470,20 +1485,20 @@ details .details-content { padding: 20px; }
   user-select: none;
 }
 .platform-toggle:hover {
-  border-color: rgba(22, 163, 74, 0.2);
+  border-color: rgba(0, 0, 0, 0.15);
   background: rgba(255, 255, 255, 0.6);
 }
 .platform-toggle.active {
-  border-color: rgba(22, 163, 74, 0.3);
-  background: rgba(240, 253, 244, 0.8);
-  color: #16a34a;
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(248, 250, 253, 0.8);
+  color: #0f172a;
   font-weight: 600;
-  box-shadow: 0 0 12px rgba(22, 163, 74, 0.06);
+  box-shadow: none;
 }
 .platform-toggle input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: var(--green);
+  accent-color: #000;
 }
 .platform-validation-error {
   color: #ef4444;
@@ -1506,19 +1521,19 @@ details .details-content { padding: 20px; }
   backdrop-filter: blur(8px);
 }
 .brand-voice-chip:hover {
-  background: rgba(240, 253, 244, 0.5);
-  border-color: rgba(22, 163, 74, 0.2);
-  color: var(--green);
+  background: rgba(248, 250, 253, 0.5);
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #0f172a;
 }
 .brand-voice-chip:has(input:checked) {
-  background: rgba(240, 253, 244, 0.8);
-  border-color: var(--green);
-  color: var(--green);
+  background: rgba(248, 250, 253, 0.8);
+  border-color: #000;
+  color: #0f172a;
   font-weight: 600;
-  box-shadow: 0 0 12px rgba(22, 163, 74, 0.1);
+  box-shadow: none;
 }
 .brand-voice-chip input[type="checkbox"] {
-  width: 14px; height: 14px; accent-color: var(--green);
+  width: 14px; height: 14px; accent-color: #000;
 }
 
 /* SECTION REVEAL ANIMATIONS */
@@ -1567,7 +1582,7 @@ details .details-content { padding: 20px; }
   margin-bottom: 12px;
 }
 .week-view-label {
-  font-family: 'Cormorant', serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 16px; font-weight: 600; color: var(--text-primary);
 }
 .week-view-days {
@@ -1581,12 +1596,12 @@ details .details-content { padding: 20px; }
   transition: all 0.25s var(--transition);
 }
 .week-day-cell:hover {
-  background: rgba(240, 253, 244, 0.5);
-  border-color: rgba(22, 163, 74, 0.2);
+  background: rgba(248, 250, 253, 0.5);
+  border-color: rgba(0, 0, 0, 0.12);
 }
 .week-day-cell.today {
-  background: linear-gradient(135deg, rgba(22, 163, 74, 0.1), rgba(34, 197, 94, 0.08));
-  border-color: rgba(22, 163, 74, 0.3);
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.2);
 }
 .week-day-cell .wdc-name {
   font-size: 10px; font-weight: 600; text-transform: uppercase;
@@ -1594,7 +1609,7 @@ details .details-content { padding: 20px; }
 }
 .week-day-cell .wdc-date {
   font-size: 16px; font-weight: 600; color: var(--text-primary);
-  font-family: 'JetBrains Mono', monospace; margin-bottom: 6px;
+  font-family: 'DM Sans', sans-serif; margin-bottom: 6px;
 }
 .week-day-cell .wdc-dots {
   display: flex; gap: 3px; justify-content: center; flex-wrap: wrap;
@@ -1667,14 +1682,14 @@ details .details-content { padding: 20px; }
   -webkit-backdrop-filter: blur(8px);
 }
 .schedule-card:hover {
-  border-color: rgba(22, 163, 74, 0.2);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.05), 0 0 12px rgba(22,163,74,0.04);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.05);
   transform: translateY(-3px);
   background: rgba(255, 255, 255, 0.6);
 }
 .schedule-card.generated {
-  border-color: rgba(22, 163, 74, 0.2);
-  background: rgba(240, 253, 244, 0.6);
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(248, 250, 253, 0.6);
 }
 .schedule-card.pending {
   border-color: rgba(251, 191, 36, 0.3);
@@ -1882,9 +1897,7 @@ details .details-content { padding: 20px; }
   content: '';
   position: absolute;
   top: -50%; left: -50%; width: 200%; height: 200%;
-  background:
-    radial-gradient(ellipse 40% 30% at 30% 30%, rgba(22, 163, 74, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 35% 25% at 70% 70%, rgba(124, 58, 237, 0.06) 0%, transparent 55%);
+  background: none;
   animation: authAmbient 20s ease-in-out infinite alternate;
   pointer-events: none;
 }
@@ -1927,7 +1940,7 @@ details .details-content { padding: 20px; }
 
 .auth-logo span {
   display: block;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 12px;
   color: var(--text-muted);
   letter-spacing: 3px;
@@ -1935,7 +1948,7 @@ details .details-content { padding: 20px; }
 }
 
 .auth-title {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
@@ -1973,7 +1986,7 @@ details .details-content { padding: 20px; }
   padding: 12px 16px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 15px;
   color: var(--text-primary);
   background: var(--bg);
@@ -1982,8 +1995,8 @@ details .details-content { padding: 20px; }
 }
 
 .auth-field input:focus {
-  border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+  border-color: #000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
 }
 
 .auth-field input::placeholder {
@@ -1992,20 +2005,21 @@ details .details-content { padding: 20px; }
 
 .auth-submit-btn {
   padding: 14px 24px;
-  background: var(--green);
+  background: #0f1729;
   color: #fff;
   border: none;
   border-radius: var(--radius);
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s var(--transition), transform 0.1s;
+  transition: all 0.2s var(--transition), transform 0.1s;
   margin-top: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .auth-submit-btn:hover {
-  background: var(--green-light);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 }
 
 .auth-submit-btn:active {
@@ -2084,7 +2098,7 @@ details .details-content { padding: 20px; }
 }
 
 .user-menu span {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   color: var(--text-on-dark);
   opacity: 0.8;
@@ -2096,7 +2110,7 @@ details .details-content { padding: 20px; }
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 10px;
   color: var(--text-on-dark);
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -2139,7 +2153,6 @@ details .details-content { padding: 20px; }
   <div id="auth-login" class="auth-card">
     <div class="auth-logo">
       <h1>ELUXR</h1>
-      <span>Magic Content Engine</span>
     </div>
     <h2 class="auth-title">Welcome back</h2>
     <p class="auth-subtitle">Sign in to your content dashboard</p>
@@ -2168,7 +2181,6 @@ details .details-content { padding: 20px; }
   <div id="auth-signup" class="auth-card" style="display: none;">
     <div class="auth-logo">
       <h1>ELUXR</h1>
-      <span>Magic Content Engine</span>
     </div>
     <h2 class="auth-title">Create your account</h2>
     <p class="auth-subtitle">Start creating AI-powered content</p>
@@ -2198,7 +2210,6 @@ details .details-content { padding: 20px; }
   <div id="auth-reset-request" class="auth-card" style="display: none;">
     <div class="auth-logo">
       <h1>ELUXR</h1>
-      <span>Magic Content Engine</span>
     </div>
     <h2 class="auth-title">Reset your password</h2>
     <p class="auth-subtitle">Enter your email to receive a reset link</p>
@@ -2220,7 +2231,6 @@ details .details-content { padding: 20px; }
   <div id="auth-reset-confirm" class="auth-card" style="display: none;">
     <div class="auth-logo">
       <h1>ELUXR</h1>
-      <span>Magic Content Engine</span>
     </div>
     <h2 class="auth-title">Set new password</h2>
     <p class="auth-subtitle">Enter your new password below</p>
@@ -2255,7 +2265,6 @@ details .details-content { padding: 20px; }
 <header class="header">
   <div class="header-logo">
     <h1>ELUXR</h1>
-    <span>Magic Content Engine</span>
   </div>
   <div id="user-menu" style="display: none;" class="user-menu">
     <span id="user-email-display"></span>
@@ -2276,9 +2285,7 @@ details .details-content { padding: 20px; }
 <section class="step-section" id="step-setup">
   <div class="section-inner">
     <div class="phase-header fade-in-up">
-      <div class="phase-tag">Step 1</div>
-      <h2>Tell Us About Your Business</h2>
-      <p>Enter your business details once. Our AI will analyze your market, build your ICP, and generate an entire month of content.</p>
+      <h2>Step 1: Define Your Ideal Customer Profile</h2>
     </div>
 
     <div class="card fade-in-up stagger-1">
@@ -2305,10 +2312,12 @@ details .details-content { padding: 20px; }
         <div class="form-group">
           <label class="form-label">Target Platforms *</label>
           <div class="platform-selector" id="platform-selector">
-            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="LinkedIn" checked> LinkedIn</label>
             <label class="platform-toggle active"><input type="checkbox" name="platforms" value="Instagram" checked> Instagram</label>
-            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="X" checked> X</label>
+            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="Facebook" checked> Facebook</label>
             <label class="platform-toggle active"><input type="checkbox" name="platforms" value="YouTube" checked> YouTube</label>
+            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="TikTok" checked> TikTok</label>
+            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="LinkedIn" checked> LinkedIn</label>
+            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="X" checked> X</label>
           </div>
           <div class="platform-validation-error" id="platform-error">Please select at least one platform</div>
         </div>
@@ -2348,7 +2357,7 @@ details .details-content { padding: 20px; }
     <div id="icp-card" class="card card-glass fade-in-up stagger-2" style="display: none; margin-top: 24px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 style="margin: 0; color: var(--text-primary, #e2e8f0); font-size: 18px;">
-          <span style="color: #16a34a; margin-right: 8px;">&#9679;</span>Your Business Profile
+          <span style="color: #000; margin-right: 8px;">&#9679;</span>Ideal Customer Profile
         </h3>
         <span id="icp-last-analyzed" style="font-size: 12px; color: var(--text-muted, #94a3b8);"></span>
       </div>
@@ -2390,9 +2399,7 @@ details .details-content { padding: 20px; }
 <section class="step-section locked" id="step-products">
   <div class="section-inner">
     <div class="phase-header fade-in-up">
-      <div class="phase-tag">Step 2</div>
-      <h2>Your Products</h2>
-      <p>Review scraped products from your website. Add or remove products before generating topics.</p>
+      <h2>Step 2: Your Products</h2>
     </div>
 
     <!-- Progress indicator (shown during pipeline) -->
@@ -2426,11 +2433,11 @@ details .details-content { padding: 20px; }
       </div>
       <div class="products-list" id="products-list">
         <div class="products-empty" id="products-empty">No products scraped yet. Run the pipeline to analyze your website.</div>
-        <div id="products-items"></div>
         <div class="products-actions" id="products-actions" style="display: none;">
           <button type="button" class="btn-add-product" onclick="addCustomProduct()">+ Add Custom Product</button>
           <button type="button" class="btn-save-products" id="btn-save-products" onclick="saveProductChanges()">Save Changes</button>
         </div>
+        <div id="products-items"></div>
       </div>
     </div>
 
@@ -2444,9 +2451,7 @@ details .details-content { padding: 20px; }
 <section class="step-section locked" id="step-topics">
   <div class="section-inner">
     <div class="phase-header fade-in-up">
-      <div class="phase-tag">Step 3</div>
-      <h2>Weekly Topics</h2>
-      <p>Generate and approve 7 daily content topics per week using the storytelling framework.</p>
+      <h2>Step 3: Weekly Topics</h2>
     </div>
 
     <!-- WEEKLY TOPICS UI -->
@@ -2510,9 +2515,7 @@ details .details-content { padding: 20px; }
 <section class="step-section locked" id="step-content">
   <div class="section-inner">
     <div class="phase-header fade-in-up">
-      <div class="phase-tag">Step 4</div>
-      <h2>Content Review</h2>
-      <p>Review generated content grouped by day. Approve posts, scripts, and generate videos.</p>
+      <h2>Step 4: Content Review</h2>
     </div>
 
     <!-- Content review cards will be rendered here by JS -->
@@ -2522,6 +2525,17 @@ details .details-content { padding: 20px; }
       </div>
       <div id="content-review-days" style="display:none;"></div>
     </div>
+
+    <!-- Day Content Popup Modal -->
+    <div class="content-day-modal" id="content-day-modal" onclick="if(event.target===this)closeDayModal()">
+      <div class="content-day-modal-content">
+        <div class="content-day-modal-header">
+          <h3 id="content-day-modal-title"></h3>
+          <button class="content-day-modal-close" onclick="closeDayModal()">&times;</button>
+        </div>
+        <div class="content-day-modal-posts" id="content-day-modal-posts"></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -2530,9 +2544,7 @@ details .details-content { padding: 20px; }
 <section class="step-section locked" id="step-calendar">
   <div class="section-inner">
     <div class="phase-header fade-in-up">
-      <div class="phase-tag">Step 5</div>
-      <h2>Your Content Calendar</h2>
-      <p>Review, approve, and download your month of content. Click any day to preview and take action.</p>
+      <h2>Step 5: Your Content Calendar</h2>
     </div>
 
     <!-- WEEKLY CONTENT SCHEDULE -->
@@ -3255,7 +3267,7 @@ function renderICPCard(icp) {
     if (tags.length > 0) {
       hashtagsText.innerHTML = tags.map(h => {
         const tag = String(h);
-        return '<span style="display:inline-block;background:rgba(22,163,74,0.15);color:#16a34a;padding:2px 10px;border-radius:12px;font-size:13px;margin:2px 4px 2px 0;">' + (tag.startsWith('#') ? tag : '#' + tag) + '</span>';
+        return '<span style="display:inline-block;background:rgba(0,0,0,0.06);color:#475569;padding:2px 10px;border-radius:12px;font-size:13px;margin:2px 4px 2px 0;">' + (tag.startsWith('#') ? tag : '#' + tag) + '</span>';
       }).join('');
       if (hashtagsSection) hashtagsSection.style.display = 'block';
     }
@@ -3392,7 +3404,7 @@ function renderProductsCard(products) {
     const prodUrl = p.product_url || '';
     const images = p.image_urls || (p.image_url ? [p.image_url] : []);
     const thumbHtml = images.length > 0
-      ? '<div class="product-thumb" onclick="openGallery(\'' + escapeHTML(p.id || '') + '\')" title="View images (' + images.length + ')"><img src="' + escapeHTML(images[0]) + '" alt="' + nameVal + '"></div>'
+      ? '<div class="product-thumb" onclick="' + (prodUrl ? "window.open('" + escapeHTML(prodUrl) + "','_blank')" : "openGallery('" + escapeHTML(p.id || '') + "')") + '" title="' + (prodUrl ? 'View product page' : 'View images (' + images.length + ')') + '"><img src="' + escapeHTML(images[0]) + '" alt="' + nameVal + '"></div>'
       : (prodUrl
         ? '<div class="product-thumb" onclick="window.open(\'' + escapeHTML(prodUrl) + '\',\'_blank\')" title="View product page"><span class="thumb-placeholder">&#128247;</span></div>'
         : '<div class="product-thumb" style="cursor:default"><span class="thumb-placeholder">&#128247;</span></div>');
@@ -5894,9 +5906,35 @@ function renderTopicCards(topics) {
     const dayNum = t.day_number || 1;
     const framework = STORYTELLING_FRAMEWORK[dayNum] || { day: 'Day ' + dayNum, theme: '', tagline: '' };
 
+    // Look up product image
+    let productImgHtml = '';
+    if (t.product_id && productsData) {
+      const product = productsData.find(p => p.id === t.product_id);
+      if (product) {
+        const imgs = product.image_urls || (product.image_url ? [product.image_url] : []);
+        if (imgs.length > 0) {
+          productImgHtml = '<div class="topic-product-img" style="flex-shrink:0; width:100px;">' +
+            '<img src="' + escapeHTML(imgs[0]) + '" alt="' + escapeHTML(product.name || '') + '" ' +
+            'style="width:100px; height:100px; object-fit:cover; border-radius:10px; border:1px solid #e2e8f0;">' +
+          '</div>';
+        }
+      }
+    } else if (t.product_name && productsData) {
+      const product = productsData.find(p => p.name && p.name.toLowerCase().includes(t.product_name.toLowerCase()));
+      if (product) {
+        const imgs = product.image_urls || (product.image_url ? [product.image_url] : []);
+        if (imgs.length > 0) {
+          productImgHtml = '<div class="topic-product-img" style="flex-shrink:0; width:100px;">' +
+            '<img src="' + escapeHTML(imgs[0]) + '" alt="' + escapeHTML(product.name || '') + '" ' +
+            'style="width:100px; height:100px; object-fit:cover; border-radius:10px; border:1px solid #e2e8f0;">' +
+          '</div>';
+        }
+      }
+    }
+
     return '<div class="' + cardClass + '" data-topic-id="' + t.id + '">' +
       '<div class="topic-day-badge">' + (isApproved ? '&#10003;' : dayNum) + '</div>' +
-      '<div class="topic-body">' +
+      '<div class="topic-body" style="flex:1; min-width:0;">' +
         '<div class="topic-day-theme">' +
           '<span class="day-name">' + framework.day + '</span>' +
           '<span class="theme-label">' + escapeHTML(framework.theme) + '</span>' +
@@ -5915,6 +5953,7 @@ function renderTopicCards(topics) {
           ) +
         '</div>' +
       '</div>' +
+      productImgHtml +
     '</div>';
   }).join('');
 }
@@ -6190,6 +6229,10 @@ function unlockNextWeek(completedWeek) {
 }
 
 // === CONTENT REVIEW (Step 4) ===
+// Store grouped data for modal access
+let _contentByDate = {};
+let _contentDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 async function renderContentReview() {
   const container = document.getElementById('content-review-days');
   const empty = document.getElementById('content-review-empty');
@@ -6198,7 +6241,6 @@ async function renderContentReview() {
   try {
     const calData = await fetchCalendarData();
     const items = calData.all || [];
-    // Update global contentData so product image lookup works
     if (items.length > 0) contentData = items;
 
     if (items.length === 0) {
@@ -6210,7 +6252,7 @@ async function renderContentReview() {
     if (empty) empty.style.display = 'none';
     container.style.display = 'block';
 
-    // Deduplicate: keep 1 item per platform per date (prefer approved, then longest content)
+    // Deduplicate
     const statusPriority = { approved: 0, pending: 1, rejected: 2 };
     const sorted = [...items].sort((a, b) => {
       const sa = statusPriority[a.status] ?? 1;
@@ -6227,106 +6269,169 @@ async function renderContentReview() {
     });
 
     // Group by date
-    const byDate = {};
+    _contentByDate = {};
     deduped.forEach(item => {
       const date = item.date || 'unknown';
-      if (!byDate[date]) byDate[date] = [];
-      byDate[date].push(item);
+      if (!_contentByDate[date]) _contentByDate[date] = [];
+      _contentByDate[date].push(item);
     });
 
-    // Sort dates
-    const sortedDates = Object.keys(byDate).sort();
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const sortedDates = Object.keys(_contentByDate).sort();
 
-    container.innerHTML = sortedDates.map(dateStr => {
-      const dayItems = byDate[dateStr];
+    // Render day cards grid
+    container.innerHTML = '<div class="content-days-grid">' + sortedDates.map(dateStr => {
+      const dayItems = _contentByDate[dateStr];
       const dateObj = new Date(dateStr + 'T00:00:00');
-      const dayName = dayNames[dateObj.getDay()];
+      const dayName = _contentDayNames[dateObj.getDay()];
       const dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
       const framework = STORYTELLING_FRAMEWORK[dayOfWeek] || {};
-
-      // Get product images for this day
       const productImgs = getProductImagesForDate(dateStr);
       const productThumb = productImgs.length > 0 ? productImgs[0] : null;
-
       const approvedCount = dayItems.filter(i => i.status === 'approved').length;
 
-      return '<div class="content-day-group expanded" data-date="' + dateStr + '">' +
-        '<div class="content-day-header" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
-          '<div class="day-badge">' + dayName + '</div>' +
-          '<div class="day-info">' +
-            '<h4>' + escapeHTML(framework.theme || dayName) + ' — ' + dateStr + '</h4>' +
-            '<span>' + dayItems.length + ' post' + (dayItems.length !== 1 ? 's' : '') +
-              ' | ' + approvedCount + ' approved</span>' +
-          '</div>' +
-          (productThumb ? '<img class="day-product-thumb" src="' + escapeHTML(productThumb) + '" alt="Product" onclick="event.stopPropagation();window.open(this.src)">' : '') +
-          '<span class="day-chevron">&#9660;</span>' +
-        '</div>' +
-        '<div class="content-day-posts">' +
-          dayItems.map(item => {
-            const platformClass = (item.platform || '').toLowerCase().replace(/[^a-z]/g, '');
-            const statusClass = item.status === 'approved' ? 'approved' : (item.status === 'rejected' ? 'rejected' : 'pending');
-            const isScript = (platformClass === 'instagram' || platformClass === 'youtube');
-            const hasVideo = item.video_url && item.video_url.length > 0;
-            const postPreview = parseContentText(item).substring(0, 120);
-
-            // Product images for this item (lookup by item's product_id first, then fall back to date-level)
-            let itemProductImgs = productImgs;
-            if (item.product_id && productsData) {
-              const itemProduct = productsData.find(p => p.id === item.product_id);
-              if (itemProduct) {
-                const imgs = itemProduct.image_urls || (itemProduct.image_url ? [itemProduct.image_url] : []);
-                if (imgs.length > 0) itemProductImgs = imgs;
-              }
-            }
-
-            let productImgsHtml = '';
-            if (itemProductImgs.length > 0) {
-              productImgsHtml = '<div class="card-product-images">' +
-                itemProductImgs.slice(0, 4).map(url => '<img src="' + escapeHTML(url) + '" alt="Product" onclick="event.stopPropagation();window.open(this.src)">').join('') +
-                '</div>';
-            }
-
-            // Video preview
-            let videoHtml = '';
-            if (hasVideo) {
-              videoHtml = '<div class="card-video-preview"><video src="' + escapeHTML(item.video_url) + '" controls preload="metadata"></video></div>';
-            }
-
-            // Generate video button for approved scripts without video
-            let genVideoBtn = '';
-            if (isScript && item.status === 'approved' && !hasVideo) {
-              genVideoBtn = '<button class="btn-generate-video" onclick="event.stopPropagation();generateVideoForItem(\'' + item.id + '\')">Generate Video</button>';
-            }
-
-            return '<div class="content-platform-card" data-id="' + item.id + '">' +
-              '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
-                '<div class="platform-label ' + platformClass + '">' + escapeHTML(item.platform || '') + '</div>' +
-                (isScript ? '<div class="script-badge">SCRIPT</div>' : '') +
-              '</div>' +
-              productImgsHtml +
-              '<div class="post-preview">' + escapeHTML(postPreview) + (postPreview.length >= 120 ? '...' : '') + '</div>' +
-              (item.image_url ? '<img src="' + escapeHTML(item.image_url) + '" style="width:100%;border-radius:8px;margin-bottom:8px;max-height:120px;object-fit:cover;" alt="" onerror="this.style.display=\'none\'">' : '') +
-              videoHtml +
-              '<div class="card-actions">' +
-                '<span class="status-badge ' + statusClass + '">' + statusClass + '</span>' +
-                (item.status !== 'approved'
-                  ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">Review</button>'
-                  : '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">View</button>'
-                ) +
-                genVideoBtn +
-              '</div>' +
-            '</div>';
-          }).join('') +
+      return '<div class="content-day-card" onclick="openDayModal(\'' + dateStr + '\')">' +
+        '<div class="day-badge">' + dayName + '</div>' +
+        '<div class="day-info">' +
+          '<div class="day-title">' + escapeHTML(framework.theme || dayName) + ' — ' + dateStr + '</div>' +
+          '<div class="day-stats">' + dayItems.length + ' post' + (dayItems.length !== 1 ? 's' : '') +
+            ' &middot; <span class="approved-count">' + approvedCount + ' approved</span></div>' +
         '</div>' +
       '</div>';
-    }).join('');
+    }).join('') + '</div>';
 
   } catch (err) {
     console.error('renderContentReview error:', err);
   }
 }
 window.renderContentReview = renderContentReview;
+
+function openDayModal(dateStr) {
+  const modal = document.getElementById('content-day-modal');
+  const titleEl = document.getElementById('content-day-modal-title');
+  const postsEl = document.getElementById('content-day-modal-posts');
+  if (!modal || !postsEl) return;
+
+  const dayItems = _contentByDate[dateStr] || [];
+  const dateObj = new Date(dateStr + 'T00:00:00');
+  const dayName = _contentDayNames[dateObj.getDay()];
+  const dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
+  const framework = STORYTELLING_FRAMEWORK[dayOfWeek] || {};
+
+  titleEl.textContent = dayName + ' — ' + (framework.theme || '') + ' — ' + dateStr;
+
+  // Look up the topic title for this day from weekTopics using date position
+  let topicTitle = '';
+  const allDates = Object.keys(_contentByDate).sort();
+  const dateIndex = allDates.indexOf(dateStr);
+  if (dateIndex >= 0) {
+    const weekNum = Math.floor(dateIndex / 7) + 1;
+    const dayInWeek = (dateIndex % 7) + 1;
+    const weekTopicsList = weekTopics[weekNum];
+    if (weekTopicsList) {
+      const match = weekTopicsList.find(t => t.day_number === dayInWeek);
+      if (match) topicTitle = match.topic || '';
+    }
+  }
+  // Fallback: match by product_id
+  if (!topicTitle && dayItems.length > 0) {
+    const firstItem = dayItems[0];
+    for (const wn of Object.keys(weekTopics)) {
+      const topics = weekTopics[wn];
+      if (topics) {
+        const match = topics.find(t => t.product_id && firstItem.product_id && t.product_id === firstItem.product_id);
+        if (match) { topicTitle = match.topic || ''; break; }
+      }
+    }
+  }
+
+  // Sort items by platform order: Instagram, Facebook, YouTube, TikTok, LinkedIn, X
+  const platformOrder = { instagram: 0, facebook: 1, youtube: 2, tiktok: 3, linkedin: 4, x: 5 };
+  const sortedItems = [...dayItems].sort((a, b) => {
+    const pa = platformOrder[(a.platform || '').toLowerCase()] ?? 99;
+    const pb = platformOrder[(b.platform || '').toLowerCase()] ?? 99;
+    return pa - pb;
+  });
+
+  const topicHeaderHtml = topicTitle
+    ? '<div style="font-size:16px; font-weight:600; color:var(--text-primary); margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #e2e8f0;">' + escapeHTML(topicTitle) + '</div>'
+    : '';
+
+  postsEl.innerHTML = topicHeaderHtml + sortedItems.map(item => {
+    const platformClass = (item.platform || '').toLowerCase().replace(/[^a-z]/g, '');
+    const statusClass = item.status === 'approved' ? 'approved' : (item.status === 'rejected' ? 'rejected' : 'pending');
+    const isScript = (platformClass === 'instagram' || platformClass === 'youtube');
+    const hasVideo = item.video_url && item.video_url.length > 0;
+    const fullText = parseContentText(item);
+
+    let videoHtml = '';
+    if (hasVideo) {
+      videoHtml = '<div class="card-video-preview"><video src="' + escapeHTML(item.video_url) + '" controls preload="metadata"></video></div>';
+    }
+
+    let genVideoBtn = '';
+    if (isScript && item.status === 'approved' && !hasVideo) {
+      genVideoBtn = '<button class="btn-generate-video" onclick="event.stopPropagation();generateVideoForItem(\'' + item.id + '\')">Generate Video</button>';
+    }
+
+    return '<div class="content-platform-card" data-id="' + item.id + '" style="margin-bottom:0;">' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
+        '<div class="platform-label ' + platformClass + '">' + escapeHTML(item.platform || '') + '</div>' +
+        (isScript ? '<div class="script-badge">SCRIPT</div>' : '') +
+      '</div>' +
+      '<div class="post-preview" style="max-height:none; overflow:visible; white-space:pre-wrap;">' + escapeHTML(fullText) + '</div>' +
+      (item.image_url ? '<img src="' + escapeHTML(item.image_url) + '" style="width:100%;border-radius:8px;margin-bottom:8px;max-height:200px;object-fit:cover;" alt="" onerror="this.style.display=\'none\'">' : '') +
+      videoHtml +
+      '<div class="card-actions" style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;">' +
+        '<span class="status-badge ' + statusClass + '">' + statusClass + '</span>' +
+        (item.status !== 'approved'
+          ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();quickApprove(\'' + item.id + '\',\'' + dateStr + '\')">Approve</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">Edit</button>' +
+            '<button class="btn btn-outline btn-sm" style="color:#ef4444;" onclick="event.stopPropagation();quickReject(\'' + item.id + '\',\'' + dateStr + '\')">Reject</button>'
+          : '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">Edit</button>'
+        ) +
+        genVideoBtn +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  modal.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+}
+window.openDayModal = openDayModal;
+
+function closeDayModal() {
+  const modal = document.getElementById('content-day-modal');
+  if (modal) modal.classList.remove('visible');
+  document.body.style.overflow = '';
+}
+window.closeDayModal = closeDayModal;
+
+async function quickApprove(itemId, reopenDate) {
+  try {
+    await window.supabase.from('content_items').update({ status: 'approved' }).eq('id', itemId);
+    showToast('Content approved!', 'success');
+    await renderContentReview();
+    fetchAndDisplayCalendar();
+    if (reopenDate) openDayModal(reopenDate);
+  } catch (e) {
+    showToast('Error approving: ' + e.message, 'error');
+  }
+}
+window.quickApprove = quickApprove;
+
+async function quickReject(itemId, reopenDate) {
+  try {
+    await window.supabase.from('content_items').update({ status: 'rejected' }).eq('id', itemId);
+    showToast('Content rejected', 'success');
+    await renderContentReview();
+    fetchAndDisplayCalendar();
+    if (reopenDate) openDayModal(reopenDate);
+  } catch (e) {
+    showToast('Error rejecting: ' + e.message, 'error');
+  }
+}
+window.quickReject = quickReject;
+
 window.fetchAndDisplayCalendar = fetchAndDisplayCalendar;
 window.unlockStep = unlockStep;
 
@@ -6575,7 +6680,10 @@ function closeGallery() {
 // Keyboard
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (document.getElementById('gallery-modal').classList.contains('visible')) {
+    const dayModal = document.getElementById('content-day-modal');
+    if (dayModal && dayModal.classList.contains('visible')) {
+      closeDayModal();
+    } else if (document.getElementById('gallery-modal').classList.contains('visible')) {
       closeGallery();
     } else {
       closeModal();
