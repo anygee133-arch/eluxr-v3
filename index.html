@@ -3981,8 +3981,7 @@ async function generateContent(formData) {
       // Store run ID in memory for recovery
       currentPipelineRunId = runId;
 
-      // Show progress UI and navigate to phase 2
-      goToPhase(2);
+      // Reset progress UI (scrolling already handled by handleFormSubmit)
       resetProgressUI();
 
       // Subscribe to real-time progress
@@ -4357,17 +4356,23 @@ function renderProgress(run) {
   // Handle completion
   if (run.status === 'completed') {
     cleanupProgress();
-    showToast('Business analysis complete! Now review your weekly topics.', 'success');
+    // Hide progress card
+    document.getElementById('pipeline-progress-card').style.display = 'none';
+    showToast('Business analysis complete! Now review your products and generate topics.', 'success');
     // Re-enable generate button
     const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
     if (generateBtn) generateBtn.disabled = false;
-    // Show topics section (pipeline now only does ICP + Themes)
+    // Unlock topics step and show topics section
+    unlockStep('step-topics');
     const topicsSection = document.getElementById('topics-section');
     if (topicsSection) topicsSection.style.display = 'block';
     // Load any existing topics
     loadExistingTopics();
+    // Scroll to Step 3 (topics) after a brief delay so user sees products first
+    setTimeout(() => smoothTransitionToStep('step-topics', 1000), 2000);
   } else if (run.status === 'failed') {
     cleanupProgress();
+    document.getElementById('pipeline-progress-card').style.display = 'none';
     showToast(`Generation failed: ${run.error_message || 'Unknown error'}`, 'error');
     const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
     if (generateBtn) generateBtn.disabled = false;
@@ -4413,8 +4418,10 @@ async function checkActivePipeline() {
     // Active run found -- restore progress UI
     currentPipelineRunId = activeRun.id;
 
-    // Navigate to progress view and restore state
-    goToPhase(2);
+    // Navigate to products step (where progress UI lives) and restore state
+    unlockStep('step-products');
+    document.getElementById('pipeline-progress-card').style.display = 'block';
+    smoothTransitionToStep('step-products', 1000);
     renderProgress(activeRun);
     subscribeToProgress(activeRun.id);
 
@@ -6428,7 +6435,7 @@ async function lockInAndGenerate() {
         tab.classList.add('completed');
       }
 
-      if (window.fetchAndDisplayCalendar) fetchAndDisplayCalendar();
+      if (window.fetchAndDisplayCalendar) fetchAndDisplayCalendar(true);
       // Unlock content review and calendar steps
       unlockStep('step-content');
       unlockStep('step-calendar');
