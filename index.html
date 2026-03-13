@@ -1132,6 +1132,19 @@ details .details-content { padding: 20px; }
   border-bottom: 1px solid rgba(241, 245, 249, 0.5);
   transition: opacity 0.3s var(--transition);
 }
+.product-item[draggable="true"] { cursor: grab; }
+.product-item.dragging { opacity: 0.5; transform: scale(0.98); }
+.product-item.drag-over { border-top: 2px solid #000; }
+.product-order-badge {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #0f172a; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.drag-handle {
+  cursor: grab; color: var(--text-muted); padding: 4px;
+  display: flex; align-items: center; font-size: 16px;
+}
 .product-item:last-child {
   border-bottom: none;
 }
@@ -2443,6 +2456,12 @@ details .details-content { padding: 20px; }
       </div>
     </div>
 
+    <div id="generate-topics-btn-container" style="text-align:center; margin-top:24px; display:none;">
+      <button class="btn btn-primary btn-lg" id="btn-generate-week-topics" onclick="generateTopicsFromProducts()">
+        Generate Week 1 Topics
+      </button>
+    </div>
+
     <div id="products-step-empty" class="card" style="text-align:center; padding:40px;">
       <p style="color:var(--text-secondary); margin-bottom:16px;">Complete Step 1 to discover your products.</p>
     </div>
@@ -2487,8 +2506,11 @@ details .details-content { padding: 20px; }
         <!-- Approval Counter -->
         <div id="topics-approval" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid rgba(226,232,240,0.4);">
           <span id="approval-count" style="font-size:14px; font-weight:600; color:var(--text-secondary);">0 / 7 topics approved</span>
-          <button class="btn btn-primary" id="btn-lock-in" onclick="lockInAndGenerate()" disabled>
+          <button class="btn btn-primary" id="btn-lock-in" onclick="lockInAndGenerate()" disabled style="display:none;">
             Lock In &amp; Generate Content
+          </button>
+          <button class="btn btn-primary" id="btn-approve-generate" onclick="approveAllAndGenerate()">
+            Approve All &amp; Generate Content
           </button>
         </div>
       </div>
@@ -3373,6 +3395,9 @@ async function loadProducts() {
     if (productsData.length > 0) {
       container.style.display = 'block';
       renderProductsCard(productsData);
+      if (productsData.length < 28) {
+        showToast('Only ' + productsData.length + ' products found. Some days may share products.', 'warning');
+      }
       // Hide empty state, unlock topics step
       const emptyState = document.getElementById('products-step-empty');
       if (emptyState) emptyState.style.display = 'none';
@@ -3417,6 +3442,8 @@ function renderProductsCard(products) {
       ? '<a href="' + escapeHTML(prodUrl) + '" target="_blank" rel="noopener" class="product-link" title="View product page">&#x1F517;</a>'
       : '';
     return '<div class="product-item" data-product-id="' + (p.id || '') + '" data-index="' + idx + '">' +
+      '<div class="drag-handle">&#9776;</div>' +
+      '<div class="product-order-badge">' + (idx + 1) + '</div>' +
       thumbHtml +
       '<div class="product-name">' +
         '<input type="text" value="' + nameVal + '" placeholder="Product name" onchange="markProductsModified()" />' +
@@ -3430,12 +3457,84 @@ function renderProductsCard(products) {
       '<button type="button" class="product-remove" onclick="removeProduct(this)" title="Remove product">&times;</button>' +
     '</div>';
   }).join('');
+
+  initProductOrder();
+  initDragAndDrop();
+  updateGenerateTopicsButton();
 }
 
 function toggleProductsCard() {
   const card = document.getElementById('products-card-container');
   if (card) card.classList.toggle('expanded');
 }
+
+let productOrder = [];
+
+function initProductOrder() {
+  if (productsData && productsData.length > 0 && productOrder.length === 0) {
+    productOrder = productsData.map(function(p) { return p.id; });
+  }
+}
+window.initProductOrder = initProductOrder;
+
+function getOrderedProducts() {
+  if (productOrder.length === 0) return productsData || [];
+  return productOrder.map(function(id) {
+    return (productsData || []).find(function(p) { return p.id === id; });
+  }).filter(Boolean);
+}
+window.getOrderedProducts = getOrderedProducts;
+
+function initDragAndDrop() {
+  var items = document.querySelectorAll('#products-items .product-item');
+  items.forEach(function(item, idx) {
+    item.setAttribute('draggable', 'true');
+    item.dataset.orderIndex = idx;
+
+    item.addEventListener('dragstart', function(e) {
+      item.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', String(idx));
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', function() {
+      item.classList.remove('dragging');
+      document.querySelectorAll('.product-item.drag-over').forEach(function(el) {
+        el.classList.remove('drag-over');
+      });
+    });
+
+    item.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      item.classList.add('drag-over');
+    });
+
+    item.addEventListener('dragleave', function() {
+      item.classList.remove('drag-over');
+    });
+
+    item.addEventListener('drop', function(e) {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      var fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+      var toIndex = idx;
+      if (fromIndex !== toIndex) {
+        reorderProducts(fromIndex, toIndex);
+      }
+    });
+  });
+}
+window.initDragAndDrop = initDragAndDrop;
+
+function reorderProducts(fromIndex, toIndex) {
+  var moved = productOrder.splice(fromIndex, 1)[0];
+  productOrder.splice(toIndex, 0, moved);
+  renderProductsCard(getOrderedProducts());
+  initDragAndDrop();
+  markProductsModified();
+}
+window.reorderProducts = reorderProducts;
 
 function markProductsModified() {
   productsModified = true;
@@ -5994,7 +6093,7 @@ function updateApprovalCount(topics) {
   if (lockBtn) lockBtn.disabled = approved < total;
 }
 
-async function generateTopics() {
+async function generateTopics(assignedProducts) {
   const campaignId = await ensureCampaign();
   if (!campaignId) {
     showToast('No campaign found. Please run the analysis first.', 'error');
@@ -6011,13 +6110,20 @@ async function generateTopics() {
       `Day ${day} (${f.day}): ${f.theme} — ${f.tagline}`
     ).join('\n');
 
+    var bodyObj = {
+      campaign_id: campaignId,
+      week_number: currentWeek,
+      storytelling_framework: frameworkContext
+    };
+    if (assignedProducts && assignedProducts.length > 0) {
+      bodyObj.assigned_products = assignedProducts.map(function(p) {
+        return { id: p.id, name: p.name, description: p.description, category: p.category };
+      });
+    }
+
     const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-generate-topics`, {
       method: 'POST',
-      body: JSON.stringify({
-        campaign_id: campaignId,
-        week_number: currentWeek,
-        storytelling_framework: frameworkContext
-      })
+      body: JSON.stringify(bodyObj)
     });
 
     const data = await safeJson(response);
@@ -6046,6 +6152,62 @@ async function generateTopics() {
   document.getElementById('topics-loading').style.display = 'none';
   renderWeekView(currentWeek);
 }
+
+async function generateTopicsFromProducts() {
+  if (!productOrder || productOrder.length === 0) {
+    initProductOrder();
+  }
+  var weekStart = (currentWeek - 1) * 7;
+  var weekEnd = weekStart + 7;
+  var weekProducts = getOrderedProducts().slice(weekStart, weekEnd);
+  if (weekProducts.length === 0) {
+    showToast('No products available for Week ' + currentWeek, 'error');
+    return;
+  }
+  await generateTopics(weekProducts);
+  if (typeof smoothTransitionToStep === 'function') {
+    smoothTransitionToStep('step-topics', 500);
+  } else {
+    scrollToStep('step-topics');
+  }
+}
+window.generateTopicsFromProducts = generateTopicsFromProducts;
+
+function updateGenerateTopicsButton() {
+  var container = document.getElementById('generate-topics-btn-container');
+  var btn = document.getElementById('btn-generate-week-topics');
+  if (container && productsData && productsData.length > 0) {
+    container.style.display = 'block';
+    if (btn) btn.textContent = 'Generate Week ' + currentWeek + ' Topics';
+  }
+}
+window.updateGenerateTopicsButton = updateGenerateTopicsButton;
+
+async function approveAllAndGenerate() {
+  var topics = weekTopics[currentWeek];
+  if (!topics || topics.length === 0) {
+    showToast('No topics to approve', 'error');
+    return;
+  }
+  try {
+    for (var i = 0; i < topics.length; i++) {
+      if (topics[i].status !== 'approved') {
+        topics[i].status = 'approved';
+        await window.supabase
+          .from('weekly_topics')
+          .update({ status: 'approved', updated_at: new Date().toISOString() })
+          .eq('id', topics[i].id);
+      }
+    }
+    renderTopicCards(topics);
+    updateApprovalCount(topics);
+    showToast('All topics approved! Starting content generation...', 'success');
+    await lockInAndGenerate();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+window.approveAllAndGenerate = approveAllAndGenerate;
 
 async function approveTopic(topicId) {
   const topics = weekTopics[currentWeek];
