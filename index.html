@@ -3155,11 +3155,18 @@ function mapContentItem(dbRow, themeMap) {
   } else if (themeMap && dbRow.theme_id && themeMap[dbRow.theme_id]) {
     themeName = themeMap[dbRow.theme_id];
   }
-  let hashtags = '';
   const contentText = dbRow.content || '';
-  const hashtagMatch = contentText.match(/((?:#\w+\s*){2,})$/);
-  if (hashtagMatch) {
-    hashtags = hashtagMatch[1].trim();
+  // Hashtags: prefer the DB array field, fall back to parsing from content text
+  let hashtags = [];
+  if (Array.isArray(dbRow.hashtags) && dbRow.hashtags.length > 0) {
+    hashtags = dbRow.hashtags;
+  } else if (typeof dbRow.hashtags === 'string' && dbRow.hashtags.trim()) {
+    hashtags = dbRow.hashtags.split(/[,\s]+/).filter(function(t) { return t.length > 1; });
+  } else {
+    var hashtagMatch = contentText.match(/((?:#\w+\s*){2,})$/);
+    if (hashtagMatch) {
+      hashtags = hashtagMatch[1].trim().split(/\s+/).filter(function(t) { return t.length > 1; });
+    }
   }
   return {
     id: dbRow.id,
@@ -3221,6 +3228,32 @@ function escapeHTML(str) {
   div.appendChild(document.createTextNode(str));
   return div.innerHTML;
 }
+
+// === ICP HASHTAG RELEVANCE HELPER ===
+function assignRelevantHashtags(postTheme, postProductName, allHashtags, count) {
+  count = count || 3;
+  if (!allHashtags || allHashtags.length === 0) return [];
+  var keywords = ((postTheme || '') + ' ' + (postProductName || '')).toLowerCase().split(/\s+/).filter(function(w) { return w.length > 2; });
+  var scored = allHashtags.map(function(tag) {
+    var tagLower = tag.toLowerCase().replace('#', '');
+    var score = 0;
+    keywords.forEach(function(kw) {
+      if (tagLower.indexOf(kw) >= 0 || kw.indexOf(tagLower) >= 0) score += 2;
+    });
+    return { tag: tag, score: score };
+  });
+  scored.sort(function(a, b) { return b.score - a.score; });
+  var result = scored.slice(0, count).map(function(s) { return s.tag; });
+  if (result.length < count) {
+    var remaining = allHashtags.filter(function(t) { return result.indexOf(t) < 0; });
+    while (result.length < count && remaining.length > 0) {
+      var idx = Math.floor(Math.random() * remaining.length);
+      result.push(remaining.splice(idx, 1)[0]);
+    }
+  }
+  return result.map(function(t) { return t.charAt(0) === '#' ? t : '#' + t; });
+}
+window.assignRelevantHashtags = assignRelevantHashtags;
 
 // === ICP (Ideal Customer Profile) LOADER ===
 let icpLoaded = false;
@@ -3292,6 +3325,7 @@ function renderICPCard(icp) {
     else if (Array.isArray(hashtags)) tags = hashtags.map(h => String(h)).filter(Boolean);
     else if (typeof hashtags === 'object') tags = Object.values(hashtags).flat().map(h => String(h)).filter(Boolean);
     if (tags.length > 0) {
+      window._icpHashtags = tags;
       hashtagsText.innerHTML = tags.map(h => {
         const tag = String(h);
         return '<span style="display:inline-block;background:rgba(0,0,0,0.06);color:#475569;padding:2px 10px;border-radius:12px;font-size:13px;margin:2px 4px 2px 0;">' + (tag.startsWith('#') ? tag : '#' + tag) + '</span>';
@@ -4124,13 +4158,19 @@ function parseContentText(content) {
   return text;
 }
 
-// Helper to get clean hashtags
+// Helper to get clean hashtags (always returns a string for backward compat)
 function parseHashtags(content) {
   let hashtags = content.hashtags || '';
+
+  // If hashtags is already an array, join to string
+  if (Array.isArray(hashtags)) {
+    return hashtags.join(' ');
+  }
 
   // Check if content has parsed data
   if (content._parsed) {
     hashtags = content._parsed.hashtags || content._parsed.first_comment || '';
+    if (Array.isArray(hashtags)) return hashtags.join(' ');
   }
 
   // If hashtags is in the content text as JSON
@@ -4138,6 +4178,7 @@ function parseHashtags(content) {
     try {
       const parsed = JSON.parse(content.content);
       hashtags = parsed.hashtags || parsed.first_comment || '';
+      if (Array.isArray(hashtags)) return hashtags.join(' ');
     } catch (e) {}
   }
 
@@ -4726,10 +4767,10 @@ async function openScheduleCard(dateStr) {
             <label>Post Content</label>
             <textarea id="schedule-edit-content-${idx}" style="min-height:100px;">${item.post_text || ''}</textarea>
           </div>
-          ${item.hashtags ? `
+          ${item.hashtags && item.hashtags.length > 0 ? `
             <div class="schedule-modal-field">
               <label>Hashtags</label>
-              <div class="value" style="font-size:13px;">${item.hashtags}</div>
+              <div class="value" style="font-size:13px;">${Array.isArray(item.hashtags) ? item.hashtags.join(' ') : item.hashtags}</div>
             </div>
           ` : ''}
           ${item.image_prompt ? `
@@ -5435,7 +5476,7 @@ function exportToCSV() {
   const rows = contentData.map(c => [
     c.date, c.platform, c.theme, c.content_type,
     `"${c.post_text.replace(/"/g, '""')}"`,
-    c.hashtags, c.image_url || '', c.video_url || '', c.status
+    Array.isArray(c.hashtags) ? c.hashtags.join(' ') : (c.hashtags || ''), c.image_url || '', c.video_url || '', c.status
   ]);
 
   const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -6463,6 +6504,28 @@ async function renderContentReview() {
       return true;
     });
 
+    // Fallback: assign ICP hashtags to items without them
+    var icpHashtags = window._icpHashtags || [];
+    if (icpHashtags.length > 0) {
+      deduped.forEach(function(item) {
+        if (!item.hashtags || item.hashtags.length === 0) {
+          var assigned = assignRelevantHashtags(
+            item.theme || '', item.product_name || '', icpHashtags, 3
+          );
+          if (assigned.length > 0) {
+            item.hashtags = assigned;
+            // Update Supabase in background (fire and forget)
+            if (window.supabase) {
+              window.supabase.from('content_items')
+                .update({ hashtags: assigned })
+                .eq('id', item.id)
+                .then(function() {});
+            }
+          }
+        }
+      });
+    }
+
     // Group by date
     _contentByDate = {};
     deduped.forEach(item => {
@@ -6483,13 +6546,15 @@ async function renderContentReview() {
       const productImgs = getProductImagesForDate(dateStr);
       const productThumb = productImgs.length > 0 ? productImgs[0] : null;
       const approvedCount = dayItems.filter(i => i.status === 'approved').length;
+      var hasHashtags = dayItems.some(function(i) { return i.hashtags && i.hashtags.length > 0; });
 
       return '<div class="content-day-card" onclick="openDayModal(\'' + dateStr + '\')">' +
         '<div class="day-badge">' + dayName + '</div>' +
         '<div class="day-info">' +
           '<div class="day-title">' + escapeHTML(framework.theme || dayName) + ' — ' + dateStr + '</div>' +
           '<div class="day-stats">' + dayItems.length + ' post' + (dayItems.length !== 1 ? 's' : '') +
-            ' &middot; <span class="approved-count">' + approvedCount + ' approved</span></div>' +
+            ' &middot; <span class="approved-count">' + approvedCount + ' approved</span>' +
+            (hasHashtags ? ' &middot; <span style="color:var(--text-muted);">#</span>' : '') + '</div>' +
         '</div>' +
       '</div>';
     }).join('') + '</div>';
@@ -6568,6 +6633,13 @@ function openDayModal(dateStr) {
       genVideoBtn = '<button class="btn-generate-video" onclick="event.stopPropagation();generateVideoForItem(\'' + item.id + '\')">Generate Video</button>';
     }
 
+    var hashtagsHtml = '';
+    if (item.hashtags && item.hashtags.length > 0) {
+      hashtagsHtml = '<div class="post-hashtags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
+        item.hashtags.map(function(h) { return '<span class="hashtag">' + escapeHTML(h) + '</span>'; }).join('') +
+      '</div>';
+    }
+
     return '<div class="content-platform-card" data-id="' + item.id + '" style="margin-bottom:0;">' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
         '<div class="platform-label ' + platformClass + '">' + escapeHTML(item.platform || '') + '</div>' +
@@ -6576,6 +6648,7 @@ function openDayModal(dateStr) {
       '<div class="post-preview" style="max-height:none; overflow:visible; white-space:pre-wrap;">' + escapeHTML(fullText) + '</div>' +
       (item.image_url ? '<img src="' + escapeHTML(item.image_url) + '" style="width:100%;border-radius:8px;margin-bottom:8px;max-height:200px;object-fit:cover;" alt="" onerror="this.style.display=\'none\'">' : '') +
       videoHtml +
+      hashtagsHtml +
       '<div class="card-actions" style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;">' +
         '<span class="status-badge ' + statusClass + '">' + statusClass + '</span>' +
         (item.status !== 'approved'
