@@ -938,6 +938,27 @@ details .details-content { padding: 20px; }
 .btn-generate-video.generating {
   animation: pulse 1.5s ease-in-out infinite;
 }
+/* Image generation button — same style as video */
+.btn-generate-image {
+  background: #0f1729;
+  color: white; border: none; border-radius: 8px;
+  padding: 8px 14px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.btn-generate-image:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transform: translateY(-1px);
+}
+.btn-generate-image:disabled {
+  opacity: 0.5; cursor: not-allowed; transform: none;
+}
+.btn-generate-image.generating {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.btn-generate-image.btn-sm {
+  padding: 5px 10px; font-size: 11px;
+}
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 /* Video preview inline */
 .card-video-preview {
@@ -6359,8 +6380,9 @@ async function lockInAndGenerate() {
       .eq('user_id', user.id)
       .eq('campaign_id', campaignId);
 
-    // Fire off content studio (async — returns immediately)
-    await authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
+    // Fire off content studio — do NOT await (webhook blocks until workflow finishes)
+    // Start it in background and immediately begin polling for results
+    authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
       method: 'POST',
       body: JSON.stringify({
         campaign_id: campaignId,
@@ -6368,7 +6390,7 @@ async function lockInAndGenerate() {
         month: getSelectedMonth ? getSelectedMonth() : new Date().toISOString().slice(0, 7),
         platforms: getSelectedPlatforms ? getSelectedPlatforms() : ['linkedin', 'instagram']
       })
-    });
+    }).catch(err => console.warn('Content studio call completed or timed out:', err));
 
     // Poll Supabase for new content items (workflow runs in background)
     let progress = 10;
@@ -6466,8 +6488,11 @@ function unlockNextWeek(completedWeek) {
 
 // === CONTENT REVIEW (Step 4) ===
 
-function viewGeneratedContent() {
-  renderContentReview();
+async function viewGeneratedContent() {
+  // Ensure step is unlocked
+  unlockStep('step-content');
+  // Wait for content to render before scrolling
+  await renderContentReview();
   scrollToStep('step-content');
 }
 window.viewGeneratedContent = viewGeneratedContent;
@@ -6640,6 +6665,13 @@ function openDayModal(dateStr) {
       genVideoBtn = '<button class="btn-generate-video" onclick="event.stopPropagation();generateVideoForItem(\'' + item.id + '\')">Generate Video</button>';
     }
 
+    let genImageBtn = '';
+    if (!item.image_url) {
+      genImageBtn = '<button class="btn-generate-image" onclick="event.stopPropagation();generateImageForItem(\'' + item.id + '\',\'' + dateStr + '\')">Generate Image</button>';
+    } else {
+      genImageBtn = '<button class="btn-generate-image btn-sm" onclick="event.stopPropagation();generateImageForItem(\'' + item.id + '\',\'' + dateStr + '\')">Regenerate Image</button>';
+    }
+
     var hashtagsHtml = '';
     if (item.hashtags && item.hashtags.length > 0) {
       hashtagsHtml = '<div class="post-hashtags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
@@ -6665,6 +6697,7 @@ function openDayModal(dateStr) {
           : '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">Edit</button>'
         ) +
         genVideoBtn +
+        genImageBtn +
       '</div>' +
     '</div>';
   }).join('');
@@ -6824,6 +6857,89 @@ async function generateVideoForItem(itemId) {
       btn.textContent = 'Generate Video';
     }
   }
+}
+
+async function generateImageForItem(itemId, reopenDate) {
+  const item = contentData.find(c => c.id === itemId);
+  if (!item) { showToast('Content not found', 'error'); return; }
+
+  // Find the button and show generating state
+  const btn = document.querySelector('.btn-generate-image[onclick*="' + itemId + '"]');
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('generating');
+    btn.textContent = 'Generating...';
+  }
+
+  showToast('Generating image... This may take 60-90 seconds.', 'success');
+
+  try {
+    const topic = item.post_text || item.content || '';
+    const productImgs = getProductImagesForDate(item.date);
+    const productImageUrl = productImgs.length > 0 ? productImgs[0] : '';
+
+    // Fire and forget — webhook responds immediately with 200
+    const response = await fetch('https://n8n-dev.eluxr.com/webhook/eluxr-tools-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic: topic,
+        productImageUrl: productImageUrl,
+        content_id: itemId
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Webhook returned ' + response.status);
+    }
+
+    // Workflow saves image_url to Supabase when done — poll for it
+    pollForImage(itemId, btn, reopenDate);
+  } catch (err) {
+    console.error('generateImageForItem error:', err);
+    showToast('Error generating image: ' + err.message, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('generating');
+      btn.textContent = item.image_url ? 'Regenerate Image' : 'Generate Image';
+    }
+  }
+}
+window.generateImageForItem = generateImageForItem;
+
+async function pollForImage(itemId, btn, reopenDate) {
+  let attempts = 0;
+  const maxAttempts = 36; // 3 minutes (36 * 5s)
+  const interval = setInterval(async () => {
+    attempts++;
+    try {
+      const { data } = await window.supabase
+        .from('content_items')
+        .select('image_url')
+        .eq('id', itemId)
+        .single();
+
+      if (data && data.image_url) {
+        clearInterval(interval);
+        const item = contentData.find(c => c.id === itemId);
+        if (item) item.image_url = data.image_url;
+        showToast('Image generated!', 'success');
+        if (btn) { btn.disabled = false; btn.classList.remove('generating'); }
+        await renderContentReview();
+        if (reopenDate) openDayModal(reopenDate);
+      } else if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        showToast('Image generation timed out. It may still be processing — check back shortly.', 'error');
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('generating');
+          btn.textContent = 'Generate Image';
+        }
+      }
+    } catch (e) {
+      console.error('pollForImage error:', e);
+    }
+  }, 5000);
 }
 
 async function pollForVideo(itemId, btn) {
