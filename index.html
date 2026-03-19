@@ -750,8 +750,7 @@ details .details-content { padding: 20px; }
   width: 100%; min-height: 200px; padding: 16px;
   border: 1px solid var(--border); border-radius: 10px;
   font-size: 14px; font-family: 'DM Sans', sans-serif;
-  line-height: 1.6; resize: vertical;
-  resize: vertical; margin-bottom: 16px; line-height: 1.6;
+  line-height: 1.6; resize: vertical; margin-bottom: 16px;
 }
 .edit-textarea:focus { outline: none; border-color: var(--green); }
 
@@ -854,19 +853,20 @@ details .details-content { padding: 20px; }
 }
 .content-day-modal-header {
   display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
-  padding-bottom: 16px; border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 16px; border-bottom: 1px solid rgba(241, 245, 249, 0.4);
 }
 .content-day-modal-header h3 {
   font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0;
   font-family: 'DM Sans', sans-serif;
 }
 .content-day-modal-close {
-  width: 36px; height: 36px; border: none; background: rgba(248, 250, 253, 0.6);
+  width: 36px; height: 36px; border: 1px solid rgba(226, 232, 240, 0.4); background: rgba(255, 255, 255, 0.6);
   border-radius: 10px; font-size: 20px; cursor: pointer; color: var(--text-secondary);
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.25s var(--transition);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
-.content-day-modal-close:hover { background: rgba(0,0,0,0.06); }
+.content-day-modal-close:hover { background: rgba(254, 242, 242, 0.7); border-color: rgba(254, 202, 202, 0.6); color: #ef4444; }
 .content-day-modal-posts {
   display: flex; flex-direction: column; gap: 16px;
 }
@@ -1543,6 +1543,145 @@ details .details-content { padding: 20px; }
   display: none;
 }
 
+/* THEME SELECTOR */
+.theme-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.theme-option {
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.3s var(--transition);
+}
+.theme-option:hover {
+  border-color: var(--text-secondary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.theme-option.selected {
+  border-color: #000;
+  background: rgba(0, 0, 0, 0.04);
+  box-shadow: 0 0 0 1px #000;
+}
+.theme-option h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+.theme-option p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+@media (max-width: 640px) {
+  .theme-selector { grid-template-columns: 1fr; }
+}
+
+/* IMPLEMENTED BADGE */
+.topic-card.implemented {
+  opacity: 0.85;
+  border-left: 3px solid #000;
+}
+.topic-implemented-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: #000;
+}
+
+/* DAY MODAL */
+.day-modal-topic-header {
+  background: rgba(0,0,0,0.03);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  border-left: 4px solid #000;
+}
+.day-modal-theme {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.day-modal-topic-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.day-modal-topic-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.day-modal-product-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+.day-modal-image-section,
+.day-modal-video-section,
+.day-modal-platforms {
+  margin-bottom: 24px;
+}
+.day-modal-image-section h4,
+.day-modal-video-section h4,
+.day-modal-platforms h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+.image-options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.image-option {
+  text-align: center;
+  cursor: pointer;
+}
+.image-option img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+  margin-bottom: 8px;
+}
+.image-option:hover img {
+  border-color: #000;
+}
+.approved-image-display {
+  position: relative;
+}
+.image-approved-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #000;
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 /* BRAND VOICE CHIPS */
 .brand-voice-grid {
   display: flex; flex-wrap: wrap; gap: 8px;
@@ -1632,8 +1771,10 @@ details .details-content { padding: 20px; }
   transition: all 0.25s var(--transition);
 }
 .week-day-cell:hover {
-  background: rgba(248, 250, 253, 0.5);
+  background: rgba(248, 250, 253, 0.8);
   border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
 }
 .week-day-cell.today {
   background: rgba(0, 0, 0, 0.04);
@@ -1856,11 +1997,25 @@ details .details-content { padding: 20px; }
   font-weight: 600;
 }
 .schedule-modal-close {
-  background: none;
-  border: none;
-  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(226, 232, 240, 0.4);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  font-size: 20px;
   cursor: pointer;
-  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.25s var(--transition);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.schedule-modal-close:hover {
+  background: rgba(254, 242, 242, 0.7);
+  border-color: rgba(254, 202, 202, 0.6);
+  color: #ef4444;
 }
 .schedule-modal-body {
   padding: 24px;
@@ -2321,7 +2476,7 @@ details .details-content { padding: 20px; }
 <section class="step-section" id="step-setup">
   <div class="section-inner">
     <div class="phase-header fade-in-up">
-      <h2>Step 1: Define Your Ideal Customer Profile</h2>
+      <h2>Step 1: Define Your Business Profile</h2>
     </div>
 
     <div class="card fade-in-up stagger-1">
@@ -2346,6 +2501,22 @@ details .details-content { padding: 20px; }
         </div>
 
         <div class="form-group">
+          <label class="form-label" for="content_language">Content Language *</label>
+          <select class="form-select" id="content_language" name="content_language" required>
+            <option value="English" selected>English</option>
+            <option value="Spanish">Spanish (Español)</option>
+            <option value="German">German (Deutsch)</option>
+            <option value="French">French (Français)</option>
+            <option value="Italian">Italian (Italiano)</option>
+            <option value="Portuguese">Portuguese (Português)</option>
+            <option value="Chinese">Chinese (中文)</option>
+            <option value="Japanese">Japanese (日本語)</option>
+            <option value="Korean">Korean (한국어)</option>
+            <option value="Arabic">Arabic (العربية)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label class="form-label">Target Platforms *</label>
           <div class="platform-selector" id="platform-selector">
             <label class="platform-toggle active"><input type="checkbox" name="platforms" value="Instagram" checked> Instagram</label>
@@ -2356,6 +2527,13 @@ details .details-content { padding: 20px; }
             <label class="platform-toggle active"><input type="checkbox" name="platforms" value="X" checked> X</label>
           </div>
           <div class="platform-validation-error" id="platform-error">Please select at least one platform</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Weekly Storytelling Theme *</label>
+          <div class="theme-selector" id="theme-selector">
+            <!-- Rendered by JS on page load -->
+          </div>
         </div>
 
         <details>
@@ -2393,7 +2571,7 @@ details .details-content { padding: 20px; }
     <div id="icp-card" class="card card-glass fade-in-up stagger-2" style="display: none; margin-top: 24px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 style="margin: 0; color: var(--text-primary, #e2e8f0); font-size: 18px;">
-          <span style="color: #000; margin-right: 8px;">&#9679;</span>Ideal Customer Profile
+          <span style="color: #000; margin-right: 8px;">&#9679;</span>Your Business Profile
         </h3>
         <span id="icp-last-analyzed" style="font-size: 12px; color: var(--text-muted, #94a3b8);"></span>
       </div>
@@ -3024,12 +3202,15 @@ details .details-content { padding: 20px; }
             if (window.loadICP) window.loadICP();
             // Load scraped products from Supabase
             if (window.loadProducts) window.loadProducts();
+            // Render theme selector
+            if (window.renderThemeSelector) window.renderThemeSelector();
             // Load content calendar and review after auth confirmed
             if (window.fetchAndDisplayCalendar) {
               window.fetchAndDisplayCalendar(true).then(calData => {
                 if (calData && calData.all && calData.all.length > 0) {
                   ['step-products', 'step-topics', 'step-content', 'step-calendar'].forEach(id => window.unlockStep && window.unlockStep(id));
                   if (window.renderContentReview) window.renderContentReview();
+                  if (window.updateStats) window.updateStats();
                   if (window.loadScheduleThemes) window.loadScheduleThemes();
                 }
               }).catch(() => {});
@@ -3160,6 +3341,7 @@ let selectedItems = new Set();
 let currentPreviewDay = null;
 let currentPreviewId = null;
 let currentMonth = new Date().toISOString().slice(0, 7); // Default to current month YYYY-MM
+let userManuallyChangedMonth = false;
 let currentPipelineRunId = null;
 let businessContext = null; // Stores business info from Step 1 for use in content generation
 
@@ -3251,20 +3433,60 @@ function escapeHTML(str) {
 }
 
 // === ICP HASHTAG RELEVANCE HELPER ===
+let _usedHashtagCombos = new Set();
+
 function assignRelevantHashtags(postTheme, postProductName, allHashtags, count) {
   count = count || 3;
   if (!allHashtags || allHashtags.length === 0) return [];
-  var keywords = ((postTheme || '') + ' ' + (postProductName || '')).toLowerCase().split(/\s+/).filter(function(w) { return w.length > 2; });
+
+  var themeWords = (postTheme || '').toLowerCase().split(/\s+/).filter(function(w) { return w.length > 2; });
+  var productWords = (postProductName || '').toLowerCase().split(/\s+/).filter(function(w) { return w.length > 2; });
+
   var scored = allHashtags.map(function(tag) {
     var tagLower = tag.toLowerCase().replace('#', '');
     var score = 0;
-    keywords.forEach(function(kw) {
-      if (tagLower.indexOf(kw) >= 0 || kw.indexOf(tagLower) >= 0) score += 2;
+    // Theme relevance (higher weight)
+    themeWords.forEach(function(kw) {
+      if (tagLower.indexOf(kw) >= 0) score += 3;
+      else if (kw.indexOf(tagLower) >= 0) score += 1;
     });
+    // Product relevance
+    productWords.forEach(function(kw) {
+      if (tagLower.indexOf(kw) >= 0) score += 2;
+      else if (kw.indexOf(tagLower) >= 0) score += 1;
+    });
+    // Small random jitter to vary results
+    score += Math.random() * 0.5;
     return { tag: tag, score: score };
   });
+
   scored.sort(function(a, b) { return b.score - a.score; });
-  var result = scored.slice(0, count).map(function(s) { return s.tag; });
+
+  // Pick top candidates, ensuring combo uniqueness across campaign
+  var candidates = scored.map(function(s) { return s.tag; });
+  var result = [];
+  var attempts = 0;
+  var maxAttempts = 10;
+
+  while (result.length < count && attempts < maxAttempts) {
+    attempts++;
+    var pick = [];
+    for (var i = 0; i < candidates.length && pick.length < count; i++) {
+      if (result.indexOf(candidates[i]) < 0 && pick.indexOf(candidates[i]) < 0) {
+        pick.push(candidates[i]);
+      }
+    }
+    var comboKey = pick.slice().sort().join('|').toLowerCase();
+    if (!_usedHashtagCombos.has(comboKey) || attempts >= maxAttempts) {
+      _usedHashtagCombos.add(comboKey);
+      result = pick;
+      break;
+    }
+    // Shuffle candidates to try a different combo
+    candidates = candidates.sort(function() { return Math.random() - 0.5; });
+  }
+
+  // Fill remaining slots if needed
   if (result.length < count) {
     var remaining = allHashtags.filter(function(t) { return result.indexOf(t) < 0; });
     while (result.length < count && remaining.length > 0) {
@@ -3272,6 +3494,7 @@ function assignRelevantHashtags(postTheme, postProductName, allHashtags, count) 
       result.push(remaining.splice(idx, 1)[0]);
     }
   }
+
   return result.map(function(t) { return t.charAt(0) === '#' ? t : '#' + t; });
 }
 window.assignRelevantHashtags = assignRelevantHashtags;
@@ -3445,13 +3668,13 @@ async function loadProducts() {
       console.error('Error loading products:', error);
       return;
     }
-    productsData = products || [];
-    if (countBadge) countBadge.textContent = productsData.length;
+    productsData = (products || []).slice(0, 28);
+    if (countBadge) countBadge.textContent = productsData.length + ' / 28';
     if (productsData.length > 0) {
       container.style.display = 'block';
       renderProductsCard(productsData);
       if (productsData.length < 28) {
-        showToast('Only ' + productsData.length + ' products found. Some days may share products.', 'warning');
+        showToast('Only ' + productsData.length + ' of 28 products found. Please add ' + (28 - productsData.length) + ' more products to generate a full campaign.', 'warning');
       }
       // Hide empty state, unlock topics step
       const emptyState = document.getElementById('products-step-empty');
@@ -3607,6 +3830,12 @@ function removeProduct(btn) {
 function addCustomProduct() {
   const itemsContainer = document.getElementById('products-items');
   if (!itemsContainer) return;
+  const currentCount = itemsContainer.querySelectorAll('.product-item:not(.inactive)').length;
+  if (currentCount >= 28) {
+    showToast('Maximum 28 products reached. Remove a product before adding a new one.', 'warning');
+    return;
+  }
+  showToast((28 - currentCount - 1) + ' product slots remaining after this one.', 'success');
   const newId = 'new-' + Date.now();
   const html = '<div class="product-item" data-product-id="' + newId + '" data-new="true">' +
     '<div class="product-thumb-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>' +
@@ -3890,7 +4119,9 @@ async function handleFormSubmit(e) {
     industry: document.getElementById('industry').value,
     month: getSelectedMonth(),
     brand_voice: brandVoice,
-    platforms: getSelectedPlatforms()
+    platforms: getSelectedPlatforms(),
+    storytelling_theme: selectedThemeKey,
+    content_language: document.getElementById('content_language') ? document.getElementById('content_language').value : 'English'
   };
 
   // Store business context globally for use in Content Generator
@@ -3898,7 +4129,8 @@ async function handleFormSubmit(e) {
     business_url: formData.business_url,
     industry: formData.industry,
     brand_voice: formData.brand_voice,
-    platforms: formData.platforms
+    platforms: formData.platforms,
+    content_language: formData.content_language
   };
 
   // Save business profile to Supabase
@@ -4259,6 +4491,22 @@ async function fetchAndDisplayCalendar(silent = false) {
       return parsed;
     });
 
+    // Auto-detect the active content month if content exists
+    if (contentData.length > 0 && !userManuallyChangedMonth) {
+      const dateCounts = {};
+      contentData.forEach(c => {
+        const d = c.date || c.scheduled_date || '';
+        const m = d.substring(0, 7);
+        if (m) dateCounts[m] = (dateCounts[m] || 0) + 1;
+      });
+      const topMonth = Object.entries(dateCounts).sort((a, b) => b[1] - a[1])[0];
+      if (topMonth && topMonth[0]) {
+        currentMonth = topMonth[0];
+        const monthInput = document.getElementById('month');
+        if (monthInput) monthInput.value = currentMonth;
+      }
+    }
+
     if (!silent) goToPhase(3);
 
     if (contentData.length === 0) {
@@ -4462,6 +4710,7 @@ window.checkActivePipeline = checkActivePipeline;
 // Calendar rendering
 // Month navigation functions
 function changeMonth(delta) {
+  userManuallyChangedMonth = true;
   // Parse currentMonth (YYYY-MM) without timezone issues
   const [year, month] = currentMonth.split('-').map(Number);
   // Create date using local timezone (month is 0-indexed in JS)
@@ -4475,10 +4724,12 @@ function changeMonth(delta) {
 
 function goToCurrentMonth() {
   const now = new Date();
-  currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  userManuallyChangedMonth = false;
   renderCalendar(currentMonth, contentData);
   updateStats();
-  closeContentList();
+  scheduleWeekOffset = 0;
+  loadScheduleThemes();
 }
 
 // Make functions globally accessible for onclick handlers
@@ -5501,23 +5752,31 @@ function updateBatchBar() {
 // Export
 function exportToCSV() {
   const headers = ['Date', 'Platform', 'Theme', 'Content Type', 'Post Text', 'Hashtags', 'Image URL', 'Video URL', 'Status'];
-  const rows = contentData.map(c => [
-    c.date, c.platform, c.theme, c.content_type,
-    `"${c.post_text.replace(/"/g, '""')}"`,
-    Array.isArray(c.hashtags) ? c.hashtags.join(' ') : (c.hashtags || ''), c.image_url || '', c.video_url || '', c.status
+  const monthData = getContentForMonth(currentMonth);
+  if (monthData.length === 0) {
+    showToast('No content to export for this month.', 'error');
+    return;
+  }
+  const rows = monthData.map(c => [
+    c.date || c.scheduled_date || '',
+    c.platform || '',
+    c.theme || '',
+    c.content_type || '',
+    '"' + (c.post_text || c.content || '').replace(/"/g, '""').replace(/\n/g, ' ') + '"',
+    Array.isArray(c.hashtags) ? c.hashtags.join(' ') : (c.hashtags || ''),
+    c.image_url || '',
+    c.video_url || '',
+    c.status || 'pending'
   ]);
-
   const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
-
   const link = document.createElement('a');
   link.href = url;
-  link.download = `eluxr-content-${currentMonth}.csv`;
+  link.download = 'eluxr-content-' + currentMonth + '.csv';
   link.click();
   URL.revokeObjectURL(url);
-
-  showToast('CSV exported successfully!', 'success');
+  showToast(rows.length + ' posts exported to CSV!', 'success');
 }
 
 // Google Calendar OAuth state
@@ -5539,7 +5798,7 @@ function buildCalendarEvents() {
     byDate[d].push(post);
   });
 
-  const dayThemes = ['', 'Curiosity Hook', 'Craftsmanship', 'Meaning & Symbolism', 'Transformation', 'Hidden Detail / Surprise', 'Lifestyle Aspiration', 'Legacy & Timelessness'];
+  const fw = getActiveFramework(); const dayThemes = ['', fw[1].theme, fw[2].theme, fw[3].theme, fw[4].theme, fw[5].theme, fw[6].theme, fw[7].theme];
 
   const events = [];
   Object.keys(byDate).sort().forEach(dateStr => {
@@ -5552,9 +5811,13 @@ function buildCalendarEvents() {
     const statusCounts = posts.reduce((acc, p) => { acc[p.status || 'pending'] = (acc[p.status || 'pending'] || 0) + 1; return acc; }, {});
     const statusText = Object.entries(statusCounts).map(([k, v]) => v + ' ' + k).join(', ');
     const preview = (posts[0].post_text || posts[0].content || '').substring(0, 300);
+    const firstPostText = (posts[0].post_text || posts[0].content || '').replace(/\n/g, ' ').substring(0, 80);
+    const eventTitle = theme
+      ? theme + ': ' + firstPostText
+      : firstPostText || 'ELUXR Content — ' + platforms;
 
     events.push({
-      summary: 'Post: ' + (theme ? theme + ' — ' : '') + platforms,
+      summary: eventTitle,
       description: 'ELUXR Content Reminder\n\n' +
         'Theme: ' + (theme || 'N/A') + '\n' +
         'Platforms: ' + platforms + '\n' +
@@ -5616,6 +5879,7 @@ async function syncToGoogleCalendar() {
 
   // Fallback to .ics download if no Google Client ID configured
   if (!clientId) {
+    showToast('Google Calendar direct sync is not configured. Downloading .ics file instead — you can import it into Google Calendar manually.', 'success');
     downloadIcsFile(events);
     return;
   }
@@ -5668,7 +5932,7 @@ async function syncToGoogleCalendar() {
 }
 
 function downloadIcsFile(events) {
-  const dayThemes = ['', 'Curiosity Hook', 'Craftsmanship', 'Meaning & Symbolism', 'Transformation', 'Hidden Detail / Surprise', 'Lifestyle Aspiration', 'Legacy & Timelessness'];
+  const fw = getActiveFramework(); const dayThemes = ['', fw[1].theme, fw[2].theme, fw[3].theme, fw[4].theme, fw[5].theme, fw[6].theme, fw[7].theme];
 
   let icsEvents = '';
   events.forEach(event => {
@@ -5685,7 +5949,7 @@ function downloadIcsFile(events) {
       'UID:' + uid + '\r\n' +
       'DTSTART;VALUE=DATE:' + icsDate + '\r\n' +
       'DTEND;VALUE=DATE:' + icsDate + '\r\n' +
-      'SUMMARY:' + event.summary + '\r\n' +
+      'SUMMARY:' + (event.summary || 'ELUXR Content').replace(/[,;\\]/g, ' ') + '\r\n' +
       'DESCRIPTION:' + desc + '\r\n' +
       'BEGIN:VALARM\r\nTRIGGER:-PT540M\r\nACTION:DISPLAY\r\nDESCRIPTION:Time to post: ' + theme + '\r\nEND:VALARM\r\n' +
       'BEGIN:VALARM\r\nTRIGGER:-PT60M\r\nACTION:DISPLAY\r\nDESCRIPTION:Post soon: ' + theme + '\r\nEND:VALARM\r\n' +
@@ -5709,14 +5973,22 @@ function downloadIcsFile(events) {
 
 // Stats
 function updateStats() {
-  // Get content filtered for current month
-  const monthData = getContentForMonth(currentMonth);
+  let monthData = getContentForMonth(currentMonth);
+  // Fallback: if filtered data is empty but contentData has items, show all
+  if (monthData.length === 0 && contentData.length > 0) {
+    monthData = contentData;
+  }
 
-  document.getElementById('stat-total').textContent = monthData.length;
-  document.getElementById('stat-pending').textContent = monthData.filter(c => c.status === 'pending' || !c.status).length;
-  document.getElementById('stat-approved').textContent = monthData.filter(c => c.status === 'approved').length;
-  document.getElementById('stat-videos').textContent = monthData.filter(c => c.video_url).length;
+  const totalEl = document.getElementById('stat-total');
+  const pendingEl = document.getElementById('stat-pending');
+  const approvedEl = document.getElementById('stat-approved');
+  const videosEl = document.getElementById('stat-videos');
+  if (totalEl) totalEl.textContent = monthData.length;
+  if (pendingEl) pendingEl.textContent = monthData.filter(c => c.status === 'pending' || !c.status).length;
+  if (approvedEl) approvedEl.textContent = monthData.filter(c => c.status === 'approved').length;
+  if (videosEl) videosEl.textContent = monthData.filter(c => c.video_url).length;
 }
+window.updateStats = updateStats;
 
 // Helper to get content for a specific month
 function getContentForMonth(month) {
@@ -5905,6 +6177,17 @@ function startOver() {
   }
 }
 
+// Make calendar/content functions globally accessible
+window.showContentList = showContentList;
+window.closeContentList = closeContentList;
+window.exportToCSV = exportToCSV;
+window.downloadIcsFile = downloadIcsFile;
+window.buildCalendarEvents = buildCalendarEvents;
+window.getContentForMonth = getContentForMonth;
+window.approveContent = approveContent;
+window.rejectContent = rejectContent;
+window.startOver = startOver;
+
 // Toast
 function showToast(message, type = 'success') {
   const container = document.getElementById('toast-container');
@@ -5925,16 +6208,89 @@ function showToast(message, type = 'success') {
 let currentWeek = 1;
 let weekTopics = {}; // { 1: [...], 2: [...], ... }
 
-// 7-Day Storytelling Framework
-const STORYTELLING_FRAMEWORK = {
-  1: { day: 'Monday',    theme: 'Curiosity Hook',        tagline: 'Stop the scroll with intrigue and visual mystery' },
-  2: { day: 'Tuesday',   theme: 'Craftsmanship',         tagline: 'Establish luxury credibility and authority' },
-  3: { day: 'Wednesday', theme: 'Meaning & Symbolism',   tagline: 'Build emotional connection' },
-  4: { day: 'Thursday',  theme: 'Transformation Moment',  tagline: 'Show impact when jewelry is worn' },
-  5: { day: 'Friday',    theme: 'Hidden Detail / Surprise', tagline: 'Encourage shares through discovery' },
-  6: { day: 'Saturday',  theme: 'Lifestyle Aspiration',  tagline: 'Inspire desire and aspiration' },
-  7: { day: 'Sunday',    theme: 'Legacy & Timelessness', tagline: 'Build brand prestige' }
+// 7-Day Storytelling Themes
+const STORYTELLING_THEMES = {
+  'luxury-intrigue': {
+    name: 'Luxury Intrigue & Discovery',
+    description: 'Mystery-driven storytelling that builds curiosity around craftsmanship and hidden details',
+    framework: {
+      1: { day: 'Monday',    theme: 'Curiosity Hook',          tagline: 'Stop the scroll with intrigue and visual mystery' },
+      2: { day: 'Tuesday',   theme: 'Craftsmanship',           tagline: 'Establish luxury credibility and authority' },
+      3: { day: 'Wednesday', theme: 'Meaning & Symbolism',     tagline: 'Build emotional connection' },
+      4: { day: 'Thursday',  theme: 'Transformation Moment',   tagline: 'Show impact when the piece is worn' },
+      5: { day: 'Friday',    theme: 'Hidden Detail / Surprise', tagline: 'Encourage shares through discovery' },
+      6: { day: 'Saturday',  theme: 'Lifestyle Aspiration',    tagline: 'Inspire desire and aspiration' },
+      7: { day: 'Sunday',    theme: 'Legacy & Timelessness',   tagline: 'Build brand prestige and long-term emotional value' }
+    }
+  },
+  'emotional-journey': {
+    name: 'Emotional Journey',
+    description: 'Story arc that takes the audience from desire to belonging through personal narrative',
+    framework: {
+      1: { day: 'Monday',    theme: 'The Desire',              tagline: 'Spark longing with aspirational imagery' },
+      2: { day: 'Tuesday',   theme: 'The Story Behind',        tagline: 'Origin story — where the piece was born' },
+      3: { day: 'Wednesday', theme: 'The Person',              tagline: 'Real people, real moments, real connection' },
+      4: { day: 'Thursday',  theme: 'The Ritual',              tagline: 'Daily rituals and the role luxury plays' },
+      5: { day: 'Friday',    theme: 'The Confidence',          tagline: 'How wearing it changes how you feel' },
+      6: { day: 'Saturday',  theme: 'The Celebration',         tagline: 'Milestones, gifts, and unforgettable nights' },
+      7: { day: 'Sunday',    theme: 'The Promise',             tagline: 'What this piece means for tomorrow' }
+    }
+  },
+  'authority-educator': {
+    name: 'Authority & Educator',
+    description: 'Position the brand as the expert — teach, reveal secrets, and build trust through knowledge',
+    framework: {
+      1: { day: 'Monday',    theme: 'Industry Myth-Bust',      tagline: 'Challenge a common misconception' },
+      2: { day: 'Tuesday',   theme: 'Material Deep-Dive',      tagline: 'Educate on materials, gems, metals, or techniques' },
+      3: { day: 'Wednesday', theme: 'Design Philosophy',       tagline: 'Why we design the way we do' },
+      4: { day: 'Thursday',  theme: 'Insider Knowledge',       tagline: 'Share what only experts know' },
+      5: { day: 'Friday',    theme: 'Comparison / Breakdown',  tagline: 'Side-by-side quality breakdowns' },
+      6: { day: 'Saturday',  theme: 'Trend Forecast',          tagline: 'What is coming next in luxury' },
+      7: { day: 'Sunday',    theme: 'Heritage & Legacy',       tagline: 'History, tradition, and timeless principles' }
+    }
+  },
+  'cinematic-series': {
+    name: 'Cinematic Series',
+    description: 'Netflix-style weekly show — each week is an episode with cliffhangers and visual drama',
+    framework: {
+      1: { day: 'Monday',    theme: 'Cold Open / Teaser',      tagline: 'Drop viewers into a visual moment — no context' },
+      2: { day: 'Tuesday',   theme: 'The Reveal',              tagline: 'Show what Monday hinted at — full glory' },
+      3: { day: 'Wednesday', theme: 'Behind the Scenes',       tagline: 'Pull back the curtain on creation' },
+      4: { day: 'Thursday',  theme: 'The Moment',              tagline: 'The dramatic transformation or unboxing' },
+      5: { day: 'Friday',    theme: 'Plot Twist',              tagline: 'Surprise detail or unexpected angle' },
+      6: { day: 'Saturday',  theme: 'The World',               tagline: 'Place the piece in a cinematic setting' },
+      7: { day: 'Sunday',    theme: 'Next Episode Teaser',     tagline: 'Cliffhanger — hint at next week' }
+    }
+  }
 };
+
+let selectedThemeKey = 'luxury-intrigue';
+
+function getActiveFramework() {
+  return STORYTELLING_THEMES[selectedThemeKey].framework;
+}
+
+function renderThemeSelector() {
+  const container = document.getElementById('theme-selector');
+  if (!container) return;
+  container.innerHTML = Object.entries(STORYTELLING_THEMES).map(([key, theme]) => {
+    const selected = key === selectedThemeKey ? ' selected' : '';
+    return '<div class="theme-option' + selected + '" data-theme="' + key + '" onclick="selectTheme(\'' + key + '\')">' +
+      '<h4>' + escapeHTML(theme.name) + '</h4>' +
+      '<p>' + escapeHTML(theme.description) + '</p>' +
+    '</div>';
+  }).join('');
+}
+
+function selectTheme(key) {
+  if (!STORYTELLING_THEMES[key]) return;
+  selectedThemeKey = key;
+  document.querySelectorAll('.theme-option').forEach(el => {
+    el.classList.toggle('selected', el.dataset.theme === key);
+  });
+}
+window.selectTheme = selectTheme;
+window.renderThemeSelector = renderThemeSelector;
 
 async function ensureCampaign() {
   if (window.currentCampaignId) return window.currentCampaignId;
@@ -6078,27 +6434,31 @@ function renderWeekView(n) {
     // Check if all approved and content generated
     const allApproved = topics.every(t => t.status === 'approved');
     const tab = document.querySelector(`.week-tab[data-week="${n}"]`);
-    if (tab && tab.classList.contains('completed')) {
+    const isCompleted = tab && tab.classList.contains('completed');
+    if (isCompleted) {
+      // Show topics in implemented mode (read-only) instead of hiding them
+      gridSection.style.display = 'block';
+      renderTopicCards(topics, true);
       completeSection.style.display = 'block';
       document.getElementById('completed-week-num').textContent = n;
     } else {
       gridSection.style.display = 'block';
-      renderTopicCards(topics);
+      renderTopicCards(topics, false);
       updateApprovalCount(topics);
     }
   }
 }
 
-function renderTopicCards(topics) {
+function renderTopicCards(topics, isImplemented) {
   const container = document.getElementById('topics-cards');
   if (!container) return;
 
   container.innerHTML = topics.map(t => {
     const isApproved = t.status === 'approved';
     const isRegen = t.status === 'regenerating';
-    const cardClass = 'topic-card' + (isApproved ? ' approved' : '') + (isRegen ? ' regenerating' : '');
+    const cardClass = 'topic-card' + (isApproved ? ' approved' : '') + (isRegen ? ' regenerating' : '') + (isImplemented ? ' implemented' : '');
     const dayNum = t.day_number || 1;
-    const framework = STORYTELLING_FRAMEWORK[dayNum] || { day: 'Day ' + dayNum, theme: '', tagline: '' };
+    const framework = getActiveFramework()[dayNum] || { day: 'Day ' + dayNum, theme: '', tagline: '' };
 
     // Look up product image
     let productImgHtml = '';
@@ -6140,10 +6500,13 @@ function renderTopicCards(topics) {
           (t.product_name ? '<span class="topic-tag product">' + escapeHTML(t.product_name) + '</span>' : '') +
         '</div>' +
         '<div class="topic-actions">' +
-          (isApproved
-            ? '<span class="topic-approved-label">&#10003; Approved</span>'
-            : '<button class="btn-approve-topic" onclick="approveTopic(\'' + t.id + '\')">Approve</button>' +
-              '<button class="btn-regen-topic" onclick="regenerateTopic(\'' + t.id + '\')">Regenerate</button>'
+          (isImplemented
+            ? '<span class="topic-implemented-label">Content Generated</span>'
+            : (isApproved
+              ? '<span class="topic-approved-label">&#10003; Approved</span>'
+              : '<button class="btn-approve-topic" onclick="approveTopic(\'' + t.id + '\')">Approve</button>' +
+                '<button class="btn-regen-topic" onclick="regenerateTopic(\'' + t.id + '\')">Regenerate</button>'
+            )
           ) +
         '</div>' +
       '</div>' +
@@ -6175,14 +6538,15 @@ async function generateTopics(assignedProducts) {
 
   try {
     // Build storytelling framework context for prompt
-    const frameworkContext = Object.entries(STORYTELLING_FRAMEWORK).map(([day, f]) =>
+    const frameworkContext = Object.entries(getActiveFramework()).map(([day, f]) =>
       `Day ${day} (${f.day}): ${f.theme} — ${f.tagline}`
     ).join('\n');
 
     var bodyObj = {
       campaign_id: campaignId,
       week_number: currentWeek,
-      storytelling_framework: frameworkContext
+      storytelling_framework: frameworkContext,
+      content_language: businessContext.content_language || 'English'
     };
     if (assignedProducts && assignedProducts.length > 0) {
       bodyObj.assigned_products = assignedProducts.map(function(p) {
@@ -6223,6 +6587,10 @@ async function generateTopics(assignedProducts) {
 }
 
 async function generateTopicsFromProducts() {
+  if (!productsData || productsData.length < 28) {
+    showToast('You need 28 products to generate a full 4-week campaign. Currently: ' + (productsData ? productsData.length : 0) + '/28. Please add more products.', 'error');
+    return;
+  }
   if (!productOrder || productOrder.length === 0) {
     initProductOrder();
   }
@@ -6388,7 +6756,8 @@ async function lockInAndGenerate() {
         campaign_id: campaignId,
         week_number: currentWeek,
         month: getSelectedMonth ? getSelectedMonth() : new Date().toISOString().slice(0, 7),
-        platforms: getSelectedPlatforms ? getSelectedPlatforms() : ['linkedin', 'instagram']
+        platforms: getSelectedPlatforms ? getSelectedPlatforms() : ['linkedin', 'instagram'],
+        content_language: businessContext.content_language || 'English'
       })
     }).catch(err => console.warn('Content studio call completed or timed out:', err));
 
@@ -6574,7 +6943,7 @@ async function renderContentReview() {
       const dateObj = new Date(dateStr + 'T00:00:00');
       const dayName = _contentDayNames[dateObj.getDay()];
       const dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
-      const framework = STORYTELLING_FRAMEWORK[dayOfWeek] || {};
+      const framework = getActiveFramework()[dayOfWeek] || {};
       const productImgs = getProductImagesForDate(dateStr);
       const productThumb = productImgs.length > 0 ? productImgs[0] : null;
       const approvedCount = dayItems.filter(i => i.status === 'approved').length;
@@ -6594,8 +6963,14 @@ async function renderContentReview() {
   } catch (err) {
     console.error('renderContentReview error:', err);
   }
+  updateStats();
 }
 window.renderContentReview = renderContentReview;
+
+// Day modal state
+let dayImageOptions = {};
+let dayApprovedImage = {};
+let dayVideoUrl = {};
 
 function openDayModal(dateStr) {
   const modal = document.getElementById('content-day-modal');
@@ -6607,12 +6982,14 @@ function openDayModal(dateStr) {
   const dateObj = new Date(dateStr + 'T00:00:00');
   const dayName = _contentDayNames[dateObj.getDay()];
   const dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
-  const framework = STORYTELLING_FRAMEWORK[dayOfWeek] || {};
+  const framework = getActiveFramework()[dayOfWeek] || {};
 
   titleEl.textContent = dayName + ' — ' + (framework.theme || '') + ' — ' + dateStr;
 
   // Look up the topic title for this day from weekTopics using date position
   let topicTitle = '';
+  let topicDescription = '';
+  let topicProductName = '';
   const allDates = Object.keys(_contentByDate).sort();
   const dateIndex = allDates.indexOf(dateStr);
   if (dateIndex >= 0) {
@@ -6621,7 +6998,11 @@ function openDayModal(dateStr) {
     const weekTopicsList = weekTopics[weekNum];
     if (weekTopicsList) {
       const match = weekTopicsList.find(t => t.day_number === dayInWeek);
-      if (match) topicTitle = match.topic || '';
+      if (match) {
+        topicTitle = match.topic || '';
+        topicDescription = match.description || '';
+        topicProductName = match.product_name || '';
+      }
     }
   }
   // Fallback: match by product_id
@@ -6631,12 +7012,12 @@ function openDayModal(dateStr) {
       const topics = weekTopics[wn];
       if (topics) {
         const match = topics.find(t => t.product_id && firstItem.product_id && t.product_id === firstItem.product_id);
-        if (match) { topicTitle = match.topic || ''; break; }
+        if (match) { topicTitle = match.topic || ''; topicDescription = match.description || ''; topicProductName = match.product_name || ''; break; }
       }
     }
   }
 
-  // Sort items by platform order: Instagram, Facebook, YouTube, TikTok, LinkedIn, X
+  // Sort items by platform order
   const platformOrder = { instagram: 0, facebook: 1, youtube: 2, tiktok: 3, linkedin: 4, x: 5 };
   const sortedItems = [...dayItems].sort((a, b) => {
     const pa = platformOrder[(a.platform || '').toLowerCase()] ?? 99;
@@ -6644,68 +7025,262 @@ function openDayModal(dateStr) {
     return pa - pb;
   });
 
-  const topicHeaderHtml = topicTitle
-    ? '<div style="font-size:16px; font-weight:600; color:var(--text-primary); margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #e2e8f0;">' + escapeHTML(topicTitle) + '</div>'
-    : '';
-
-  postsEl.innerHTML = topicHeaderHtml + sortedItems.map(item => {
-    const platformClass = (item.platform || '').toLowerCase().replace(/[^a-z]/g, '');
-    const statusClass = item.status === 'approved' ? 'approved' : (item.status === 'rejected' ? 'rejected' : 'pending');
-    const isScript = (platformClass === 'instagram' || platformClass === 'youtube');
-    const hasVideo = item.video_url && item.video_url.length > 0;
-    const fullText = parseContentText(item);
-
-    let videoHtml = '';
-    if (hasVideo) {
-      videoHtml = '<div class="card-video-preview"><video src="' + escapeHTML(item.video_url) + '" controls preload="metadata"></video></div>';
-    }
-
-    let genVideoBtn = '';
-    if (isScript && item.status === 'approved' && !hasVideo) {
-      genVideoBtn = '<button class="btn-generate-video" onclick="event.stopPropagation();generateVideoForItem(\'' + item.id + '\')">Generate Video</button>';
-    }
-
-    let genImageBtn = '';
-    if (!item.image_url) {
-      genImageBtn = '<button class="btn-generate-image" onclick="event.stopPropagation();generateImageForItem(\'' + item.id + '\',\'' + dateStr + '\')">Generate Image</button>';
-    } else {
-      genImageBtn = '<button class="btn-generate-image btn-sm" onclick="event.stopPropagation();generateImageForItem(\'' + item.id + '\',\'' + dateStr + '\')">Regenerate Image</button>';
-    }
-
-    var hashtagsHtml = '';
-    if (item.hashtags && item.hashtags.length > 0) {
-      hashtagsHtml = '<div class="post-hashtags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
-        item.hashtags.map(function(h) { return '<span class="hashtag">' + escapeHTML(h) + '</span>'; }).join('') +
-      '</div>';
-    }
-
-    return '<div class="content-platform-card" data-id="' + item.id + '" style="margin-bottom:0;">' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
-        '<div class="platform-label ' + platformClass + '">' + escapeHTML(item.platform || '') + '</div>' +
-        (isScript ? '<div class="script-badge">SCRIPT</div>' : '') +
-      '</div>' +
-      '<div class="post-preview" style="max-height:none; overflow:visible; white-space:pre-wrap;">' + escapeHTML(fullText) + '</div>' +
-      (item.image_url ? '<img src="' + escapeHTML(item.image_url) + '" style="width:100%;border-radius:8px;margin-bottom:8px;max-height:200px;object-fit:cover;" alt="" onerror="this.style.display=\'none\'">' : '') +
-      videoHtml +
-      hashtagsHtml +
-      '<div class="card-actions" style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;">' +
-        '<span class="status-badge ' + statusClass + '">' + statusClass + '</span>' +
-        (item.status !== 'approved'
-          ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();quickApprove(\'' + item.id + '\',\'' + dateStr + '\')">Approve</button>' +
-            '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">Edit</button>' +
-            '<button class="btn btn-outline btn-sm" style="color:#ef4444;" onclick="event.stopPropagation();quickReject(\'' + item.id + '\',\'' + dateStr + '\')">Reject</button>'
-          : '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">Edit</button>'
-        ) +
-        genVideoBtn +
-        genImageBtn +
-      '</div>' +
+  // === Topic Header Section ===
+  let html = '';
+  if (topicTitle) {
+    html += '<div class="day-modal-topic-header">' +
+      '<div class="day-modal-theme">' + escapeHTML(framework.theme || '') + ' — ' + escapeHTML(framework.tagline || '') + '</div>' +
+      '<div class="day-modal-topic-title">' + escapeHTML(topicTitle) + '</div>' +
+      (topicDescription ? '<div class="day-modal-topic-desc">' + escapeHTML(topicDescription) + '</div>' : '') +
+      (topicProductName ? '<div class="day-modal-product-name">Product: ' + escapeHTML(topicProductName) + '</div>' : '') +
     '</div>';
-  }).join('');
+  }
+
+  // === Image Selection Section ===
+  // Check if any content item already has an image_url from Supabase
+  const existingImg = dayItems.find(i => i.image_url);
+  if (existingImg && !dayApprovedImage[dateStr]) {
+    dayApprovedImage[dateStr] = existingImg.image_url;
+    dayImageOptions[dateStr] = [existingImg.image_url];
+  }
+  const images = dayImageOptions[dateStr] || [];
+  const approvedImg = dayApprovedImage[dateStr] || null;
+  html += '<div class="day-modal-image-section">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+      '<h4>Day Image</h4>' +
+      '<button class="btn btn-outline btn-sm" onclick="generateDayImages(\'' + dateStr + '\')" id="btn-gen-day-images-' + dateStr + '">' + (approvedImg ? 'Regenerate' : 'Generate Image') + '</button>' +
+    '</div>' +
+    '<div class="image-options-grid" id="image-options-' + dateStr + '">';
+  if (approvedImg) {
+    html += '<div class="approved-image-display"><img src="' + escapeHTML(approvedImg) + '" alt="Approved image"><div class="image-approved-badge">Selected</div></div>';
+  } else if (images.length > 0) {
+    html += images.map(function(url, i) {
+      return '<div class="image-option" onclick="selectDayImage(\'' + dateStr + '\',' + i + ')">' +
+        '<img src="' + escapeHTML(url) + '" alt="Option ' + (i + 1) + '">' +
+      '</div>';
+    }).join('');
+  } else {
+    html += '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:14px;">No images yet. Click "Generate Image" to create an AI image for this day.</div>';
+  }
+  html += '</div></div>';
+
+  // === Video Section ===
+  const videoUrl = dayVideoUrl[dateStr] || null;
+  html += '<div class="day-modal-video-section">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+      '<h4>Day Video</h4>' +
+      '<button class="btn btn-outline btn-sm" onclick="generateDayVideo(\'' + dateStr + '\')" id="btn-gen-day-video-' + dateStr + '">Generate Video</button>' +
+    '</div>' +
+    '<div id="day-video-preview-' + dateStr + '">';
+  if (videoUrl) {
+    html += '<div class="card-video-preview"><video src="' + escapeHTML(videoUrl) + '" controls preload="metadata"></video></div>';
+  } else {
+    html += '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:14px;">No video yet. Click "Generate Video" to create a video for this day.</div>';
+  }
+  html += '</div></div>';
+
+  // === Platform Posts Section ===
+  html += '<div class="day-modal-platforms">' +
+    '<h4>Platform Posts</h4>' +
+    sortedItems.map(item => {
+      const platformClass = (item.platform || '').toLowerCase().replace(/[^a-z]/g, '');
+      const statusClass = item.status === 'approved' ? 'approved' : (item.status === 'rejected' ? 'rejected' : 'pending');
+      const isScript = (platformClass === 'instagram' || platformClass === 'youtube');
+      const fullText = parseContentText(item);
+
+      var hashtagsHtml = '';
+      if (item.hashtags && item.hashtags.length > 0) {
+        hashtagsHtml = '<div class="post-hashtags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
+          item.hashtags.map(function(h) { return '<span class="hashtag">' + escapeHTML(h) + '</span>'; }).join('') +
+        '</div>';
+      }
+
+      return '<div class="content-platform-card" data-id="' + item.id + '" style="margin-bottom:0;">' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
+          '<div class="platform-label ' + platformClass + '">' + escapeHTML(item.platform || '') + '</div>' +
+          (isScript ? '<div class="script-badge">SCRIPT</div>' : '') +
+        '</div>' +
+        '<div class="post-preview" style="max-height:none; overflow:visible; white-space:pre-wrap;">' + escapeHTML(fullText) + '</div>' +
+        hashtagsHtml +
+        '<div class="card-actions" style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;">' +
+          '<span class="status-badge ' + statusClass + '">' + statusClass + '</span>' +
+          (item.status !== 'approved'
+            ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();quickApprove(\'' + item.id + '\',\'' + dateStr + '\')">Approve</button>' +
+              '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">Edit</button>' +
+              '<button class="btn btn-outline btn-sm" style="color:#ef4444;" onclick="event.stopPropagation();quickReject(\'' + item.id + '\',\'' + dateStr + '\')">Reject</button>'
+            : '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">Edit</button>'
+          ) +
+        '</div>' +
+      '</div>';
+    }).join('') +
+  '</div>';
+
+  postsEl.innerHTML = html;
 
   modal.classList.add('visible');
   document.body.style.overflow = 'hidden';
 }
 window.openDayModal = openDayModal;
+
+async function generateDayImages(dateStr) {
+  const btn = document.getElementById('btn-gen-day-images-' + dateStr);
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  const container = document.getElementById('image-options-' + dateStr);
+  if (container) container.innerHTML = '<div class="day-image-empty">Generating image... This may take 60-90 seconds.</div>';
+
+  try {
+    const dayItems = _contentByDate[dateStr] || [];
+    const firstItem = dayItems[0] || {};
+    const topic = firstItem.post_text || firstItem.content || '';
+    const productImgs = getProductImagesForDate(dateStr);
+    const productImageUrl = productImgs.length > 0 ? productImgs[0] : '';
+
+    // Fire-and-forget — workflow generates image and saves to Supabase
+    const response = await fetch(N8N_BASE_URL + '/eluxr-tools-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic: topic,
+        productImageUrl: productImageUrl,
+        content_id: firstItem.id
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Webhook returned ' + response.status);
+    }
+
+    showToast('Image generation started. Polling for result...', 'success');
+
+    // Poll Supabase for the image_url
+    let attempts = 0;
+    const maxAttempts = 24; // 2 minutes (24 * 5s)
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      try {
+        const { data, error } = await window.supabase
+          .from('content_items')
+          .select('image_url')
+          .eq('id', firstItem.id)
+          .single();
+
+        if (data && data.image_url) {
+          clearInterval(pollInterval);
+          const imageUrl = data.image_url;
+          dayImageOptions[dateStr] = [imageUrl];
+          dayApprovedImage[dateStr] = imageUrl;
+
+          // Update all content items for this date
+          dayItems.forEach(function(item) {
+            item.image_url = imageUrl;
+            if (window.supabase) {
+              window.supabase.from('content_items')
+                .update({ image_url: imageUrl })
+                .eq('id', item.id)
+                .then(function() {});
+            }
+          });
+
+          if (container) {
+            container.innerHTML = '<div class="approved-image-display"><img src="' + escapeHTML(imageUrl) + '" alt="Generated image"><div class="image-approved-badge">Generated</div></div>';
+          }
+          if (btn) { btn.disabled = false; btn.textContent = 'Regenerate'; }
+          showToast('Image generated and applied to all posts for this day!', 'success');
+        }
+      } catch (e) {
+        console.error('Poll error:', e);
+      }
+
+      if (attempts >= maxAttempts) {
+        clearInterval(pollInterval);
+        if (container) container.innerHTML = '<div class="day-image-empty">Image generation timed out. Try again.</div>';
+        if (btn) { btn.disabled = false; btn.textContent = 'Generate Image'; }
+        showToast('Image generation timed out. Please try again.', 'error');
+      }
+    }, 5000);
+
+  } catch (err) {
+    console.error('generateDayImages error:', err);
+    showToast('Error generating image: ' + err.message, 'error');
+    if (container) container.innerHTML = '<div class="day-image-empty">Error generating image. Try again.</div>';
+    if (btn) { btn.disabled = false; btn.textContent = 'Generate Image'; }
+  }
+}
+window.generateDayImages = generateDayImages;
+
+function selectDayImage(dateStr, index) {
+  const images = dayImageOptions[dateStr] || [];
+  if (!images[index]) return;
+  dayApprovedImage[dateStr] = images[index];
+
+  // Update all content items for this date with the selected image
+  const dayItems = _contentByDate[dateStr] || [];
+  dayItems.forEach(function(item) {
+    item.image_url = images[index];
+    if (window.supabase) {
+      window.supabase.from('content_items')
+        .update({ image_url: images[index] })
+        .eq('id', item.id)
+        .then(function() {});
+    }
+  });
+
+  // Update UI
+  const container = document.getElementById('image-options-' + dateStr);
+  if (container) {
+    container.innerHTML = '<div class="approved-image-display"><img src="' + escapeHTML(images[index]) + '" alt="Selected image"><div class="image-approved-badge">Selected</div></div>';
+  }
+  showToast('Image selected and applied to all posts for this day.', 'success');
+}
+window.selectDayImage = selectDayImage;
+
+async function generateDayVideo(dateStr) {
+  const btn = document.getElementById('btn-gen-day-video-' + dateStr);
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  const container = document.getElementById('day-video-preview-' + dateStr);
+  if (container) container.innerHTML = '<div class="day-image-empty">Generating video... This may take a few minutes.</div>';
+
+  try {
+    const dayItems = _contentByDate[dateStr] || [];
+    const firstItem = dayItems[0] || {};
+    const response = await authenticatedFetch(N8N_BASE_URL + '/eluxr-generate-video', {
+      method: 'POST',
+      body: JSON.stringify({
+        content_id: firstItem.id,
+        date: dateStr,
+        theme: firstItem.theme || '',
+        product_name: firstItem.product_name || ''
+      })
+    });
+    const data = await safeJson(response);
+    const videoUrl = data.video_url || '';
+    if (videoUrl) {
+      dayVideoUrl[dateStr] = videoUrl;
+      // Update content items
+      dayItems.forEach(function(item) {
+        item.video_url = videoUrl;
+        if (window.supabase) {
+          window.supabase.from('content_items')
+            .update({ video_url: videoUrl })
+            .eq('id', item.id)
+            .then(function() {});
+        }
+      });
+      if (container) {
+        container.innerHTML = '<div class="card-video-preview"><video src="' + escapeHTML(videoUrl) + '" controls preload="metadata"></video></div>';
+      }
+      showToast('Video generated!', 'success');
+    } else {
+      if (container) container.innerHTML = '<div class="day-image-empty">No video returned. Please try again.</div>';
+    }
+  } catch (err) {
+    console.error('generateDayVideo error:', err);
+    showToast('Error generating video: ' + err.message, 'error');
+    if (container) container.innerHTML = '<div class="day-image-empty">Error generating video. Try again.</div>';
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Generate Video'; }
+}
+window.generateDayVideo = generateDayVideo;
 
 function closeDayModal() {
   const modal = document.getElementById('content-day-modal');
@@ -6720,6 +7295,7 @@ async function quickApprove(itemId, reopenDate) {
     showToast('Content approved!', 'success');
     await renderContentReview();
     fetchAndDisplayCalendar();
+    updateStats();
     if (reopenDate) openDayModal(reopenDate);
   } catch (e) {
     showToast('Error approving: ' + e.message, 'error');
@@ -6733,6 +7309,7 @@ async function quickReject(itemId, reopenDate) {
     showToast('Content rejected', 'success');
     await renderContentReview();
     fetchAndDisplayCalendar();
+    updateStats();
     if (reopenDate) openDayModal(reopenDate);
   } catch (e) {
     showToast('Error rejecting: ' + e.message, 'error');
@@ -6878,8 +7455,8 @@ async function generateImageForItem(itemId, reopenDate) {
     const productImgs = getProductImagesForDate(item.date);
     const productImageUrl = productImgs.length > 0 ? productImgs[0] : '';
 
-    // Fire and forget — webhook responds immediately with 200
-    const response = await fetch('https://n8n-dev.eluxr.com/webhook/eluxr-tools-image', {
+    // Fire and forget — workflow saves image_url to Supabase when done
+    const response = await fetch(N8N_BASE_URL + '/eluxr-tools-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
