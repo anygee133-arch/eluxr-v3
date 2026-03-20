@@ -863,6 +863,24 @@ details .details-content { padding: 20px; }
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   flex-shrink: 0;
 }
+.content-day-card.generating-image {
+  border-color: rgba(15, 23, 41, 0.25);
+  box-shadow: 0 0 0 1px rgba(15, 23, 41, 0.08), 0 4px 16px rgba(0,0,0,0.06);
+}
+.day-card-spinner {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0; margin-left: auto;
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+}
+.spinner-ring {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2.5px solid rgba(15, 23, 41, 0.12);
+  border-top-color: #0f1729;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 /* Content Review - Day Popup Modal */
 .content-day-modal {
@@ -1608,8 +1626,37 @@ details .details-content { padding: 20px; }
   color: var(--text-secondary);
   line-height: 1.4;
 }
+.theme-option-header {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; cursor: pointer;
+}
+.theme-chevron {
+  font-size: 12px; color: var(--text-muted); flex-shrink: 0; margin-top: 4px;
+}
+.theme-days {
+  max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+  margin-top: 0;
+}
+.theme-days.expanded {
+  max-height: 500px; margin-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.08); padding-top: 10px;
+}
+.theme-day-row {
+  display: flex; gap: 8px; align-items: baseline; padding: 4px 0;
+  font-size: 12px;
+}
+.theme-day-name {
+  font-weight: 700; color: var(--text-primary); min-width: 75px; flex-shrink: 0;
+}
+.theme-day-theme {
+  font-weight: 600; color: var(--text-secondary); min-width: 140px; flex-shrink: 0;
+}
+.theme-day-tagline {
+  color: var(--text-muted); flex: 1;
+}
 @media (max-width: 640px) {
   .theme-selector { grid-template-columns: 1fr; }
+  .theme-day-row { flex-wrap: wrap; }
+  .theme-day-tagline { width: 100%; margin-left: 83px; }
 }
 
 /* IMPLEMENTED BADGE */
@@ -1661,6 +1708,28 @@ details .details-content { padding: 20px; }
   font-weight: 500;
   color: var(--text-muted);
   margin-top: 8px;
+}
+.day-modal-product-block {
+  flex-shrink: 0; text-align: center; width: 110px;
+  transition: opacity 0.2s;
+}
+.day-modal-product-block:hover { opacity: 0.8; }
+.day-modal-product-img {
+  width: 110px; height: 110px; object-fit: cover;
+  border-radius: 12px; border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.day-modal-product-img-placeholder {
+  width: 110px; height: 110px; border-radius: 12px;
+  border: 1px solid #e2e8f0; background: rgba(0,0,0,0.03);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+.day-modal-product-label {
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  margin-top: 6px; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 .day-modal-platforms {
   margin-bottom: 24px;
@@ -1982,6 +2051,37 @@ details .details-content { padding: 20px; }
   color: var(--purple);
   font-weight: 500;
   margin-bottom: 12px;
+}
+.schedule-platform-dots {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;
+}
+.schedule-plat-dot {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 2px 6px; border-radius: 4px;
+  background: rgba(0,0,0,0.06); color: var(--text-muted);
+}
+.schedule-plat-dot.approved {
+  background: #0f1729; color: #fff;
+}
+.schedule-plat-dot.pending {
+  background: rgba(0,0,0,0.08); color: var(--text-secondary);
+  border: 1px dashed rgba(0,0,0,0.2);
+}
+.schedule-plat-dot.instagram { border-left: 2px solid #E4405F; }
+.schedule-plat-dot.facebook { border-left: 2px solid #1877F2; }
+.schedule-plat-dot.youtube { border-left: 2px solid #FF0000; }
+.schedule-plat-dot.tiktok { border-left: 2px solid #000; }
+.schedule-plat-dot.linkedin { border-left: 2px solid #0077B5; }
+.schedule-plat-dot.x { border-left: 2px solid #1DA1F2; }
+.schedule-card-thumb {
+  width: 100%; aspect-ratio: 4/5; object-fit: cover;
+  border-radius: 8px; margin-bottom: 8px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.schedule-card-preview {
+  font-size: 11px; color: var(--text-muted); line-height: 1.4;
+  margin-bottom: 8px; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .schedule-card-status {
   display: inline-flex;
@@ -3700,14 +3800,11 @@ async function loadProducts() {
       console.error('Error loading products:', error);
       return;
     }
-    productsData = (products || []).slice(0, 28);
-    if (countBadge) countBadge.textContent = productsData.length + ' / 28';
+    productsData = (products || []);
+    if (countBadge) countBadge.textContent = productsData.length;
     if (productsData.length > 0) {
       container.style.display = 'block';
       renderProductsCard(productsData);
-      if (productsData.length < 28) {
-        showToast('Only ' + productsData.length + ' of 28 products found. Please add ' + (28 - productsData.length) + ' more products to generate a full campaign.', 'warning');
-      }
       // Hide empty state, unlock topics step
       const emptyState = document.getElementById('products-step-empty');
       if (emptyState) emptyState.style.display = 'none';
@@ -3863,11 +3960,7 @@ function addCustomProduct() {
   const itemsContainer = document.getElementById('products-items');
   if (!itemsContainer) return;
   const currentCount = itemsContainer.querySelectorAll('.product-item:not(.inactive)').length;
-  if (currentCount >= 28) {
-    showToast('Maximum 28 products reached. Remove a product before adding a new one.', 'warning');
-    return;
-  }
-  showToast((28 - currentCount - 1) + ' product slots remaining after this one.', 'success');
+  showToast('Adding custom product.', 'success');
   const newId = 'new-' + Date.now();
   const html = '<div class="product-item" data-product-id="' + newId + '" data-new="true">' +
     '<div class="product-thumb-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>' +
@@ -4213,6 +4306,15 @@ function downloadImage(url) {
   a.target = '_blank';
   a.click();
 }
+
+function downloadMedia(url, filename) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || 'eluxr-download';
+  a.target = '_blank';
+  a.click();
+}
+window.downloadMedia = downloadMedia;
 
 function downloadVideo(url) {
   const a = document.createElement('a');
@@ -4779,83 +4881,82 @@ let selectedScheduleItem = null;
 
 async function loadScheduleThemes() {
   const grid = document.getElementById('schedule-grid');
-  grid.innerHTML = `
-    <div class="schedule-loading" style="grid-column: 1 / -1;">
-      <div class="spinner" style="width:30px;height:30px;margin:0 auto 12px;"></div>
-      <p>Loading weekly content and themes...</p>
-    </div>
-  `;
+  grid.innerHTML = '<div class="schedule-loading" style="grid-column: 1 / -1;"><div class="spinner" style="width:30px;height:30px;margin:0 auto 12px;"></div><p>Loading...</p></div>';
 
+  // 1. Load themes (optional, don't let failure block everything)
   try {
-    const { data: themes, error: themeError } = await window.supabase
-      .from('themes')
-      .select('*')
-      .order('week_number', { ascending: true });
-    if (themeError) console.error('Error fetching themes:', themeError);
+    const { data: themes } = await window.supabase
+      .from('themes').select('*').order('week_number', { ascending: true });
     if (themes && themes.length > 0) {
       weeklyThemes = themes.map(t => ({
         id: t.id, name: t.name || t.theme_name || '', description: t.description || '',
         week_number: t.week_number, month: t.month || '',
         content_types: t.content_types || {}, daily_details: t.daily_details || {}
       }));
-    } else {
-      weeklyThemes = [];
     }
-    const calData = await fetchAndDisplayCalendar(true);
-    // Auto-detect which week has content and jump to it
-    if (calData && calData.all && calData.all.length > 0) {
-      const allDates = calData.all.map(i => i.date || i.scheduled_date).filter(Boolean).sort();
-      if (allDates.length > 0) {
-        // Find the earliest content date and calculate week offset from today
-        const earliest = new Date(allDates[0] + 'T00:00:00');
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const todayStart = new Date(today);
-        todayStart.setDate(today.getDate() - today.getDay()); // Sunday of this week
-        const contentWeekStart = new Date(earliest);
-        contentWeekStart.setDate(earliest.getDate() - earliest.getDay()); // Sunday of content week
-        const diffWeeks = Math.round((contentWeekStart - todayStart) / (7 * 24 * 60 * 60 * 1000));
-        if (diffWeeks !== 0) scheduleWeekOffset = diffWeeks;
-      }
-    }
-    // Render the schedule grid (This Week's Content Schedule)
-    if (calData) {
-      const contentThemes = (calData.all || []).map(item => ({
-        date: item.date || item.scheduled_date,
-        theme: item.theme || '',
-        platform: item.platform || '',
-        content_type: item.content_type || '',
-        post_text: item.post_text || ''
-      }));
-      renderScheduleGrid(contentThemes, calData);
-    } else {
-      renderScheduleGrid([], { pending: [], approved: [], all: [] });
-    }
-  } catch (err) {
-    console.error('loadScheduleThemes error:', err);
-    weeklyThemes = [];
-    const grid = document.getElementById('schedule-grid');
-    if (grid) renderScheduleGrid([], { pending: [], approved: [], all: [] });
+  } catch (e) { console.warn('Themes query failed (non-fatal):', e); }
+
+  // 2. Load content data
+  try {
+    await fetchAndDisplayCalendar(true);
+  } catch (e) { console.warn('Calendar fetch failed (non-fatal):', e); }
+
+  // 3. Build calData from contentData (which fetchAndDisplayCalendar populates)
+  const allItems = contentData || [];
+  const calData = {
+    all: allItems,
+    approved: allItems.filter(i => i.status === 'approved'),
+    pending: allItems.filter(i => i.status === 'pending')
+  };
+
+  // 4. Set schedule start to today on first load only
+  if (!scheduleStartDate) {
+    scheduleStartDate = new Date();
+    scheduleStartDate.setHours(0, 0, 0, 0);
   }
+
+  // 5. Render
+  const contentThemes = allItems.map(item => ({
+    date: item.date || item.scheduled_date,
+    theme: item.theme || '',
+    platform: item.platform || '',
+    content_type: item.content_type || '',
+    post_text: item.post_text || item.content || '',
+    image_url: item.image_url || '',
+    video_url: item.video_url || ''
+  }));
+  renderScheduleGrid(contentThemes, calData);
 }
 
+// scheduleStartDate is set by loadScheduleThemes to the first content date
+let scheduleStartDate = null;
+
 function getWeekDates(offset = 0) {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - dayOfWeek + (offset * 7));
+  let start;
+  if (scheduleStartDate) {
+    start = new Date(scheduleStartDate);
+    start.setDate(start.getDate() + (offset * 7));
+  } else {
+    const today = new Date();
+    start = new Date(today);
+    start.setDate(today.getDate() + (offset * 7));
+  }
+  start.setHours(0, 0, 0, 0);
 
   const dates = [];
   for (let i = 0; i < 7; i++) {
-    const date = new Date(startOfWeek);
-    date.setDate(startOfWeek.getDate() + i);
+    const date = new Date(start);
+    date.setDate(start.getDate() + i);
     dates.push(date);
   }
   return dates;
 }
 
 function formatDateString(date) {
-  return date.toISOString().split('T')[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + d;
 }
 
 function renderScheduleGrid(themes, approvalData) {
@@ -4942,19 +5043,47 @@ function renderScheduleGrid(themes, approvalData) {
 
     const cardClass = approved.length > 0 ? 'generated' : (pending.length > 0 ? 'pending' : '');
 
-    // Get display values from content or theme
-    const displayItem = approved[0] || pending[0] || theme || {};
+    // Get all content items for this day
+    const allDayItems = [...approved, ...pending];
+    const displayItem = allDayItems[0] || theme || {};
     const displayTheme = displayItem.theme || displayItem.post_text?.substring(0, 60) || 'No content';
-    const displayPlatform = displayItem.platform || '—';
-    const displayType = displayItem.content_type || '';
+
+    // Build platform dots showing all posts
+    let platformDotsHtml = '';
+    if (allDayItems.length > 0) {
+      const platformMap = { instagram: 'IG', facebook: 'FB', youtube: 'YT', tiktok: 'TT', linkedin: 'LI', x: 'X' };
+      platformDotsHtml = '<div class="schedule-platform-dots">' + allDayItems.map(item => {
+        const plat = (item.platform || '').toLowerCase();
+        const isAppr = approved.includes(item);
+        return `<span class="schedule-plat-dot ${plat} ${isAppr ? 'approved' : 'pending'}" title="${item.platform || ''}: ${isAppr ? 'Approved' : 'Pending'}">${platformMap[plat] || plat}</span>`;
+      }).join('') + '</div>';
+    }
+
+    // Show approved image thumbnail if available
+    const dayImage = allDayItems.find(i => i.image_url);
+    const dayImageUrl = dayImage ? dayImage.image_url : null;
+    let imageThumbHtml = '';
+    if (dayImageUrl) {
+      imageThumbHtml = `<img src="${dayImageUrl}" class="schedule-card-thumb" alt="Day image" />`;
+    }
+
+    // Build approved post preview (first approved post snippet)
+    let postPreviewHtml = '';
+    if (approved.length > 0) {
+      const previewText = (approved[0].post_text || approved[0].content || '').substring(0, 80);
+      if (previewText) {
+        postPreviewHtml = `<div class="schedule-card-preview">${previewText}${previewText.length >= 80 ? '…' : ''}</div>`;
+      }
+    }
 
     html += `
       <div class="schedule-card ${cardClass}" onclick="openScheduleCard('${dateStr}')" style="${isToday ? 'border: 2px solid var(--green);' : ''}">
         <div class="schedule-card-date">${dayNames[date.getDay()]}</div>
         <div class="schedule-card-day">${date.getDate()}</div>
-        <div class="schedule-card-platform">${displayPlatform}</div>
+        ${imageThumbHtml}
+        ${platformDotsHtml}
         <div class="schedule-card-theme">${displayTheme}</div>
-        <div class="schedule-card-type">${displayType}</div>
+        ${postPreviewHtml}
         <span class="schedule-card-status ${statusClass}">${statusText}</span>
         <div class="schedule-card-actions" onclick="event.stopPropagation();">
           ${pending.length > 0 ? `
@@ -4988,7 +5117,23 @@ function renderScheduleGrid(themes, approvalData) {
 
 function changeScheduleWeek(delta) {
   scheduleWeekOffset += delta;
-  loadScheduleThemes();
+  // Re-render grid without reloading data
+  const allItems = contentData || [];
+  const calData = {
+    all: allItems,
+    approved: allItems.filter(i => i.status === 'approved'),
+    pending: allItems.filter(i => i.status === 'pending')
+  };
+  const contentThemes = allItems.map(item => ({
+    date: item.date || item.scheduled_date,
+    theme: item.theme || '',
+    platform: item.platform || '',
+    content_type: item.content_type || '',
+    post_text: item.post_text || item.content || '',
+    image_url: item.image_url || '',
+    video_url: item.video_url || ''
+  }));
+  renderScheduleGrid(contentThemes, calData);
 }
 
 function refreshSchedule() {
@@ -5002,130 +5147,87 @@ async function openScheduleCard(dateStr) {
   const actions = document.getElementById('schedule-modal-actions');
   const title = document.getElementById('schedule-modal-title');
 
-  // Show loading state
-  body.innerHTML = '<div class="schedule-loading"><div class="spinner" style="width:24px;height:24px;margin:0 auto;"></div></div>';
   modal.classList.add('active');
 
-  // Find theme and local content for this date
-  const theme = scheduleThemes.find(t => t.date === dateStr) || {};
-  const localContent = contentData.find(c => c.date === dateStr) || {};
-
-  // Fetch latest content from approval list
-  let pendingItems = [];
-  let approvedItems = [];
-
-  try {
-    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-approval-list`);
-    if (response.ok) {
-      const data = await safeJson(response, { pending: [], approved: [], all: [] });
-      pendingItems = (data.pending || []).filter(p => (p.date || p.scheduled_date) === dateStr);
-      approvedItems = (data.approved || []).filter(a => (a.date || a.scheduled_date) === dateStr);
-    }
-  } catch (e) {
-    console.log('Error fetching approval list:', e);
-  }
-
-  // Parse content from items
-  const parseItem = (item) => {
-    if (!item) return {};
-    let parsed = { ...item };
-    if (item.content && typeof item.content === 'string') {
-      try {
-        const contentParsed = JSON.parse(item.content);
-        parsed = { ...item, ...contentParsed };
-      } catch (e) {}
-    }
-    return parsed;
-  };
-
-  const pendingParsed = pendingItems.map(parseItem);
-  const approvedParsed = approvedItems.map(parseItem);
-  const allContent = [...approvedParsed, ...pendingParsed];
+  // Pull content directly from contentData (already loaded from Supabase)
+  const dayItems = (contentData || []).filter(c => (c.date || c.scheduled_date) === dateStr);
+  const approvedItems = dayItems.filter(i => i.status === 'approved');
+  const pendingItems = dayItems.filter(i => i.status === 'pending');
 
   const displayDate = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
   });
-
   title.textContent = displayDate;
-  selectedScheduleItem = { dateStr, theme, pendingItems, approvedItems, allContent };
 
-  // Build content display
+  // Sort by platform
+  const platformOrder = { instagram: 0, facebook: 1, youtube: 2, tiktok: 3, linkedin: 4, x: 5 };
+  const sortedItems = [...dayItems].sort((a, b) => {
+    const pa = platformOrder[(a.platform || '').toLowerCase()] ?? 99;
+    const pb = platformOrder[(b.platform || '').toLowerCase()] ?? 99;
+    return pa - pb;
+  });
+
   let bodyHtml = '';
 
-  if (allContent.length === 0) {
-    // No content yet
-    bodyHtml = `
-      <div class="schedule-modal-field">
-        <label>Platform</label>
-        <div class="value">${theme.platform || localContent.platform || 'Not set'}</div>
-      </div>
-      <div class="schedule-modal-field">
-        <label>Theme</label>
-        <div class="value">${theme.theme || localContent.theme || 'Not set'}</div>
-      </div>
-      <p style="text-align:center; color:var(--text-muted); padding:20px;">
-        No content generated yet for this day.<br>
-        Click "Generate Content" to create a post.
-      </p>
-    `;
+  if (sortedItems.length === 0) {
+    bodyHtml = '<p style="text-align:center; color:var(--text-muted); padding:20px;">No content for this day.</p>';
   } else {
-    // Show all content for this day
-    allContent.forEach((item, idx) => {
-      const isApproved = approvedItems.some(a => a.row_number === item.row_number);
-      const statusBadge = isApproved
-        ? '<span style="color:var(--green);font-size:11px;font-weight:600;">✓ APPROVED</span>'
-        : '<span style="color:#d97706;font-size:11px;font-weight:600;">⏳ PENDING</span>';
+    // Show image if any item has one
+    const dayImage = dayItems.find(i => i.image_url);
+    if (dayImage) {
+      bodyHtml += '<div style="margin-bottom:16px; text-align:center;">' +
+        '<img src="' + escapeHTML(dayImage.image_url) + '" style="max-width:100%; max-height:300px; border-radius:12px; object-fit:cover;" />' +
+        '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(dayImage.image_url) + '\', \'image-' + dateStr + '.png\')">&#8681; Download Image</button></div>' +
+      '</div>';
+    }
 
-      bodyHtml += `
-        <div style="padding:16px; background:var(--bg-subtle); border-radius:8px; margin-bottom:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <span class="schedule-card-platform">${item.platform || '—'}</span>
-            ${statusBadge}
-          </div>
-          <div class="schedule-modal-field">
-            <label>Post Content</label>
-            <textarea id="schedule-edit-content-${idx}" style="min-height:100px;">${item.post_text || ''}</textarea>
-          </div>
-          ${item.hashtags && item.hashtags.length > 0 ? `
-            <div class="schedule-modal-field">
-              <label>Hashtags</label>
-              <div class="value" style="font-size:13px;">${Array.isArray(item.hashtags) ? item.hashtags.join(' ') : item.hashtags}</div>
-            </div>
-          ` : ''}
-          ${item.image_prompt ? `
-            <div class="schedule-modal-field">
-              <label>Image Prompt</label>
-              <div class="value" style="font-size:11px; color:var(--text-muted);">${item.image_prompt}</div>
-            </div>
-          ` : ''}
-          ${!isApproved ? `
-            <div style="display:flex; gap:8px; margin-top:12px;">
-              <button class="btn btn-primary btn-sm" onclick="approveScheduleContent('${dateStr}')">Approve</button>
-              <button class="btn btn-outline btn-sm" style="color:#ef4444;" onclick="rejectScheduleContent('${dateStr}')">Reject</button>
-            </div>
-          ` : ''}
-        </div>
-      `;
+    // Show video if any
+    const dayVideo = dayItems.find(i => i.video_url);
+    if (dayVideo) {
+      bodyHtml += '<div style="margin-bottom:16px; text-align:center;">' +
+        '<video controls style="max-width:100%; max-height:300px; border-radius:12px;"><source src="' + escapeHTML(dayVideo.video_url) + '" type="video/mp4"></video>' +
+        '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(dayVideo.video_url) + '\', \'video-' + dateStr + '.mp4\')">&#8681; Download Video</button></div>' +
+      '</div>';
+    }
+
+    // Show each platform post
+    sortedItems.forEach(function(item) {
+      const platformClass = (item.platform || '').toLowerCase();
+      const isApproved = item.status === 'approved';
+      const statusBadge = isApproved
+        ? '<span style="color:#0f172a;font-size:11px;font-weight:600;">✓ APPROVED</span>'
+        : '<span style="color:#d97706;font-size:11px;font-weight:600;">⏳ PENDING</span>';
+      const postText = item.post_text || item.content || '';
+
+      var hashtagsHtml = '';
+      if (item.hashtags && item.hashtags.length > 0) {
+        hashtagsHtml = '<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:8px;">' +
+          item.hashtags.map(function(h) { return '<span class="hashtag">' + escapeHTML(h) + '</span>'; }).join('') +
+        '</div>';
+      }
+
+      bodyHtml += '<div style="padding:16px; background:rgba(0,0,0,0.02); border-radius:10px; margin-bottom:12px; border:1px solid rgba(0,0,0,0.06);">' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
+          '<div class="platform-label ' + platformClass + '">' + escapeHTML(item.platform || '') + '</div>' +
+          statusBadge +
+        '</div>' +
+        '<div style="font-size:14px; line-height:1.6; white-space:pre-wrap; color:var(--text-primary);">' + escapeHTML(postText) + '</div>' +
+        hashtagsHtml +
+        (!isApproved ? '<div style="display:flex; gap:8px; margin-top:12px;">' +
+          '<button class="btn btn-primary btn-sm" onclick="quickApprove(\'' + item.id + '\',\'' + dateStr + '\'); closeScheduleModal(); loadScheduleThemes();">Approve</button>' +
+          '<button class="btn btn-outline btn-sm" style="color:#ef4444;" onclick="quickReject(\'' + item.id + '\',\'' + dateStr + '\'); closeScheduleModal(); loadScheduleThemes();">Reject</button>' +
+        '</div>' : '') +
+      '</div>';
     });
   }
 
   body.innerHTML = bodyHtml;
 
-  // Build actions
-  const hasPending = pendingItems.length > 0;
-  const hasApproved = approvedItems.length > 0;
-  const hasAnyContent = allContent.length > 0;
-
+  // Actions
   let actionsHtml = '';
-
-  if (hasPending) {
-    actionsHtml += `<button class="btn btn-primary" onclick="approveScheduleContent('${dateStr}'); closeScheduleModal();">Approve All</button>`;
+  if (pendingItems.length > 0) {
+    actionsHtml += '<button class="btn btn-primary" onclick="approveScheduleContent(\'' + dateStr + '\'); closeScheduleModal();">Approve All</button>';
   }
-
-  if (!hasAnyContent) {
-    actionsHtml += `<div style="color:var(--text-muted); font-size:13px;">No content for this date</div>`;
-  }
-
   actions.innerHTML = actionsHtml;
 }
 
@@ -6353,9 +6455,26 @@ function renderThemeSelector() {
   if (!container) return;
   container.innerHTML = Object.entries(STORYTELLING_THEMES).map(([key, theme]) => {
     const selected = key === selectedThemeKey ? ' selected' : '';
-    return '<div class="theme-option' + selected + '" data-theme="' + key + '" onclick="selectTheme(\'' + key + '\')">' +
-      '<h4>' + escapeHTML(theme.name) + '</h4>' +
-      '<p>' + escapeHTML(theme.description) + '</p>' +
+    const expanded = key === selectedThemeKey ? ' expanded' : '';
+    const fw = theme.framework;
+    const daysHtml = '<div class="theme-days' + expanded + '">' +
+      Object.entries(fw).map(([d, info]) => {
+        return '<div class="theme-day-row">' +
+          '<span class="theme-day-name">' + escapeHTML(info.day) + '</span>' +
+          '<span class="theme-day-theme">' + escapeHTML(info.theme) + '</span>' +
+          '<span class="theme-day-tagline">' + escapeHTML(info.tagline) + '</span>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+    return '<div class="theme-option' + selected + '" data-theme="' + key + '">' +
+      '<div class="theme-option-header" onclick="selectTheme(\'' + key + '\')">' +
+        '<div>' +
+          '<h4>' + escapeHTML(theme.name) + '</h4>' +
+          '<p>' + escapeHTML(theme.description) + '</p>' +
+        '</div>' +
+        '<span class="theme-chevron">' + (selected ? '&#9650;' : '&#9660;') + '</span>' +
+      '</div>' +
+      daysHtml +
     '</div>';
   }).join('');
 }
@@ -6364,7 +6483,12 @@ function selectTheme(key) {
   if (!STORYTELLING_THEMES[key]) return;
   selectedThemeKey = key;
   document.querySelectorAll('.theme-option').forEach(el => {
-    el.classList.toggle('selected', el.dataset.theme === key);
+    const isSelected = el.dataset.theme === key;
+    el.classList.toggle('selected', isSelected);
+    const days = el.querySelector('.theme-days');
+    if (days) days.classList.toggle('expanded', isSelected);
+    const chevron = el.querySelector('.theme-chevron');
+    if (chevron) chevron.innerHTML = isSelected ? '&#9650;' : '&#9660;';
   });
 }
 window.selectTheme = selectTheme;
@@ -6540,27 +6664,28 @@ function renderTopicCards(topics, isImplemented) {
 
     // Look up product image
     let productImgHtml = '';
+    var matchedProduct = null;
     if (t.product_id && productsData) {
-      const product = productsData.find(p => p.id === t.product_id);
-      if (product) {
-        const imgs = product.image_urls || (product.image_url ? [product.image_url] : []);
-        if (imgs.length > 0) {
-          productImgHtml = '<div class="topic-product-img" style="flex-shrink:0; width:100px;">' +
-            '<img src="' + escapeHTML(imgs[0]) + '" alt="' + escapeHTML(product.name || '') + '" ' +
-            'style="width:100px; height:100px; object-fit:cover; border-radius:10px; border:1px solid #e2e8f0;">' +
-          '</div>';
-        }
-      }
-    } else if (t.product_name && productsData) {
-      const product = productsData.find(p => p.name && p.name.toLowerCase().includes(t.product_name.toLowerCase()));
-      if (product) {
-        const imgs = product.image_urls || (product.image_url ? [product.image_url] : []);
-        if (imgs.length > 0) {
-          productImgHtml = '<div class="topic-product-img" style="flex-shrink:0; width:100px;">' +
-            '<img src="' + escapeHTML(imgs[0]) + '" alt="' + escapeHTML(product.name || '') + '" ' +
-            'style="width:100px; height:100px; object-fit:cover; border-radius:10px; border:1px solid #e2e8f0;">' +
-          '</div>';
-        }
+      matchedProduct = productsData.find(p => p.id === t.product_id);
+    }
+    if (!matchedProduct && t.product_name && productsData) {
+      matchedProduct = productsData.find(p => p.name && p.name.toLowerCase().includes(t.product_name.toLowerCase()));
+    }
+    if (matchedProduct) {
+      const imgs = matchedProduct.image_urls || (matchedProduct.image_url ? [matchedProduct.image_url] : []);
+      const prodUrl = matchedProduct.product_url || '';
+      const clickAttr = prodUrl ? ' onclick="event.stopPropagation(); window.open(\'' + escapeHTML(prodUrl) + '\', \'_blank\')" style="cursor:pointer;" title="View product page"' : '';
+      if (imgs.length > 0) {
+        productImgHtml = '<div class="topic-product-img" style="flex-shrink:0; width:100px; text-align:center;"' + clickAttr + '>' +
+          '<img src="' + escapeHTML(imgs[0]) + '" alt="' + escapeHTML(matchedProduct.name || '') + '" ' +
+          'style="width:100px; height:100px; object-fit:cover; border-radius:10px; border:1px solid #e2e8f0;">' +
+          '<div style="font-size:11px; color:var(--text-secondary); margin-top:4px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHTML(matchedProduct.name || '') + '</div>' +
+        '</div>';
+      } else if (prodUrl) {
+        productImgHtml = '<div class="topic-product-img" style="flex-shrink:0; width:100px; text-align:center;"' + clickAttr + '>' +
+          '<div style="width:100px; height:100px; border-radius:10px; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.03); font-size:24px;">&#128247;</div>' +
+          '<div style="font-size:11px; color:var(--text-secondary); margin-top:4px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHTML(matchedProduct.name || '') + '</div>' +
+        '</div>';
       }
     }
 
@@ -6665,8 +6790,8 @@ async function generateTopics(assignedProducts) {
 }
 
 async function generateTopicsFromProducts() {
-  if (!productsData || productsData.length < 28) {
-    showToast('You need 28 products to generate a full 4-week campaign. Currently: ' + (productsData ? productsData.length : 0) + '/28. Please add more products.', 'error');
+  if (!productsData || productsData.length < 7) {
+    showToast('You need at least 7 products to generate topics (1 per day). Currently: ' + (productsData ? productsData.length : 0) + '. Please add more products.', 'error');
     return;
   }
   if (!productOrder || productOrder.length === 0) {
@@ -6892,11 +7017,10 @@ async function lockInAndGenerate() {
     // Unlock next week
     unlockNextWeek(currentWeek);
 
-    // Show completion
+    // Show completion — stay on Step 3, restore topics grid
     setTimeout(() => {
       progressSection.style.display = 'none';
-      document.getElementById('week-complete').style.display = 'block';
-      document.getElementById('completed-week-num').textContent = currentWeek;
+      document.getElementById('topics-grid').style.display = 'block';
 
       const tab = document.querySelector(`.week-tab[data-week="${currentWeek}"]`);
       if (tab) {
@@ -6910,9 +7034,9 @@ async function lockInAndGenerate() {
       unlockStep('step-calendar');
       startCalendarAutoRefresh();
       loadScheduleThemes();
-      // Render content review
+      // Pre-render content review in background (no scroll)
       if (window.renderContentReview) renderContentReview();
-      showToast('Week ' + currentWeek + ' content generated!', 'success');
+      showToast('Week ' + currentWeek + ' content generated! Scroll down to Step 4 to review.', 'success');
     }, 1000);
   } catch (err) {
     console.error('lockInAndGenerate error:', err);
@@ -7027,7 +7151,8 @@ async function renderContentReview() {
       const approvedCount = dayItems.filter(i => i.status === 'approved').length;
       var hasHashtags = dayItems.some(function(i) { return i.hashtags && i.hashtags.length > 0; });
 
-      return '<div class="content-day-card" onclick="openDayModal(\'' + dateStr + '\')">' +
+      var isGenerating = generatingImageDates.has(dateStr);
+      return '<div class="content-day-card' + (isGenerating ? ' generating-image' : '') + '" onclick="openDayModal(\'' + dateStr + '\')">' +
         '<div class="day-badge">' + dayName + '</div>' +
         '<div class="day-info">' +
           '<div class="day-title">' + escapeHTML(framework.theme || dayName) + ' — ' + dateStr + '</div>' +
@@ -7035,6 +7160,7 @@ async function renderContentReview() {
             ' &middot; <span class="approved-count">' + approvedCount + ' approved</span>' +
             (hasHashtags ? ' &middot; <span style="color:var(--text-muted);">#</span>' : '') + '</div>' +
         '</div>' +
+        (isGenerating ? '<div class="day-card-spinner"><div class="spinner-ring"></div><span>Generating image…</span></div>' : '') +
       '</div>';
     }).join('') + '</div>';
 
@@ -7049,6 +7175,7 @@ window.renderContentReview = renderContentReview;
 let dayImageOptions = {};
 let dayApprovedImage = {};
 let dayVideoUrl = {};
+let generatingImageDates = new Set();
 let dayImageApproved = {};
 
 function openDayModal(dateStr) {
@@ -7104,14 +7231,36 @@ function openDayModal(dateStr) {
     return pa - pb;
   });
 
-  // === Topic Header Section ===
+  // === Topic Header Section with Product Image ===
   let html = '';
+  // Find product for this day
+  let dayProduct = null;
+  if (dayItems.length > 0 && productsData) {
+    const firstItem = dayItems[0];
+    if (firstItem.product_id) dayProduct = productsData.find(p => p.id === firstItem.product_id);
+    if (!dayProduct && topicProductName) dayProduct = productsData.find(p => p.name && p.name.toLowerCase().includes(topicProductName.toLowerCase()));
+  }
   if (topicTitle) {
-    html += '<div class="day-modal-topic-header">' +
-      '<div class="day-modal-theme">' + escapeHTML(framework.theme || '') + ' — ' + escapeHTML(framework.tagline || '') + '</div>' +
-      '<div class="day-modal-topic-title">' + escapeHTML(topicTitle) + '</div>' +
-      (topicDescription ? '<div class="day-modal-topic-desc">' + escapeHTML(topicDescription) + '</div>' : '') +
-      (topicProductName ? '<div class="day-modal-product-name">Product: ' + escapeHTML(topicProductName) + '</div>' : '') +
+    let productBlockHtml = '';
+    if (dayProduct) {
+      const pImgs = dayProduct.image_urls || (dayProduct.image_url ? [dayProduct.image_url] : []);
+      const pUrl = dayProduct.product_url || '';
+      const pClickAttr = pUrl ? ' onclick="window.open(\'' + escapeHTML(pUrl) + '\', \'_blank\')" style="cursor:pointer;" title="View product page"' : '';
+      productBlockHtml = '<div class="day-modal-product-block"' + pClickAttr + '>' +
+        (pImgs.length > 0
+          ? '<img src="' + escapeHTML(pImgs[0]) + '" alt="' + escapeHTML(dayProduct.name || '') + '" class="day-modal-product-img" />'
+          : '<div class="day-modal-product-img-placeholder">&#128247;</div>') +
+        '<div class="day-modal-product-label">' + escapeHTML(dayProduct.name || '') + '</div>' +
+      '</div>';
+    }
+    html += '<div class="day-modal-topic-header" style="display:flex; gap:20px; align-items:flex-start;">' +
+      '<div style="flex:1; min-width:0;">' +
+        '<div class="day-modal-theme">' + escapeHTML(framework.theme || '') + ' — ' + escapeHTML(framework.tagline || '') + '</div>' +
+        '<div class="day-modal-topic-title">' + escapeHTML(topicTitle) + '</div>' +
+        (topicDescription ? '<div class="day-modal-topic-desc">' + escapeHTML(topicDescription) + '</div>' : '') +
+        (topicProductName ? '<div class="day-modal-product-name">Product: ' + escapeHTML(topicProductName) + '</div>' : '') +
+      '</div>' +
+      productBlockHtml +
     '</div>';
   }
 
@@ -7132,17 +7281,27 @@ function openDayModal(dateStr) {
       imageColHtml = '<div class="generated-media-display approved">' +
         '<div class="media-approved-badge">\u2713 Approved</div>' +
         '<img src="' + escapeHTML(existingImageUrl) + '" class="day-generated-image" />' +
-        '<button class="btn btn-outline btn-sm" onclick="unapproveAndRegenerateDayImage(\'' + dateStr + '\')">Regenerate Image</button>' +
+        '<div class="media-action-buttons">' +
+          '<button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(existingImageUrl) + '\', \'image-' + dateStr + '.png\')">&#8681; Download</button>' +
+          '<button class="btn btn-outline btn-sm" onclick="unapproveAndRegenerateDayImage(\'' + dateStr + '\')">Regenerate</button>' +
+        '</div>' +
       '</div>';
     } else {
       imageColHtml = '<div class="generated-media-display">' +
         '<img src="' + escapeHTML(existingImageUrl) + '" class="day-generated-image" />' +
         '<div class="media-action-buttons">' +
           '<button class="btn btn-primary" onclick="approveDayImage(\'' + dateStr + '\')">Approve Image \u2713</button>' +
+          '<button class="btn btn-outline" onclick="downloadMedia(\'' + escapeHTML(existingImageUrl) + '\', \'image-' + dateStr + '.png\')">&#8681; Download</button>' +
           '<button class="btn btn-outline" onclick="generateDayImages(\'' + dateStr + '\')">Regenerate</button>' +
         '</div>' +
       '</div>';
     }
+  } else if (generatingImageDates.has(dateStr)) {
+    imageColHtml = '<div class="empty-media-state">' +
+      '<div class="modal-image-spinner"><div class="spinner-ring" style="width:32px;height:32px;border-width:3px;"></div></div>' +
+      '<p style="margin-top:12px; font-weight:600;">Generating image…</p>' +
+      '<p style="font-size:12px; color:var(--text-muted);">This may take 60-90 seconds</p>' +
+    '</div>';
   } else {
     imageColHtml = '<div class="empty-media-state">' +
       '<p>No image yet. Generate an AI image from this day\'s topic.</p>' +
@@ -7160,7 +7319,10 @@ function openDayModal(dateStr) {
   } else if (existingVideoUrl) {
     videoColHtml = '<div class="generated-media-display">' +
       '<video controls class="day-generated-video"><source src="' + escapeHTML(existingVideoUrl) + '" type="video/mp4"></video>' +
-      '<button class="btn btn-outline btn-sm" onclick="generateDayVideo(\'' + dateStr + '\')">Regenerate Video</button>' +
+      '<div class="media-action-buttons">' +
+        '<button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(existingVideoUrl) + '\', \'video-' + dateStr + '.mp4\')">&#8681; Download</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="generateDayVideo(\'' + dateStr + '\')">Regenerate Video</button>' +
+      '</div>' +
     '</div>';
   } else {
     videoColHtml = '<div class="empty-media-state">' +
@@ -7218,6 +7380,11 @@ window.openDayModal = openDayModal;
 
 async function generateDayImages(dateStr) {
   dayImageApproved[dateStr] = false;
+  generatingImageDates.add(dateStr);
+  updateDayCardSpinner(dateStr, true);
+  // Re-render modal to show spinner in the image area
+  var modal = document.getElementById('content-day-modal');
+  if (modal && modal.classList.contains('visible')) openDayModal(dateStr);
   showToast('Generating image... This may take 60-90 seconds.', 'success');
 
   try {
@@ -7227,6 +7394,17 @@ async function generateDayImages(dateStr) {
     const productImgs = getProductImagesForDate(dateStr);
     const productImageUrl = productImgs.length > 0 ? productImgs[0] : '';
 
+    // Look up product name and category so the AI knows what type of jewelry this is
+    let productName = firstItem.product_name || '';
+    let productCategory = '';
+    if (firstItem.product_id && productsData) {
+      const prod = productsData.find(p => p.id === firstItem.product_id);
+      if (prod) {
+        productName = prod.name || productName;
+        productCategory = prod.category || '';
+      }
+    }
+
     // Fire-and-forget — workflow generates image and saves to Supabase
     const response = await fetch(N8N_BASE_URL + '/eluxr-tools-image', {
       method: 'POST',
@@ -7234,7 +7412,9 @@ async function generateDayImages(dateStr) {
       body: JSON.stringify({
         topic: topic,
         productImageUrl: productImageUrl,
-        content_id: firstItem.id
+        content_id: firstItem.id,
+        product_name: productName,
+        product_category: productCategory
       })
     });
 
@@ -7274,6 +7454,8 @@ async function generateDayImages(dateStr) {
             }
           });
 
+          generatingImageDates.delete(dateStr);
+          updateDayCardSpinner(dateStr, false);
           showToast('Image generated! Approve it to unlock video generation.', 'success');
           var modal = document.getElementById('content-day-modal');
           if (modal && modal.classList.contains('visible')) openDayModal(dateStr);
@@ -7284,16 +7466,42 @@ async function generateDayImages(dateStr) {
 
       if (attempts >= maxAttempts) {
         clearInterval(pollInterval);
+        generatingImageDates.delete(dateStr);
+        updateDayCardSpinner(dateStr, false);
         showToast('Image generation timed out. Please try again.', 'error');
       }
     }, 5000);
 
   } catch (err) {
     console.error('generateDayImages error:', err);
+    generatingImageDates.delete(dateStr);
+    updateDayCardSpinner(dateStr, false);
     showToast('Error generating image: ' + err.message, 'error');
   }
 }
 window.generateDayImages = generateDayImages;
+
+function updateDayCardSpinner(dateStr, show) {
+  var cards = document.querySelectorAll('.content-day-card');
+  cards.forEach(function(card) {
+    if (card.getAttribute('onclick') && card.getAttribute('onclick').includes(dateStr)) {
+      if (show) {
+        card.classList.add('generating-image');
+        if (!card.querySelector('.day-card-spinner')) {
+          var spinner = document.createElement('div');
+          spinner.className = 'day-card-spinner';
+          spinner.innerHTML = '<div class="spinner-ring"></div><span>Generating image…</span>';
+          card.appendChild(spinner);
+        }
+      } else {
+        card.classList.remove('generating-image');
+        var existing = card.querySelector('.day-card-spinner');
+        if (existing) existing.remove();
+      }
+    }
+  });
+}
+window.updateDayCardSpinner = updateDayCardSpinner;
 
 function selectDayImage(dateStr, index) {
   const images = dayImageOptions[dateStr] || [];
