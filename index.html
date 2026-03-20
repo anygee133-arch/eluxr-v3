@@ -3477,6 +3477,17 @@ let userManuallyChangedMonth = false;
 let currentPipelineRunId = null;
 let businessContext = null; // Stores business info from Step 1 for use in content generation
 
+function getBusinessContext() {
+  if (businessContext) return businessContext;
+  return {
+    business_url: (document.getElementById('business-url') || {}).value || '',
+    industry: (document.getElementById('industry') || {}).value || '',
+    brand_voice: '',
+    platforms: typeof getSelectedPlatforms === 'function' ? getSelectedPlatforms() : ['instagram', 'linkedin'],
+    content_language: (document.getElementById('content_language') || {}).value || 'English'
+  };
+}
+
 // === DATA NORMALIZER ===
 // Maps Supabase content_items rows to the frontend field format
 function mapContentItem(dbRow, themeMap) {
@@ -6749,7 +6760,7 @@ async function generateTopics(assignedProducts) {
       campaign_id: campaignId,
       week_number: currentWeek,
       storytelling_framework: frameworkContext,
-      content_language: businessContext.content_language || 'English'
+      content_language: getBusinessContext().content_language || 'English'
     };
     if (assignedProducts && assignedProducts.length > 0) {
       bodyObj.assigned_products = assignedProducts.map(function(p) {
@@ -6960,7 +6971,7 @@ async function lockInAndGenerate() {
         week_number: currentWeek,
         month: getSelectedMonth ? getSelectedMonth() : new Date().toISOString().slice(0, 7),
         platforms: getSelectedPlatforms ? getSelectedPlatforms() : ['linkedin', 'instagram'],
-        content_language: businessContext.content_language || 'English'
+        content_language: getBusinessContext().content_language || 'English'
       })
     }).catch(err => console.warn('Content studio call completed or timed out:', err));
 
