@@ -5147,10 +5147,6 @@ function renderScheduleGrid(themes, approvalData) {
         ${postPreviewHtml}
         <span class="schedule-card-status ${statusClass}">${statusText}</span>
         <div class="schedule-card-actions" onclick="event.stopPropagation();">
-          ${pending.length > 0 ? `
-            <button class="btn btn-primary btn-sm" onclick="approveScheduleContent('${dateStr}')">✓ Approve</button>
-          ` : ''}
-          ${approved.length > 0 && pending.length === 0 ? `<button class="btn btn-outline btn-sm" onclick="openScheduleCard('${dateStr}')">View</button>` : ''}
         </div>
       </div>
     `;
@@ -5285,11 +5281,7 @@ async function openScheduleCard(dateStr) {
   body.innerHTML = bodyHtml;
 
   // Actions
-  let actionsHtml = '';
-  if (pendingItems.length > 0) {
-    actionsHtml += '<button class="btn btn-primary" onclick="approveScheduleContent(\'' + dateStr + '\'); closeScheduleModal();">Approve All</button>';
-  }
-  actions.innerHTML = actionsHtml;
+  actions.innerHTML = '';
 }
 
 function closeScheduleModal() {
