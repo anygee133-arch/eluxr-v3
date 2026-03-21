@@ -2848,7 +2848,7 @@ details .details-content { padding: 20px; }
     </div>
 
     <!-- WEEKLY TOPICS UI -->
-    <div id="topics-section" class="card card-glass fade-in-up stagger-1">
+    <div id="topics-section" class="card card-glass fade-in-up stagger-1" style="overflow:visible;">
       <!-- Week Tabs -->
       <div class="week-tabs" id="week-tabs">
         <button class="week-tab active" data-week="1" onclick="selectWeek(1)">Week 1</button>
@@ -7180,12 +7180,12 @@ async function renderContentReview() {
     const sortedDates = Object.keys(_contentByDate).sort();
 
     // Render day cards grid
-    container.innerHTML = '<div class="content-days-grid">' + sortedDates.map(dateStr => {
+    container.innerHTML = '<div class="content-days-grid">' + sortedDates.map((dateStr, dateIdx) => {
       const dayItems = _contentByDate[dateStr];
       const dateObj = new Date(dateStr + 'T00:00:00');
       const dayName = _contentDayNames[dateObj.getDay()];
-      const dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
-      const framework = getActiveFramework()[dayOfWeek] || {};
+      const dayInWeek = (dateIdx % 7) + 1;
+      const framework = getActiveFramework()[dayInWeek] || {};
       const productImgs = getProductImagesForDate(dateStr);
       const productThumb = productImgs.length > 0 ? productImgs[0] : null;
       const approvedCount = dayItems.filter(i => i.status === 'approved').length;
@@ -7227,8 +7227,12 @@ function openDayModal(dateStr) {
   const dayItems = _contentByDate[dateStr] || [];
   const dateObj = new Date(dateStr + 'T00:00:00');
   const dayName = _contentDayNames[dateObj.getDay()];
-  const dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
-  const framework = getActiveFramework()[dayOfWeek] || {};
+
+  // Use sequential date index to determine day-in-week, not calendar day of week
+  const allDates = Object.keys(_contentByDate).sort();
+  const dateIndex = allDates.indexOf(dateStr);
+  const dayInWeek = dateIndex >= 0 ? (dateIndex % 7) + 1 : 1;
+  const framework = getActiveFramework()[dayInWeek] || {};
 
   titleEl.textContent = dayName + ' — ' + (framework.theme || '') + ' — ' + dateStr;
 
@@ -7236,11 +7240,8 @@ function openDayModal(dateStr) {
   let topicTitle = '';
   let topicDescription = '';
   let topicProductName = '';
-  const allDates = Object.keys(_contentByDate).sort();
-  const dateIndex = allDates.indexOf(dateStr);
   if (dateIndex >= 0) {
     const weekNum = Math.floor(dateIndex / 7) + 1;
-    const dayInWeek = (dateIndex % 7) + 1;
     const weekTopicsList = weekTopics[weekNum];
     if (weekTopicsList) {
       const match = weekTopicsList.find(t => t.day_number === dayInWeek);
@@ -7273,12 +7274,31 @@ function openDayModal(dateStr) {
 
   // === Topic Header Section with Product Image ===
   let html = '';
-  // Find product for this day
+  // Find product for this day — try multiple lookup strategies
   let dayProduct = null;
-  if (dayItems.length > 0 && productsData) {
-    const firstItem = dayItems[0];
-    if (firstItem.product_id) dayProduct = productsData.find(p => p.id === firstItem.product_id);
-    if (!dayProduct && topicProductName) dayProduct = productsData.find(p => p.name && p.name.toLowerCase().includes(topicProductName.toLowerCase()));
+  if (productsData) {
+    // 1. From content_items product_id (most reliable — set by backend pipeline)
+    if (dayItems.length > 0) {
+      const itemWithProduct = dayItems.find(i => i.product_id);
+      if (itemWithProduct) dayProduct = productsData.find(p => p.id === itemWithProduct.product_id);
+    }
+    // 2. From weekly_topics product_id via day_number
+    if (!dayProduct && dateIndex >= 0) {
+      const wkNum = Math.floor(dateIndex / 7) + 1;
+      const wkTopics = weekTopics[wkNum];
+      if (wkTopics) {
+        const topicMatch = wkTopics.find(t => t.day_number === dayInWeek && t.product_id);
+        if (topicMatch) dayProduct = productsData.find(p => p.id === topicMatch.product_id);
+      }
+    }
+    // 3. From topic product_name (exact match)
+    if (!dayProduct && topicProductName) {
+      dayProduct = productsData.find(p => p.name && p.name.toLowerCase() === topicProductName.toLowerCase());
+    }
+    // 4. From topic product_name (contains match)
+    if (!dayProduct && topicProductName) {
+      dayProduct = productsData.find(p => p.name && (p.name.toLowerCase().includes(topicProductName.toLowerCase()) || topicProductName.toLowerCase().includes(p.name.toLowerCase())));
+    }
   }
   if (topicTitle) {
     let productBlockHtml = '';
@@ -7435,13 +7455,35 @@ async function generateDayImages(dateStr) {
     const productImageUrl = productImgs.length > 0 ? productImgs[0] : '';
 
     // Look up product name and category so the AI knows what type of jewelry this is
-    let productName = firstItem.product_name || '';
+    let productName = '';
     let productCategory = '';
-    if (firstItem.product_id && productsData) {
-      const prod = productsData.find(p => p.id === firstItem.product_id);
+    // Try content_items product_id first
+    const itemWithProd = dayItems.find(i => i.product_id);
+    if (itemWithProd && productsData) {
+      const prod = productsData.find(p => p.id === itemWithProd.product_id);
       if (prod) {
-        productName = prod.name || productName;
+        productName = prod.name || '';
         productCategory = prod.category || '';
+      }
+    }
+    // Fallback: look up from weekTopics
+    if (!productName) {
+      const allContentDates = Object.keys(_contentByDate || {}).sort();
+      const dIdx = allContentDates.indexOf(dateStr);
+      if (dIdx >= 0) {
+        const wkNum = Math.floor(dIdx / 7) + 1;
+        const dInWk = (dIdx % 7) + 1;
+        const wkTopics = weekTopics[wkNum];
+        if (wkTopics) {
+          const topicMatch = wkTopics.find(t => t.day_number === dInWk);
+          if (topicMatch) {
+            productName = topicMatch.product_name || '';
+            if (topicMatch.product_id && productsData) {
+              const prod = productsData.find(p => p.id === topicMatch.product_id);
+              if (prod) productCategory = prod.category || '';
+            }
+          }
+        }
       }
     }
 
@@ -7688,22 +7730,25 @@ function getProductImagesForDate(dateStr) {
       }
     }
 
-    // Fallback: match via weekly_topics (flat array)
-    const dateObj = new Date(dateStr + 'T00:00:00');
-    const dayOfWeek = dateObj.getDay() === 0 ? 7 : dateObj.getDay();
+    // Fallback: match via weekly_topics using sequential date position
     const topicsArr = Array.isArray(weekTopics) ? weekTopics : Object.values(weekTopics || {}).flat();
+    const allDates = Object.keys(_contentByDate || {}).sort();
+    const dateIndex = allDates.indexOf(dateStr);
+    const dayInWeek = dateIndex >= 0 ? (dateIndex % 7) + 1 : 0;
 
-    const topic = topicsArr.find(t => t.day_number === dayOfWeek && t.product_id);
-    if (topic) {
-      const product = (productsData || []).find(p => p.id === topic.product_id);
-      if (product) {
-        const imgs = product.image_urls || (product.image_url ? [product.image_url] : []);
-        if (imgs.length > 0) return imgs;
+    if (dayInWeek > 0) {
+      const topic = topicsArr.find(t => t.day_number === dayInWeek && t.product_id);
+      if (topic) {
+        const product = (productsData || []).find(p => p.id === topic.product_id);
+        if (product) {
+          const imgs = product.image_urls || (product.image_url ? [product.image_url] : []);
+          if (imgs.length > 0) return imgs;
+        }
       }
     }
 
     // Last fallback: match by product_name in topics
-    const topicByName = topicsArr.find(t => t.day_number === dayOfWeek && t.product_name);
+    const topicByName = dayInWeek > 0 ? topicsArr.find(t => t.day_number === dayInWeek && t.product_name) : null;
     if (topicByName) {
       const product = (productsData || []).find(p =>
         p.name && p.name.toLowerCase().includes(topicByName.product_name.toLowerCase())
