@@ -3015,6 +3015,14 @@ details .details-content { padding: 20px; }
 
     <!-- Calendar and week-view removed — schedule + stats are the primary Step 5 view -->
 
+    <!-- Reset Button -->
+    <div style="text-align:center; padding:40px 20px 20px; border-top:1px solid rgba(226,232,240,0.3); margin-top:40px;">
+      <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px;">Want to start over with a new business or fresh data?</p>
+      <button class="btn" onclick="resetAllData()" style="background:transparent; color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:13px; padding:8px 20px;">
+        Reset &amp; Start Fresh
+      </button>
+    </div>
+
   </div>
 </section>
 
@@ -4332,6 +4340,33 @@ function downloadImage(url) {
   a.target = '_blank';
   a.click();
 }
+
+async function resetAllData() {
+  if (!confirm('This will delete ALL your data (products, topics, content, ICP) and start fresh. Are you sure?')) return;
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) { showToast('Not logged in', 'error'); return; }
+    const tables = ['content_items', 'weekly_topics', 'products', 'icps', 'campaigns'];
+    for (const table of tables) {
+      await window.supabase.from(table).delete().eq('user_id', user.id);
+    }
+    // Reset frontend state
+    productsData = null;
+    productOrder = [];
+    weekTopics = {};
+    contentData = [];
+    _contentByDate = {};
+    scheduleStartDate = null;
+    scheduleWeekOffset = 0;
+    businessContext = null;
+    showToast('All data cleared. Starting fresh!', 'success');
+    // Lock all steps and reload
+    setTimeout(() => location.reload(), 500);
+  } catch (e) {
+    showToast('Error resetting: ' + e.message, 'error');
+  }
+}
+window.resetAllData = resetAllData;
 
 function downloadMedia(url, filename) {
   const a = document.createElement('a');
