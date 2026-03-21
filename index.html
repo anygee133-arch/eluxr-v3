@@ -2745,6 +2745,10 @@ details .details-content { padding: 20px; }
         <span id="icp-last-analyzed" style="font-size: 12px; color: var(--text-muted, #94a3b8);"></span>
       </div>
       <div id="icp-skeleton" style="display: none;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <div class="spinner-ring" style="width:24px; height:24px; border-width:2.5px;"></div>
+          <span style="font-size:14px; font-weight:600; color:var(--text-secondary);">Analyzing your business profile...</span>
+        </div>
         <div class="skeleton-line" style="width: 70%;"></div>
         <div class="skeleton-line" style="width: 90%;"></div>
         <div class="skeleton-line" style="width: 55%;"></div>
@@ -2857,7 +2861,7 @@ details .details-content { padding: 20px; }
       <div id="topics-generate-section" style="padding:40px 20px;">
         <p style="color:var(--text-secondary); margin-bottom:16px; text-align:center;">Generate 7 daily content topics for this week.</p>
         <div class="nav-buttons" style="border-top:none; margin-top:0; padding-top:0;">
-          <button class="btn btn-primary" id="btn-generate-topics" onclick="generateTopics()">
+          <button class="btn btn-primary" id="btn-generate-topics" onclick="generateTopicsFromProducts()">
             Generate Topics for Week <span id="generate-week-num">1</span>
           </button>
         </div>
@@ -4296,6 +4300,17 @@ async function handleFormSubmit(e) {
   // Unlock and scroll to products step, show pipeline progress
   unlockStep('step-products');
   document.getElementById('pipeline-progress-card').style.display = 'block';
+
+  // Show ICP card with loading spinner while pipeline runs
+  const icpCard = document.getElementById('icp-card');
+  const icpSkeleton = document.getElementById('icp-skeleton');
+  const icpContent = document.getElementById('icp-content');
+  if (icpCard) {
+    icpCard.style.display = 'block';
+    if (icpSkeleton) icpSkeleton.style.display = 'block';
+    if (icpContent) icpContent.style.display = 'none';
+  }
+
   smoothTransitionToStep('step-products', 1500);
 
   try {
@@ -6680,7 +6695,21 @@ function renderTopicCards(topics, isImplemented) {
       matchedProduct = productsData.find(p => p.id === t.product_id);
     }
     if (!matchedProduct && t.product_name && productsData) {
-      matchedProduct = productsData.find(p => p.name && p.name.toLowerCase().includes(t.product_name.toLowerCase()));
+      var tName = t.product_name.toLowerCase();
+      // Try exact match first
+      matchedProduct = productsData.find(p => p.name && p.name.toLowerCase() === tName);
+      // Try contains in either direction
+      if (!matchedProduct) matchedProduct = productsData.find(p => p.name && (p.name.toLowerCase().includes(tName) || tName.includes(p.name.toLowerCase())));
+      // Try matching first significant word (skip articles/common words)
+      if (!matchedProduct) {
+        var keywords = tName.replace(/[®™()]/g, '').split(/[\s\-–]+/).filter(w => w.length > 2 && !['the','and','for','with','von','der','die','das'].includes(w));
+        if (keywords.length > 0) {
+          matchedProduct = productsData.find(p => {
+            var pLower = (p.name || '').toLowerCase();
+            return keywords.filter(k => pLower.includes(k)).length >= Math.min(2, keywords.length);
+          });
+        }
+      }
     }
     if (matchedProduct) {
       const imgs = matchedProduct.image_urls || (matchedProduct.image_url ? [matchedProduct.image_url] : []);
