@@ -6677,9 +6677,13 @@ async function loadExistingTopics() {
       }
     }
 
-    // Set current week to first non-completed
+    // Set current week to first week with topics or first non-completed
     if (completedWeek > 0 && completedWeek < 4) {
       currentWeek = completedWeek + 1;
+    } else {
+      // Find first week that has topics
+      const firstWeekWithTopics = Object.keys(weekTopics).map(Number).sort((a, b) => a - b)[0];
+      if (firstWeekWithTopics) currentWeek = firstWeekWithTopics;
     }
 
     const topicsSection = document.getElementById('topics-section');
@@ -7453,7 +7457,7 @@ function openDayModal(dateStr) {
     '</div>';
   } else {
     imageColHtml = '<div class="empty-media-state">' +
-      '<p>No image yet. Generate an AI image from this day\'s topic.</p>' +
+      '<p>No image yet. Generate an image from this day\'s topic.</p>' +
       '<button class="btn btn-primary" onclick="generateDayImages(\'' + dateStr + '\')">Generate Image</button>' +
     '</div>';
   }
