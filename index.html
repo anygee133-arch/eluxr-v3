@@ -817,7 +817,38 @@ details .details-content { padding: 20px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* CONTENT REVIEW CARDS */
-/* CONTENT REVIEW DAY GROUPS */
+/* CONTENT REVIEW - Week Groups */
+.content-week-group {
+  margin-bottom: 24px;
+}
+.content-week-group:last-child { margin-bottom: 0; }
+.content-week-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; margin-bottom: 12px; cursor: pointer;
+  background: #0f1729; color: #fff; border-radius: var(--radius-lg);
+  transition: all 0.3s var(--transition);
+  user-select: none;
+}
+.content-week-header:hover { background: #1a2540; }
+.content-week-title { display: flex; align-items: baseline; gap: 12px; }
+.content-week-label {
+  font-size: 16px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+  letter-spacing: 0.5px;
+}
+.content-week-range {
+  font-size: 13px; font-weight: 400; opacity: 0.6;
+}
+.content-week-stats {
+  display: flex; align-items: center; gap: 16px; font-size: 13px;
+}
+.content-week-stats .approved-count {
+  font-weight: 600; color: #4ade80;
+}
+.content-week-toggle {
+  font-size: 11px; opacity: 0.5; transition: transform 0.3s ease;
+}
+.content-week-group.collapsed .content-days-grid { display: none; }
+.content-week-group.collapsed .content-week-toggle { transform: rotate(-90deg); }
 /* Content Review - Day Cards Stacked */
 .content-days-grid {
   display: flex; flex-direction: column; gap: 12px;
@@ -7211,30 +7242,56 @@ async function renderContentReview() {
 
     const sortedDates = Object.keys(_contentByDate).sort();
 
-    // Render day cards grid
-    container.innerHTML = '<div class="content-days-grid">' + sortedDates.map((dateStr, dateIdx) => {
-      const dayItems = _contentByDate[dateStr];
-      const dateObj = new Date(dateStr + 'T00:00:00');
-      const dayName = _contentDayNames[dateObj.getDay()];
-      const dayInWeek = (dateIdx % 7) + 1;
-      const framework = getActiveFramework()[dayInWeek] || {};
-      const productImgs = getProductImagesForDate(dateStr);
-      const productThumb = productImgs.length > 0 ? productImgs[0] : null;
-      const approvedCount = dayItems.filter(i => i.status === 'approved').length;
-      var hasHashtags = dayItems.some(function(i) { return i.hashtags && i.hashtags.length > 0; });
+    // Group dates into weeks (7 days per week)
+    const weeks = [];
+    for (let i = 0; i < sortedDates.length; i += 7) {
+      weeks.push(sortedDates.slice(i, i + 7));
+    }
 
-      var isGenerating = generatingImageDates.has(dateStr);
-      return '<div class="content-day-card' + (isGenerating ? ' generating-image' : '') + '" onclick="openDayModal(\'' + dateStr + '\')">' +
-        '<div class="day-badge">' + dayName + '</div>' +
-        '<div class="day-info">' +
-          '<div class="day-title">' + escapeHTML(framework.theme || dayName) + ' — ' + dateStr + '</div>' +
-          '<div class="day-stats">' + dayItems.length + ' post' + (dayItems.length !== 1 ? 's' : '') +
-            ' &middot; <span class="approved-count">' + approvedCount + ' approved</span>' +
-            (hasHashtags ? ' &middot; <span style="color:var(--text-muted);">#</span>' : '') + '</div>' +
+    // Render day cards grouped by week
+    container.innerHTML = weeks.map((weekDates, weekIdx) => {
+      const weekNum = weekIdx + 1;
+      const weekStart = weekDates[0];
+      const weekEnd = weekDates[weekDates.length - 1];
+      const weekApproved = weekDates.reduce((sum, d) => sum + (_contentByDate[d] || []).filter(i => i.status === 'approved').length, 0);
+      const weekTotal = weekDates.reduce((sum, d) => sum + (_contentByDate[d] || []).length, 0);
+
+      return '<div class="content-week-group">' +
+        '<div class="content-week-header" onclick="this.parentElement.classList.toggle(\'collapsed\')">' +
+          '<div class="content-week-title">' +
+            '<span class="content-week-label">Week ' + weekNum + '</span>' +
+            '<span class="content-week-range">' + weekStart + ' to ' + weekEnd + '</span>' +
+          '</div>' +
+          '<div class="content-week-stats">' +
+            '<span>' + weekTotal + ' posts</span>' +
+            '<span class="approved-count">' + weekApproved + ' approved</span>' +
+            '<span class="content-week-toggle">&#9660;</span>' +
+          '</div>' +
         '</div>' +
-        (isGenerating ? '<div class="day-card-spinner"><div class="spinner-ring"></div><span>Generating image…</span></div>' : '') +
+        '<div class="content-days-grid">' + weekDates.map((dateStr) => {
+          const globalIdx = sortedDates.indexOf(dateStr);
+          const dayItems = _contentByDate[dateStr];
+          const dateObj = new Date(dateStr + 'T00:00:00');
+          const dayName = _contentDayNames[dateObj.getDay()];
+          const dayInWeek = (globalIdx % 7) + 1;
+          const framework = getActiveFramework()[dayInWeek] || {};
+          const approvedCount = dayItems.filter(i => i.status === 'approved').length;
+          var hasHashtags = dayItems.some(function(i) { return i.hashtags && i.hashtags.length > 0; });
+          var isGenerating = generatingImageDates.has(dateStr);
+
+          return '<div class="content-day-card' + (isGenerating ? ' generating-image' : '') + '" onclick="openDayModal(\'' + dateStr + '\')">' +
+            '<div class="day-badge">' + dayName + '</div>' +
+            '<div class="day-info">' +
+              '<div class="day-title">' + escapeHTML(framework.theme || dayName) + ' — ' + dateStr + '</div>' +
+              '<div class="day-stats">' + dayItems.length + ' post' + (dayItems.length !== 1 ? 's' : '') +
+                ' &middot; <span class="approved-count">' + approvedCount + ' approved</span>' +
+                (hasHashtags ? ' &middot; <span style="color:var(--text-muted);">#</span>' : '') + '</div>' +
+            '</div>' +
+            (isGenerating ? '<div class="day-card-spinner"><div class="spinner-ring"></div><span>Generating image…</span></div>' : '') +
+          '</div>';
+        }).join('') + '</div>' +
       '</div>';
-    }).join('') + '</div>';
+    }).join('');
 
   } catch (err) {
     console.error('renderContentReview error:', err);
