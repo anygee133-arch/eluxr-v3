@@ -4449,10 +4449,13 @@ async function generateContent(formData) {
 
 async function fetchCalendarData() {
   try {
-    const { data: items, error } = await window.supabase
+    const campaignId = await ensureCampaign();
+    let query = window.supabase
       .from('content_items')
       .select('*')
       .order('scheduled_date', { ascending: true });
+    if (campaignId) query = query.eq('campaign_id', campaignId);
+    const { data: items, error } = await query;
     if (error) {
       console.error('Error fetching content from Supabase:', error);
       return { all: [], approved: [], pending: [], rejected: [] };
@@ -4946,8 +4949,10 @@ async function loadScheduleThemes() {
 
   // 1. Load themes (optional, don't let failure block everything)
   try {
-    const { data: themes } = await window.supabase
-      .from('themes').select('*').order('week_number', { ascending: true });
+    const campaignId = await ensureCampaign();
+    let themeQuery = window.supabase.from('themes').select('*').order('week_number', { ascending: true });
+    if (campaignId) themeQuery = themeQuery.eq('campaign_id', campaignId);
+    const { data: themes } = await themeQuery;
     if (themes && themes.length > 0) {
       weeklyThemes = themes.map(t => ({
         id: t.id, name: t.name || t.theme_name || '', description: t.description || '',
