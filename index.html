@@ -3754,6 +3754,7 @@ function renderICPCard(icp) {
     if (typeof hashtags === 'string') tags = hashtags.split(/[,\s]+/).filter(t => t.length > 1);
     else if (Array.isArray(hashtags)) tags = hashtags.map(h => String(h)).filter(Boolean);
     else if (typeof hashtags === 'object') tags = Object.values(hashtags).flat().map(h => String(h)).filter(Boolean);
+    tags = [...new Set(tags)];
     if (tags.length > 0) {
       window._icpHashtags = tags;
       hashtagsText.innerHTML = tags.map(h => {
@@ -5290,7 +5291,7 @@ async function openScheduleCard(dateStr) {
       const statusBadge = isApproved
         ? '<span style="color:#0f172a;font-size:11px;font-weight:600;">✓ APPROVED</span>'
         : '<span style="color:#d97706;font-size:11px;font-weight:600;">⏳ PENDING</span>';
-      const postText = item.post_text || item.content || '';
+      const postText = parseContentText(item);
 
       var hashtagsHtml = '';
       if (item.hashtags && item.hashtags.length > 0) {
