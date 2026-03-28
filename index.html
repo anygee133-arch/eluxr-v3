@@ -2794,11 +2794,6 @@ details .details-content { padding: 20px; }
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="month">Content Month *</label>
-          <input type="month" class="form-input" id="month" name="month" required>
-        </div>
-
-        <div class="form-group">
           <label class="form-label" for="content_language">Content Language *</label>
           <select class="form-select" id="content_language" name="content_language" required>
             <option value="English" selected>English</option>
@@ -2815,49 +2810,11 @@ details .details-content { padding: 20px; }
         </div>
 
         <div class="form-group">
-          <label class="form-label">Target Platforms *</label>
-          <div class="platform-selector" id="platform-selector">
-            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="Instagram" checked> Instagram</label>
-            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="Facebook" checked> Facebook</label>
-            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="YouTube" checked> YouTube</label>
-            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="TikTok" checked> TikTok</label>
-            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="LinkedIn" checked> LinkedIn</label>
-            <label class="platform-toggle active"><input type="checkbox" name="platforms" value="X" checked> X</label>
-          </div>
-          <div class="platform-validation-error" id="platform-error">Please select at least one platform</div>
+          <label class="form-label" for="business_notes">Additional Notes</label>
+          <textarea class="form-textarea" id="business_notes" name="business_notes" rows="3"
+            placeholder="Tell us more about your business, target audience, or ideal customer..."
+            style="width:100%; padding:12px 16px; border-radius:12px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); font-size:14px; font-family:'DM Sans',sans-serif; resize:vertical;"></textarea>
         </div>
-
-        <div class="form-group">
-          <label class="form-label">Weekly Storytelling Theme *</label>
-          <div class="theme-selector" id="theme-selector">
-            <!-- Rendered by JS on page load -->
-          </div>
-        </div>
-
-        <details>
-          <summary>Advanced Options — Brand Voice</summary>
-          <div class="details-content">
-            <div class="form-group">
-              <label class="form-label">Brand Voice Traits (select all that apply)</label>
-              <div class="brand-voice-grid" id="brand-voice-grid">
-                <label class="brand-voice-chip"><input type="checkbox" name="brand_traits" value="elegant"> Elegant</label>
-                <label class="brand-voice-chip"><input type="checkbox" name="brand_traits" value="bold"> Bold</label>
-                <label class="brand-voice-chip"><input type="checkbox" name="brand_traits" value="playful"> Playful</label>
-                <label class="brand-voice-chip"><input type="checkbox" name="brand_traits" value="authoritative"> Authoritative</label>
-                <label class="brand-voice-chip"><input type="checkbox" name="brand_traits" value="warm"> Warm</label>
-                <label class="brand-voice-chip"><input type="checkbox" name="brand_traits" value="sophisticated"> Sophisticated</label>
-                <label class="brand-voice-chip"><input type="checkbox" name="brand_traits" value="edgy"> Edgy</label>
-                <label class="brand-voice-chip"><input type="checkbox" name="brand_traits" value="classic"> Classic</label>
-                <label class="brand-voice-chip"><input type="checkbox" name="brand_traits" value="inspirational"> Inspirational</label>
-                <label class="brand-voice-chip"><input type="checkbox" name="brand_traits" value="minimalist"> Minimalist</label>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="brand_voice">Additional Notes</label>
-              <textarea class="form-textarea" id="brand_voice" name="brand_voice" placeholder="Any additional brand voice details..."></textarea>
-            </div>
-          </div>
-        </details>
 
         <div class="nav-buttons">
           <button type="submit" class="btn btn-primary btn-lg">Analyze My Business</button>
@@ -4219,15 +4176,51 @@ function reorderProducts(fromIndex, toIndex) {
   productOrder.splice(toIndex, 0, moved);
   renderProductsCard(getOrderedProducts());
   initDragAndDrop();
-  markProductsModified();
+  // Autosave sort order after reorder (debounced)
+  autosaveProductOrder();
 }
 window.reorderProducts = reorderProducts;
 
+let _productAutosaveTimer = null;
+function autosaveProductOrder() {
+  clearTimeout(_productAutosaveTimer);
+  _productAutosaveTimer = setTimeout(async () => {
+    try {
+      const { data: { user } } = await window.supabase.auth.getUser();
+      if (!user) return;
+      const ordered = getOrderedProducts();
+      for (let i = 0; i < ordered.length; i++) {
+        if (ordered[i].id && !String(ordered[i].id).startsWith('new-')) {
+          await window.supabase.from('products')
+            .update({ sort_order: i, updated_at: new Date().toISOString() })
+            .eq('id', ordered[i].id);
+        }
+      }
+      showSavedIndicator();
+    } catch (err) {
+      console.error('Autosave order error:', err);
+    }
+  }, 500);
+}
+
+function showSavedIndicator() {
+  const existing = document.getElementById('product-saved-indicator');
+  if (existing) existing.remove();
+  const indicator = document.createElement('div');
+  indicator.id = 'product-saved-indicator';
+  indicator.textContent = 'Saved \u2713';
+  indicator.style.cssText = 'position:fixed; bottom:80px; right:24px; background:#16a34a; color:#fff; padding:6px 16px; border-radius:8px; font-size:13px; font-weight:600; z-index:1000; animation:fadeIn 0.2s ease;';
+  document.body.appendChild(indicator);
+  setTimeout(() => indicator.remove(), 2000);
+}
+
 function markProductsModified() {
   productsModified = true;
-  const saveBtn = document.getElementById('btn-save-products');
-  if (saveBtn) saveBtn.classList.add('visible');
+  // Debounced autosave for name edits
+  clearTimeout(_productNameSaveTimer);
+  _productNameSaveTimer = setTimeout(() => saveProductChanges(), 1000);
 }
+let _productNameSaveTimer = null;
 
 function removeProduct(btn) {
   const item = btn.closest('.product-item');
@@ -4239,30 +4232,77 @@ function removeProduct(btn) {
 function addCustomProduct() {
   const itemsContainer = document.getElementById('products-items');
   if (!itemsContainer) return;
-  const currentCount = itemsContainer.querySelectorAll('.product-item:not(.inactive)').length;
-  showToast('Adding custom product.', 'success');
   const newId = 'new-' + Date.now();
-  const html = '<div class="product-item" data-product-id="' + newId + '" data-new="true">' +
-    '<div class="product-thumb-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>' +
-    '<div class="product-info">' +
-      '<div class="product-name">' +
-        '<input type="text" value="" placeholder="Enter product name..." onchange="markProductsModified()" autofocus />' +
-      '</div>' +
-      '<div class="product-meta">' +
-        '<span class="product-category">Custom</span>' +
-      '</div>' +
-    '</div>' +
-    '<button type="button" class="product-remove" onclick="removeProduct(this)" title="Remove product">&times;</button>' +
-  '</div>';
-  itemsContainer.insertAdjacentHTML('beforeend', html);
+  const html = `<div class="product-item" data-product-id="${newId}" data-new="true">
+    <div class="product-thumb-placeholder" style="position:relative; cursor:pointer;" onclick="this.querySelector('input[type=file]').click()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+      <input type="file" accept="image/jpeg,image/png" style="display:none;" onchange="handleProductImageUpload(this, '${newId}')">
+      <span style="font-size:9px; color:var(--text-muted); display:block; margin-top:2px;">Upload</span>
+    </div>
+    <div class="product-info" style="flex:1;">
+      <div class="product-name">
+        <input type="text" value="" placeholder="Product name / description..." onchange="markProductsModified()" autofocus style="width:100%;" />
+      </div>
+      <div style="margin-top:6px;">
+        <input type="text" class="product-url-input" placeholder="Product URL (optional)" style="width:100%; font-size:12px; padding:4px 8px; border-radius:6px; border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.5);" />
+      </div>
+    </div>
+    <button type="button" class="product-remove" onclick="removeProduct(this)" title="Remove product">&times;</button>
+  </div>`;
+  // Insert at TOP (position 0)
+  itemsContainer.insertAdjacentHTML('afterbegin', html);
   markProductsModified();
-  // Focus the new input
-  const newInput = itemsContainer.querySelector('[data-product-id="' + newId + '"] input');
+  const newInput = itemsContainer.querySelector('[data-product-id="' + newId + '"] .product-name input');
   if (newInput) newInput.focus();
-  // Expand if collapsed
   const card = document.getElementById('products-card-container');
   if (card && !card.classList.contains('expanded')) card.classList.add('expanded');
 }
+
+async function handleProductImageUpload(input, productId) {
+  const file = input.files[0];
+  if (!file) return;
+  if (!['image/jpeg', 'image/png'].includes(file.type)) {
+    showToast('Only JPG and PNG images are allowed', 'error');
+    input.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Image must be under 5MB', 'error');
+    input.value = '';
+    return;
+  }
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    const filePath = `${user.id}/${productId}/${Date.now()}_${file.name}`;
+    const { error: uploadError } = await window.supabase.storage
+      .from('product-images')
+      .upload(filePath, file);
+    if (uploadError) throw uploadError;
+    const { data: urlData } = window.supabase.storage.from('product-images').getPublicUrl(filePath);
+    const imgUrl = urlData.publicUrl;
+    // Update thumbnail in UI
+    const item = input.closest('.product-item');
+    if (item) {
+      const thumb = item.querySelector('.product-thumb-placeholder') || item.querySelector('.product-thumb');
+      if (thumb) {
+        thumb.outerHTML = '<div class="product-thumb" style="width:48px;height:48px;border-radius:8px;overflow:hidden;flex-shrink:0;"><img src="' + imgUrl + '" style="width:100%;height:100%;object-fit:cover;"></div>';
+      }
+    }
+    // If existing product, update image_urls in DB
+    if (productId && !String(productId).startsWith('new-')) {
+      const { data: prod } = await window.supabase.from('products').select('image_urls').eq('id', productId).single();
+      const urls = Array.isArray(prod?.image_urls) ? [...prod.image_urls, imgUrl] : [imgUrl];
+      await window.supabase.from('products').update({ image_urls: urls, updated_at: new Date().toISOString() }).eq('id', productId);
+    }
+    showToast('Image uploaded', 'success');
+  } catch (err) {
+    showToast('Upload failed: ' + err.message, 'error');
+    console.error('Product image upload error:', err);
+  }
+  input.value = '';
+}
+window.handleProductImageUpload = handleProductImageUpload;
 
 async function saveProductChanges() {
   const items = document.querySelectorAll('#products-items .product-item');
@@ -4287,10 +4327,14 @@ async function saveProductChanges() {
         await window.supabase.from('products').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', productId);
       } else if (isNew && name) {
         // Insert new custom product
+        const urlInput = item.querySelector('.product-url-input');
+        const productUrl = urlInput ? urlInput.value.trim() : '';
         await window.supabase.from('products').insert({
           user_id: user.id,
           name: name,
           category: 'Custom',
+          product_url: productUrl || null,
+          sort_order: 0,
           is_active: true
         });
       } else if (!isNew && name) {
@@ -4511,37 +4555,70 @@ function goToPhase(n) {
 async function handleFormSubmit(e) {
   e.preventDefault();
 
-  // Validate at least 1 platform selected
-  if (!validatePlatforms()) {
-    showToast('Please select at least one target platform', 'error');
-    return;
-  }
-
-  // Collect brand voice traits + freeform text
-  const brandTraits = Array.from(document.querySelectorAll('#brand-voice-grid input:checked')).map(cb => cb.value);
-  const brandNotes = document.getElementById('brand_voice').value;
-  const brandVoice = brandTraits.length > 0
-    ? brandTraits.join(', ') + (brandNotes ? '. ' + brandNotes : '')
-    : brandNotes || '';
-
   const formData = {
     business_url: document.getElementById('business_url').value,
     industry: document.getElementById('industry').value,
-    month: getSelectedMonth(),
-    brand_voice: brandVoice,
-    platforms: getSelectedPlatforms(),
-    storytelling_theme: selectedThemeKey,
-    content_language: document.getElementById('content_language') ? document.getElementById('content_language').value : 'English'
+    content_language: document.getElementById('content_language')?.value || 'English',
+    notes: document.getElementById('business_notes')?.value || ''
   };
 
-  // Store business context globally for use in Content Generator
+  if (!formData.business_url || !formData.industry) {
+    showToast('Please fill in all required fields', 'error');
+    return;
+  }
+
+  // Store business context globally
   businessContext = {
     business_url: formData.business_url,
     industry: formData.industry,
-    brand_voice: formData.brand_voice,
-    platforms: formData.platforms,
-    content_language: formData.content_language
+    content_language: formData.content_language,
+    notes: formData.notes
   };
+
+  // Re-analysis check: if ICP/products/campaign data exists, confirm before clearing
+  const hasExistingData = document.getElementById('icp-content')?.style.display === 'block'
+    || (productsData && productsData.length > 0)
+    || window.currentCampaignId;
+
+  if (hasExistingData) {
+    const confirmed = await showConfirmDialog({
+      title: 'Re-analyze Business?',
+      message: 'Re-analyzing will clear your current campaign data (Sections 2-7). Scheduled and approved posts that have been posted will not be affected.',
+      confirmText: 'Re-analyze',
+      cancelText: 'Cancel',
+      destructive: true
+    });
+    if (!confirmed) return;
+
+    // Clear downstream data
+    try {
+      const { data: { user } } = await window.supabase.auth.getUser();
+      if (user) {
+        const uid = user.id;
+        await window.supabase.from('content_items').delete().eq('user_id', uid).neq('status', 'posted');
+        await window.supabase.from('weekly_topics').delete().eq('user_id', uid);
+        await window.supabase.from('themes').delete().eq('user_id', uid);
+        await window.supabase.from('brand_documents').delete().eq('user_id', uid);
+        await window.supabase.from('campaigns').delete().eq('user_id', uid);
+        await window.supabase.from('products').delete().eq('user_id', uid);
+        await window.supabase.from('icps').delete().eq('user_id', uid);
+      }
+      // Reset frontend state
+      productsData = null;
+      productOrder = [];
+      weekTopics = {};
+      contentData = [];
+      if (typeof _contentByDate !== 'undefined') _contentByDate = {};
+      window.currentCampaignId = null;
+      // Lock sections 2-7
+      ['section-profile', 'section-products', 'section-campaign', 'section-topics', 'section-content', 'section-calendar'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('locked');
+      });
+    } catch (err) {
+      console.error('Error clearing data:', err);
+    }
+  }
 
   // Save business profile to Supabase
   try {
@@ -4549,8 +4626,8 @@ async function handleFormSubmit(e) {
     if (user) {
       await window.supabase.from('profiles')
         .update({
-          business_url: businessContext.business_url,
-          industry: businessContext.industry,
+          business_url: formData.business_url,
+          industry: formData.industry,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
@@ -4559,22 +4636,12 @@ async function handleFormSubmit(e) {
     console.error('Error saving profile:', err);
   }
 
-  // Check if there's existing pending content and offer to clear it
-  const pendingCount = contentData.filter(c => c.status !== 'approved').length;
-  if (pendingCount > 0) {
-    const clearFirst = confirm(`You have ${pendingCount} pending posts. Clear them before generating new content?\n\n(Approved posts will be kept)`);
-    if (clearFirst) {
-      await clearPendingContent(true); // silent mode
-    }
-  }
-
-  currentMonth = formData.month;
-
-  // Unlock and scroll to products step, show pipeline progress
+  // Unlock Section 2 (profile) + Section 3 (products), show pipeline progress
+  unlockSection('section-profile');
   unlockSection('section-products');
   document.getElementById('pipeline-progress-card').style.display = 'block';
 
-  // Show ICP card with loading spinner while pipeline runs
+  // Show ICP card with loading spinner
   const icpCard = document.getElementById('icp-card');
   const icpSkeleton = document.getElementById('icp-skeleton');
   const icpContent = document.getElementById('icp-content');
@@ -4584,12 +4651,12 @@ async function handleFormSubmit(e) {
     if (icpContent) icpContent.style.display = 'none';
   }
 
-  smoothTransitionToSection('section-products', 1500);
+  smoothTransitionToSection('section-profile', 1500);
 
   try {
     await generateContent(formData);
   } catch (error) {
-    showToast('Error generating content: ' + error.message, 'error');
+    showToast('Error analyzing business: ' + error.message, 'error');
     scrollToSection('section-business');
   }
 }
@@ -4607,11 +4674,18 @@ function downloadImage(url) {
 }
 
 async function resetAllData() {
-  if (!confirm('This will delete ALL your data (products, topics, content, ICP) and start fresh. Are you sure?')) return;
+  const confirmed = await showConfirmDialog({
+    title: 'Reset & Start Fresh?',
+    message: 'This will delete ALL your data (products, topics, content, ICP, brand documents) and start from scratch.',
+    confirmText: 'Reset Everything',
+    cancelText: 'Cancel',
+    destructive: true
+  });
+  if (!confirmed) return;
   try {
     const { data: { user } } = await window.supabase.auth.getUser();
     if (!user) { showToast('Not logged in', 'error'); return; }
-    const tables = ['content_items', 'weekly_topics', 'products', 'icps', 'campaigns'];
+    const tables = ['content_items', 'weekly_topics', 'themes', 'brand_documents', 'products', 'icps', 'campaigns'];
     for (const table of tables) {
       await window.supabase.from(table).delete().eq('user_id', user.id);
     }
@@ -4620,12 +4694,12 @@ async function resetAllData() {
     productOrder = [];
     weekTopics = {};
     contentData = [];
-    _contentByDate = {};
+    if (typeof _contentByDate !== 'undefined') _contentByDate = {};
     scheduleStartDate = null;
     scheduleWeekOffset = 0;
     businessContext = null;
+    window.currentCampaignId = null;
     showToast('All data cleared. Starting fresh!', 'success');
-    // Lock all steps and reload
     setTimeout(() => location.reload(), 500);
   } catch (e) {
     showToast('Error resetting: ' + e.message, 'error');
@@ -8387,6 +8461,419 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') galleryNext();
   }
 });
+
+// ============================================================
+// SHARED COMPONENT: WeekNav (Date-Based Week Navigation)
+// Used by Sections 5 (Topics), 6 (Content Review), 7 (Calendar)
+// ============================================================
+window.WeekNav = {
+  /**
+   * Calculate week boundaries for a campaign month.
+   * @param {string} monthStr - "YYYY-MM" format
+   * @param {string|Date} startDate - Campaign start date (today for current month, 1st for future)
+   * @returns {Array<{weekNum, startDate, endDate, dayCount}>}
+   */
+  calculateWeeks(monthStr, startDate) {
+    const start = startDate instanceof Date ? startDate : new Date(startDate + 'T00:00:00');
+    const [year, month] = monthStr.split('-').map(Number);
+    const monthEnd = new Date(year, month, 0); // Last day of the month
+
+    const weeks = [];
+    let current = new Date(start);
+    let weekNum = 1;
+
+    while (current <= monthEnd) {
+      const weekStart = new Date(current);
+      let weekEnd;
+
+      if (weekNum === 1) {
+        // First week: start date → nearest Sunday
+        const dayOfWeek = current.getDay(); // 0=Sun, 1=Mon, ...
+        if (dayOfWeek === 0) {
+          // Sunday start = one-day week
+          weekEnd = new Date(current);
+        } else {
+          // Run to Sunday
+          weekEnd = new Date(current);
+          weekEnd.setDate(weekEnd.getDate() + (7 - dayOfWeek));
+        }
+      } else {
+        // Subsequent weeks: Monday → Sunday (7 days)
+        weekEnd = new Date(current);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+      }
+
+      // Cap at month end
+      if (weekEnd > monthEnd) {
+        weekEnd = new Date(monthEnd);
+      }
+
+      const dayCount = Math.round((weekEnd - weekStart) / (1000 * 60 * 60 * 24)) + 1;
+      weeks.push({
+        weekNum,
+        startDate: new Date(weekStart),
+        endDate: new Date(weekEnd),
+        dayCount
+      });
+
+      // Move to next Monday
+      current = new Date(weekEnd);
+      current.setDate(current.getDate() + 1);
+      weekNum++;
+    }
+
+    return weeks;
+  },
+
+  /**
+   * Format a week label in MM/DD format.
+   * @returns {string} e.g., "3/30 - 4/5"
+   */
+  formatLabel(start, end) {
+    const s = start instanceof Date ? start : new Date(start);
+    const e = end instanceof Date ? end : new Date(end);
+    const fmt = d => `${d.getMonth() + 1}/${d.getDate()}`;
+    if (s.getTime() === e.getTime()) return `Week ${fmt(s)}`;
+    return `Week ${fmt(s)} - ${fmt(e)}`;
+  },
+
+  /**
+   * Render week navigation tabs into a container.
+   * @param {HTMLElement} containerEl - DOM element to render into
+   * @param {Array} weeks - From calculateWeeks()
+   * @param {number} activeWeek - Currently selected week number
+   * @param {Function} onSelect - Callback(weekNum, startDate, endDate, dayCount)
+   */
+  render(containerEl, weeks, activeWeek, onSelect) {
+    if (!containerEl || !weeks || weeks.length === 0) return;
+
+    const currentIdx = weeks.findIndex(w => w.weekNum === activeWeek);
+    const canPrev = currentIdx > 0;
+    const canNext = currentIdx < weeks.length - 1;
+
+    containerEl.innerHTML = `
+      <div class="week-nav" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:20px;">
+        <button class="btn btn-sm week-nav-arrow" ${!canPrev ? 'disabled' : ''} data-dir="prev"
+          style="padding:6px 12px; font-size:16px; border-radius:8px; min-width:36px; opacity:${canPrev ? 1 : 0.3};">←</button>
+        <div class="week-nav-tabs" style="display:flex; gap:4px; flex-wrap:wrap; justify-content:center;">
+          ${weeks.map(w => `
+            <button class="btn btn-sm week-nav-tab ${w.weekNum === activeWeek ? 'active' : ''}"
+              data-week="${w.weekNum}"
+              style="padding:6px 14px; font-size:12px; border-radius:8px; font-weight:${w.weekNum === activeWeek ? '700' : '500'};
+                background:${w.weekNum === activeWeek ? '#000' : 'rgba(226,232,240,0.5)'};
+                color:${w.weekNum === activeWeek ? '#fff' : 'var(--text-secondary)'};
+                border:1px solid ${w.weekNum === activeWeek ? '#000' : 'rgba(0,0,0,0.08)'};">
+              ${this.formatLabel(w.startDate, w.endDate)}
+              <span style="font-size:10px; opacity:0.7; margin-left:4px;">(${w.dayCount}d)</span>
+            </button>
+          `).join('')}
+        </div>
+        <button class="btn btn-sm week-nav-arrow" ${!canNext ? 'disabled' : ''} data-dir="next"
+          style="padding:6px 12px; font-size:16px; border-radius:8px; min-width:36px; opacity:${canNext ? 1 : 0.3};">→</button>
+      </div>
+    `;
+
+    // Attach listeners
+    containerEl.querySelectorAll('.week-nav-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wn = parseInt(btn.dataset.week);
+        const week = weeks.find(w => w.weekNum === wn);
+        if (week && onSelect) onSelect(week.weekNum, week.startDate, week.endDate, week.dayCount);
+      });
+    });
+
+    containerEl.querySelectorAll('.week-nav-arrow').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dir = btn.dataset.dir;
+        const newIdx = dir === 'prev' ? currentIdx - 1 : currentIdx + 1;
+        if (newIdx >= 0 && newIdx < weeks.length) {
+          const week = weeks[newIdx];
+          if (onSelect) onSelect(week.weekNum, week.startDate, week.endDate, week.dayCount);
+        }
+      });
+    });
+  }
+};
+
+// ============================================================
+// SHARED COMPONENT: Confirmation Dialog (Glassmorphic)
+// Replaces raw confirm() calls with styled promise-based dialog
+// ============================================================
+window.showConfirmDialog = function({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', destructive = false }) {
+  return new Promise((resolve) => {
+    // Remove any existing dialog
+    const existing = document.getElementById('confirm-dialog-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'confirm-dialog-overlay';
+    overlay.style.cssText = 'position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); animation:fadeIn 0.2s ease;';
+
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'background:rgba(255,255,255,0.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-radius:20px; border:1px solid rgba(255,255,255,0.5); box-shadow:0 20px 60px rgba(0,0,0,0.15); padding:32px; max-width:420px; width:90%; text-align:center; animation:slideIn 0.25s cubic-bezier(0.22,1,0.36,1);';
+
+    dialog.innerHTML = `
+      <h3 style="margin:0 0 12px; font-size:18px; font-weight:700; color:var(--text-primary);">${title}</h3>
+      <p style="margin:0 0 24px; font-size:14px; color:var(--text-secondary); line-height:1.5;">${message}</p>
+      <div style="display:flex; gap:12px; justify-content:center;">
+        <button id="confirm-dialog-cancel" class="btn" style="padding:10px 24px; font-size:14px; border-radius:12px; background:rgba(226,232,240,0.5); color:var(--text-secondary); border:1px solid rgba(0,0,0,0.08);">${cancelText}</button>
+        <button id="confirm-dialog-confirm" class="btn" style="padding:10px 24px; font-size:14px; border-radius:12px; font-weight:600;
+          background:${destructive ? '#ef4444' : '#16a34a'}; color:#fff; border:none;">${confirmText}</button>
+      </div>
+    `;
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    const cleanup = (result) => {
+      overlay.style.animation = 'fadeIn 0.15s ease reverse';
+      setTimeout(() => { overlay.remove(); resolve(result); }, 150);
+    };
+
+    document.getElementById('confirm-dialog-cancel').addEventListener('click', () => cleanup(false));
+    document.getElementById('confirm-dialog-confirm').addEventListener('click', () => cleanup(true));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(false); });
+  });
+};
+
+// ============================================================
+// CAMPAIGN SETUP: handleCampaignSubmit + handleBrandDocUpload
+// ============================================================
+async function handleCampaignSubmit(e) {
+  e.preventDefault();
+
+  // Validate platforms
+  const platforms = Array.from(document.querySelectorAll('#campaign-platform-selector input:checked')).map(cb => cb.value);
+  if (platforms.length === 0) {
+    document.getElementById('campaign-platform-error').style.display = 'block';
+    showToast('Please select at least one platform', 'error');
+    return;
+  }
+  document.getElementById('campaign-platform-error').style.display = 'none';
+
+  // Collect campaign data
+  const monthInput = document.getElementById('campaign_month').value;
+  if (!monthInput) {
+    showToast('Please select a content month', 'error');
+    return;
+  }
+
+  const campaignTheme = document.querySelector('input[name="campaign_theme"]:checked')?.value || 'luxury-intrigue';
+  const brandTraits = Array.from(document.querySelectorAll('#campaign-brand-voice-grid input:checked')).map(cb => cb.value);
+  const brandNotes = document.getElementById('campaign_brand_voice_notes').value;
+
+  // Calculate campaign start date
+  const now = new Date();
+  const [selYear, selMonth] = monthInput.split('-').map(Number);
+  const isCurrentMonth = selYear === now.getFullYear() && selMonth === (now.getMonth() + 1);
+  const startDate = isCurrentMonth
+    ? now.toISOString().slice(0, 10) // today
+    : `${monthInput}-01`; // 1st of selected month
+
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) { showToast('Not logged in', 'error'); return; }
+
+    // Get brand doc summaries if any
+    const { data: brandDocs } = await window.supabase
+      .from('brand_documents')
+      .select('summary_text')
+      .eq('user_id', user.id)
+      .not('summary_text', 'is', null);
+    const brandDocSummary = (brandDocs || []).map(d => d.summary_text).filter(Boolean).join('\n\n');
+
+    // Upsert campaign
+    const campaignData = {
+      user_id: user.id,
+      month: monthInput,
+      status: 'draft',
+      campaign_theme: campaignTheme,
+      brand_voice_traits: brandTraits,
+      brand_voice_notes: brandNotes,
+      platforms: platforms,
+      content_language: document.getElementById('content_language')?.value || 'English',
+      start_date: startDate,
+      is_active: true,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data: campaign, error } = await window.supabase
+      .from('campaigns')
+      .upsert(campaignData, { onConflict: 'user_id,month' })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    window.currentCampaignId = campaign.id;
+    currentMonth = monthInput;
+
+    // Store business context for downstream use
+    if (!businessContext) businessContext = {};
+    businessContext.platforms = platforms;
+    businessContext.brand_voice = brandTraits.join(', ') + (brandNotes ? '. ' + brandNotes : '');
+    businessContext.content_language = campaignData.content_language;
+
+    showToast('Campaign created! Generating topics...', 'success');
+    unlockSection('section-topics');
+    scrollToSection('section-topics');
+
+    // Trigger topic generation for all weeks
+    const weeks = WeekNav.calculateWeeks(monthInput, startDate);
+    if (weeks.length > 0) {
+      // Generate topics for week 1 first
+      currentWeek = 1;
+      const weekProducts = getOrderedProducts().slice(0, weeks[0].dayCount);
+      if (weekProducts.length >= weeks[0].dayCount) {
+        await generateTopics(weekProducts);
+      } else {
+        showToast(`Need at least ${weeks[0].dayCount} products for this week`, 'error');
+      }
+    }
+  } catch (err) {
+    showToast('Error creating campaign: ' + err.message, 'error');
+    console.error('Campaign submit error:', err);
+  }
+}
+window.handleCampaignSubmit = handleCampaignSubmit;
+
+async function handleBrandDocUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Validate file type
+  const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+  if (!allowed.includes(file.type)) {
+    showToast('Only PDF, DOCX, and TXT files are allowed', 'error');
+    input.value = '';
+    return;
+  }
+
+  // Validate size (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('File must be under 10MB', 'error');
+    input.value = '';
+    return;
+  }
+
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) { showToast('Not logged in', 'error'); return; }
+
+    showToast('Uploading document...', 'success');
+
+    // Upload to Supabase Storage
+    const filePath = `${user.id}/${Date.now()}_${file.name}`;
+    const { data: uploadData, error: uploadError } = await window.supabase.storage
+      .from('brand-documents')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    // Get public URL
+    const { data: urlData } = window.supabase.storage
+      .from('brand-documents')
+      .getPublicUrl(filePath);
+
+    // Save record to brand_documents table
+    const { data: doc, error: docError } = await window.supabase
+      .from('brand_documents')
+      .insert({
+        user_id: user.id,
+        campaign_id: window.currentCampaignId || null,
+        file_url: urlData.publicUrl || filePath,
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size
+      })
+      .select()
+      .single();
+
+    if (docError) throw docError;
+
+    showToast('Document uploaded! Processing...', 'success');
+
+    // Show in the list
+    renderBrandDocList(user.id);
+
+    // Trigger n8n workflow for text extraction + summarization
+    const N8N_BASE_URL = window.ELUXR_CONFIG?.N8N_WEBHOOK_BASE || 'https://flowbound.app.n8n.cloud/webhook';
+    authenticatedFetch(`${N8N_BASE_URL}/eluxr-process-brand-doc`, {
+      method: 'POST',
+      body: JSON.stringify({ document_id: doc.id, file_url: urlData.publicUrl || filePath, user_id: user.id })
+    }).catch(err => console.warn('Brand doc processing:', err));
+
+    input.value = '';
+  } catch (err) {
+    showToast('Upload failed: ' + err.message, 'error');
+    console.error('Brand doc upload error:', err);
+  }
+}
+window.handleBrandDocUpload = handleBrandDocUpload;
+
+async function renderBrandDocList(userId) {
+  const container = document.getElementById('brand-doc-list');
+  if (!container) return;
+
+  const { data: docs } = await window.supabase
+    .from('brand_documents')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (!docs || docs.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = docs.map(doc => `
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(255,255,255,0.5); border-radius:8px; margin-bottom:6px; border:1px solid rgba(0,0,0,0.06);">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:16px;">${doc.file_type?.includes('pdf') ? '📄' : doc.file_type?.includes('word') ? '📝' : '📃'}</span>
+        <span style="font-size:13px; font-weight:500;">${doc.file_name}</span>
+        ${doc.summary_text ? '<span style="font-size:10px; color:#16a34a; font-weight:600;">✓ Processed</span>' : '<span style="font-size:10px; color:var(--text-muted);">Processing...</span>'}
+      </div>
+      <button onclick="deleteBrandDoc('${doc.id}', '${doc.file_url}')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:14px; padding:4px 8px;">✕</button>
+    </div>
+  `).join('');
+}
+window.renderBrandDocList = renderBrandDocList;
+
+async function deleteBrandDoc(docId, fileUrl) {
+  const confirmed = await showConfirmDialog({
+    title: 'Delete Document?',
+    message: 'This will remove the document and its analysis.',
+    confirmText: 'Delete',
+    destructive: true
+  });
+  if (!confirmed) return;
+
+  try {
+    await window.supabase.from('brand_documents').delete().eq('id', docId);
+    if (fileUrl) {
+      await window.supabase.storage.from('brand-documents').remove([fileUrl]);
+    }
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (user) renderBrandDocList(user.id);
+    showToast('Document removed', 'success');
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+}
+window.deleteBrandDoc = deleteBrandDoc;
+
+// ============================================================
+// Campaign month picker: disable past months
+// ============================================================
+(function initCampaignMonth() {
+  const monthInput = document.getElementById('campaign_month');
+  if (monthInput) {
+    const now = new Date();
+    const minMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    monthInput.min = minMonth;
+    monthInput.value = minMonth;
+  }
+})();
 </script>
 </body>
 </html>
