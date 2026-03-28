@@ -3059,13 +3059,8 @@ details .details-content { padding: 20px; }
 
     <!-- WEEKLY TOPICS UI -->
     <div id="topics-section" class="card card-glass fade-in-up stagger-1" style="overflow:visible;">
-      <!-- Week Tabs -->
-      <div class="week-tabs" id="week-tabs">
-        <button class="week-tab active" data-week="1" onclick="selectWeek(1)">Week 1</button>
-        <button class="week-tab locked" data-week="2" onclick="selectWeek(2)" disabled>Week 2</button>
-        <button class="week-tab locked" data-week="3" onclick="selectWeek(3)" disabled>Week 3</button>
-        <button class="week-tab locked" data-week="4" onclick="selectWeek(4)" disabled>Week 4</button>
-      </div>
+      <!-- Week Navigation (date-based, rendered by WeekNav component) -->
+      <div id="week-nav-topics"></div>
 
       <!-- Generate Topics Button (shown when week has no topics) -->
       <div id="topics-generate-section" style="padding:40px 20px;">
@@ -3129,10 +3124,13 @@ details .details-content { padding: 20px; }
       <h2>Section 6: Content Review</h2>
     </div>
 
+    <!-- Week Navigation for Content Review -->
+    <div id="week-nav-content"></div>
+
     <!-- Content review cards will be rendered here by JS -->
     <div id="content-review-container">
       <div id="content-review-empty" class="card" style="text-align:center; padding:40px;">
-        <p style="color:var(--text-secondary);">Generate content in Step 3 to review it here.</p>
+        <p style="color:var(--text-secondary);">Generate content in Section 5 to review it here.</p>
       </div>
       <div id="content-review-days" style="display:none;"></div>
     </div>
@@ -3158,17 +3156,19 @@ details .details-content { padding: 20px; }
       <h2>Section 7: Posting Calendar</h2>
     </div>
 
+    <!-- Week Navigation for Calendar -->
+    <div id="week-nav-calendar"></div>
+
     <!-- WEEKLY CONTENT SCHEDULE -->
     <div class="content-schedule fade-in-up stagger-1" id="content-schedule">
       <div class="content-schedule-header">
-        <h3>📅 This Week's Content Schedule</h3>
+        <h3>Posting Calendar</h3>
         <div class="content-schedule-nav">
-          <button class="btn btn-outline btn-sm" onclick="changeScheduleWeek(-1)">← Prev Week</button>
+          <button class="btn btn-outline btn-sm" onclick="changeScheduleWeek(-1)">&larr; Prev Week</button>
           <span class="week-label" id="schedule-week-label">Loading...</span>
-          <button class="btn btn-outline btn-sm" onclick="changeScheduleWeek(1)">Next Week →</button>
-          <button class="btn btn-outline btn-sm" onclick="refreshSchedule()">↻ Refresh</button>
+          <button class="btn btn-outline btn-sm" onclick="changeScheduleWeek(1)">Next Week &rarr;</button>
+          <button class="btn btn-outline btn-sm" onclick="refreshSchedule()">&#8635; Refresh</button>
           <button class="btn btn-outline btn-sm" onclick="exportToCSV()">Export CSV</button>
-          <button class="btn btn-outline btn-sm" style="color:#ef4444; border-color:#ef4444;" onclick="clearPendingContent()">Clear Pending</button>
         </div>
       </div>
       <div id="schedule-grid" class="content-schedule-grid">
@@ -4410,11 +4410,12 @@ window.getSelectedMonth = getSelectedMonth;
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   initPlatformToggles();
+  loadImageThemes(); // Load image themes for Section 6
   const now = new Date();
   const monthInput = document.getElementById('month');
-  const currentMonthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  monthInput.value = currentMonthValue;
-  currentMonth = currentMonthValue;
+  const currentMonthValue = monthInput ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}` : null;
+  if (monthInput) monthInput.value = currentMonthValue;
+  currentMonth = currentMonthValue || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
   // Initialize step dots (all disabled except first)
   document.querySelectorAll('.section-dot').forEach((dot, i) => {
@@ -5306,12 +5307,12 @@ async function loadScheduleThemes() {
     await fetchAndDisplayCalendar(true);
   } catch (e) { console.warn('Calendar fetch failed (non-fatal):', e); }
 
-  // 3. Build calData from contentData (which fetchAndDisplayCalendar populates)
+  // 3. Build calData from contentData — calendar shows only approved posts
   const allItems = contentData || [];
   const calData = {
     all: allItems,
-    approved: allItems.filter(i => i.status === 'approved'),
-    pending: allItems.filter(i => i.status === 'pending')
+    approved: allItems.filter(i => i.status === 'approved' || i.status === 'scheduled' || i.status === 'posted'),
+    pending: allItems.filter(i => !i.status || i.status === 'pending' || i.status === 'pending_review')
   };
 
   // 4. Set schedule start to today on first load only
@@ -5320,7 +5321,20 @@ async function loadScheduleThemes() {
     scheduleStartDate.setHours(0, 0, 0, 0);
   }
 
-  // 5. Render
+  // 5. Render WeekNav for calendar section
+  const calNavContainer = document.getElementById('week-nav-calendar');
+  if (calNavContainer) {
+    const weeks = getCampaignWeeks();
+    if (weeks && weeks.length > 0) {
+      const calWeek = window._calendarWeek || 1;
+      WeekNav.render(calNavContainer, weeks, calWeek, (weekNum) => {
+        window._calendarWeek = weekNum;
+        loadScheduleThemes();
+      });
+    }
+  }
+
+  // 6. Render grid
   const contentThemes = allItems.map(item => ({
     date: item.date || item.scheduled_date,
     theme: item.theme || '',
@@ -5328,7 +5342,8 @@ async function loadScheduleThemes() {
     content_type: item.content_type || '',
     post_text: item.post_text || item.content || '',
     image_url: item.image_url || '',
-    video_url: item.video_url || ''
+    video_url: item.video_url || '',
+    status: item.status || 'pending'
   }));
   renderScheduleGrid(contentThemes, calData);
 }
@@ -6506,20 +6521,17 @@ function downloadIcsFile(events) {
 
 // Stats
 function updateStats() {
-  let monthData = getContentForMonth(currentMonth);
-  // Fallback: if filtered data is empty but contentData has items, show all
-  if (monthData.length === 0 && contentData.length > 0) {
-    monthData = contentData;
-  }
+  // Use contentData directly (already filtered by campaign) — no month filtering needed
+  const data = contentData || [];
 
   const totalEl = document.getElementById('stat-total');
   const pendingEl = document.getElementById('stat-pending');
   const approvedEl = document.getElementById('stat-approved');
   const videosEl = document.getElementById('stat-videos');
-  if (totalEl) totalEl.textContent = monthData.length;
-  if (pendingEl) pendingEl.textContent = monthData.filter(c => c.status === 'pending' || !c.status).length;
-  if (approvedEl) approvedEl.textContent = monthData.filter(c => c.status === 'approved').length;
-  if (videosEl) videosEl.textContent = monthData.filter(c => c.video_url).length;
+  if (totalEl) totalEl.textContent = data.length;
+  if (pendingEl) pendingEl.textContent = data.filter(c => !c.status || c.status === 'pending' || c.status === 'pending_review').length;
+  if (approvedEl) approvedEl.textContent = data.filter(c => c.status === 'approved' || c.status === 'scheduled' || c.status === 'posted').length;
+  if (videosEl) videosEl.textContent = data.filter(c => c.video_url).length;
 }
 window.updateStats = updateStats;
 
@@ -6968,49 +6980,54 @@ async function loadExistingTopics() {
 
     const completedWeek = (campaign && campaign.current_week) || 0;
 
-    // Update week tab states
-    for (let w = 1; w <= 4; w++) {
-      const tab = document.querySelector(`.week-tab[data-week="${w}"]`);
-      if (!tab) continue;
-      tab.classList.remove('locked', 'completed', 'active');
-      tab.disabled = false;
-
-      if (w <= completedWeek) {
-        tab.classList.add('completed');
-      } else if (w === completedWeek + 1) {
-        // Next unlocked week
-      } else if (w > completedWeek + 1 && !weekTopics[w]) {
-        tab.classList.add('locked');
-        tab.disabled = true;
-      }
-    }
-
-    // Set current week to first week with topics or first non-completed
-    if (completedWeek > 0 && completedWeek < 4) {
+    // Set current week to first incomplete or first with topics
+    const weeks = getCampaignWeeks();
+    if (completedWeek > 0 && completedWeek < weeks.length) {
       currentWeek = completedWeek + 1;
     } else {
-      // Find first week that has topics
       const firstWeekWithTopics = Object.keys(weekTopics).map(Number).sort((a, b) => a - b)[0];
       if (firstWeekWithTopics) currentWeek = firstWeekWithTopics;
     }
 
     const topicsSection = document.getElementById('topics-section');
     if (topicsSection) topicsSection.style.display = 'block';
-    selectWeek(currentWeek);
+
+    // Render WeekNav and select current week
+    renderTopicsWeekNav();
+    renderWeekView(currentWeek);
   } catch (err) {
     console.error('loadExistingTopics error:', err);
   }
 }
 
-function selectWeek(n) {
-  const tab = document.querySelector(`.week-tab[data-week="${n}"]`);
-  if (tab && (tab.disabled || tab.classList.contains('locked'))) return;
+// Campaign weeks cache
+let _campaignWeeks = null;
 
+function getCampaignWeeks() {
+  if (_campaignWeeks) return _campaignWeeks;
+  const month = currentMonth || new Date().toISOString().slice(0, 7);
+  const now = new Date();
+  const [selYear, selMonth] = month.split('-').map(Number);
+  const isCurrentMonth = selYear === now.getFullYear() && selMonth === (now.getMonth() + 1);
+  const startDate = isCurrentMonth ? now : new Date(`${month}-01T00:00:00`);
+  _campaignWeeks = WeekNav.calculateWeeks(month, startDate);
+  return _campaignWeeks;
+}
+
+function renderTopicsWeekNav() {
+  const container = document.getElementById('week-nav-topics');
+  if (!container) return;
+  const weeks = getCampaignWeeks();
+  WeekNav.render(container, weeks, currentWeek, (weekNum, startDate, endDate, dayCount) => {
+    selectWeek(weekNum, startDate, endDate, dayCount);
+  });
+}
+
+function selectWeek(n, startDate, endDate, dayCount) {
   currentWeek = n;
 
-  // Update active tab
-  document.querySelectorAll('.week-tab').forEach(t => t.classList.remove('active'));
-  if (tab) tab.classList.add('active');
+  // Re-render nav to update active state
+  renderTopicsWeekNav();
 
   renderWeekView(n);
 }
@@ -7028,22 +7045,37 @@ function renderWeekView(n) {
   });
 
   const topics = weekTopics[n];
-  document.getElementById('generate-week-num').textContent = n;
+  const weeks = getCampaignWeeks();
+  const weekInfo = weeks.find(w => w.weekNum === n);
+  const dayCount = weekInfo ? weekInfo.dayCount : 7;
+  const weekLabel = weekInfo ? WeekNav.formatLabel(weekInfo.startDate, weekInfo.endDate) : `Week ${n}`;
+
+  const genWeekNum = document.getElementById('generate-week-num');
+  if (genWeekNum) genWeekNum.textContent = weekLabel;
 
   if (!topics || topics.length === 0) {
     // Show generate button
     generateSection.style.display = 'block';
+    // Update generate description for partial weeks
+    const genDesc = generateSection.querySelector('p');
+    if (genDesc) genDesc.textContent = `Generate ${dayCount} daily content topics for ${weekLabel}.`;
   } else {
-    // Check if all approved and content generated
+    // Check if content already generated for this week
     const allApproved = topics.every(t => t.status === 'approved');
-    const tab = document.querySelector(`.week-tab[data-week="${n}"]`);
-    const isCompleted = tab && tab.classList.contains('completed');
-    if (isCompleted) {
-      // Show topics in implemented mode (read-only) instead of hiding them
+    // Check completion by looking at contentData for this week's dates
+    const hasContent = contentData && contentData.some(c => {
+      const cWeek = weekTopics[n]?.some(t => t.id && c.product_id);
+      return cWeek;
+    });
+
+    if (hasContent && allApproved) {
       gridSection.style.display = 'block';
       renderTopicCards(topics, true);
-      completeSection.style.display = 'block';
-      document.getElementById('completed-week-num').textContent = n;
+      if (completeSection) {
+        completeSection.style.display = 'block';
+        const completedNum = document.getElementById('completed-week-num');
+        if (completedNum) completedNum.textContent = weekLabel;
+      }
     } else {
       gridSection.style.display = 'block';
       renderTopicCards(topics, false);
@@ -7205,18 +7237,28 @@ async function generateTopics(assignedProducts) {
 }
 
 async function generateTopicsFromProducts() {
-  if (!productsData || productsData.length < 7) {
-    showToast('You need at least 7 products to generate topics (1 per day). Currently: ' + (productsData ? productsData.length : 0) + '. Please add more products.', 'error');
+  // Calculate day count for current week (partial week support)
+  const weeks = getCampaignWeeks();
+  const weekInfo = weeks.find(w => w.weekNum === currentWeek);
+  const dayCount = weekInfo ? weekInfo.dayCount : 7;
+
+  if (!productsData || productsData.length < dayCount) {
+    showToast(`You need at least ${dayCount} products for this week (1 per day). Currently: ${productsData ? productsData.length : 0}.`, 'error');
     return;
   }
   if (!productOrder || productOrder.length === 0) {
     initProductOrder();
   }
-  var weekStart = (currentWeek - 1) * 7;
-  var weekEnd = weekStart + 7;
-  var weekProducts = getOrderedProducts().slice(weekStart, weekEnd);
+  // Calculate product slice for this week based on cumulative day counts
+  let weekStart = 0;
+  for (let i = 0; i < weeks.length; i++) {
+    if (weeks[i].weekNum === currentWeek) break;
+    weekStart += weeks[i].dayCount;
+  }
+  var weekProducts = getOrderedProducts().slice(weekStart, weekStart + dayCount);
   if (weekProducts.length === 0) {
-    showToast('No products available for Week ' + currentWeek, 'error');
+    const weekLabel = weekInfo ? WeekNav.formatLabel(weekInfo.startDate, weekInfo.endDate) : `Week ${currentWeek}`;
+    showToast('No products available for ' + weekLabel, 'error');
     return;
   }
   await generateTopics(weekProducts);
@@ -7744,7 +7786,7 @@ function openDayModal(dateStr) {
         '<img src="' + escapeHTML(existingImageUrl) + '" class="day-generated-image" />' +
         '<div class="media-action-buttons">' +
           '<button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(existingImageUrl) + '\', \'image-' + dateStr + '.png\')">&#8681; Download</button>' +
-          '<button class="btn btn-outline btn-sm" onclick="unapproveAndRegenerateDayImage(\'' + dateStr + '\')">Regenerate</button>' +
+          '<button class="btn btn-outline btn-sm" onclick="showRegenerationPopup(\'' + dateStr + '\')">Regenerate</button>' +
         '</div>' +
       '</div>';
     } else {
@@ -7753,7 +7795,7 @@ function openDayModal(dateStr) {
         '<div class="media-action-buttons">' +
           '<button class="btn btn-primary" onclick="approveDayImage(\'' + dateStr + '\')">Approve Image \u2713</button>' +
           '<button class="btn btn-outline" onclick="downloadMedia(\'' + escapeHTML(existingImageUrl) + '\', \'image-' + dateStr + '.png\')">&#8681; Download</button>' +
-          '<button class="btn btn-outline" onclick="generateDayImages(\'' + dateStr + '\')">Regenerate</button>' +
+          '<button class="btn btn-outline" onclick="showRegenerationPopup(\'' + dateStr + '\')">Regenerate</button>' +
         '</div>' +
       '</div>';
     }
@@ -7792,19 +7834,39 @@ function openDayModal(dateStr) {
     '</div>';
   }
 
+  // Image Theme Selector
+  let imageThemeHtml = '<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">' +
+    '<h4 style="margin:0;">Image</h4>' +
+    '<select id="image-theme-select-' + dateStr + '" class="image-theme-select" onchange="setImageTheme(\'' + dateStr + '\', this.value)"' +
+    ' style="padding:4px 8px; border-radius:8px; border:1px solid rgba(0,0,0,0.1); font-size:12px; background:rgba(255,255,255,0.7);">' +
+    '<option value="">Select theme...</option>';
+  if (window._imageThemes) {
+    window._imageThemes.forEach(t => {
+      const selected = dayItems[0]?.image_theme_id === t.id ? ' selected' : '';
+      imageThemeHtml += '<option value="' + t.id + '"' + selected + '>' + escapeHTML(t.theme_name) + '</option>';
+    });
+  }
+  imageThemeHtml += '</select></div>';
+
   html += '<div class="day-modal-media-row">' +
-    '<div class="day-modal-image-col"><h4>Day Image</h4>' + imageColHtml + '</div>' +
-    '<div class="day-modal-video-col"><h4>Day Video</h4>' + videoColHtml + '</div>' +
+    '<div class="day-modal-image-col">' + imageThemeHtml + imageColHtml + '</div>' +
+    '<div class="day-modal-video-col"><h4>Video</h4>' + videoColHtml + '</div>' +
   '</div>';
 
   // === Platform Posts Section ===
+  const canApprovePosts = isImageApproved; // Image-before-approval gate
+  const approveDisabledAttr = canApprovePosts ? '' : ' disabled title="Approve the day\'s image first"';
+  const approveDisabledStyle = canApprovePosts ? '' : ' opacity:0.4; cursor:not-allowed;';
+
   html += '<div class="day-modal-platforms">' +
     '<h4>Platform Posts</h4>' +
+    (!canApprovePosts ? '<div style="background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:8px 12px; margin-bottom:12px; font-size:12px; color:#ef4444;">Approve the day\'s image before approving posts.</div>' : '') +
     sortedItems.map(item => {
       const platformClass = (item.platform || '').toLowerCase().replace(/[^a-z]/g, '');
       const statusClass = item.status === 'approved' ? 'approved' : (item.status === 'rejected' ? 'rejected' : 'pending');
       const isScript = (platformClass === 'instagram' || platformClass === 'youtube');
       const fullText = parseContentText(item);
+      const selectedVisual = item.selected_visual || 'image';
 
       var hashtagsHtml = '';
       if (item.hashtags && item.hashtags.length > 0) {
@@ -7813,20 +7875,42 @@ function openDayModal(dateStr) {
         '</div>';
       }
 
+      // Visual content selection thumbnails (right side)
+      let visualHtml = '';
+      if (isImageApproved && existingImageUrl) {
+        const imgChecked = selectedVisual === 'image' || selectedVisual === 'both' ? ' checked' : '';
+        const vidChecked = (selectedVisual === 'video' || selectedVisual === 'both') && existingVideoUrl ? ' checked' : '';
+        visualHtml = '<div style="display:flex; gap:8px; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid rgba(0,0,0,0.06);">' +
+          '<label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:11px;">' +
+            '<input type="checkbox"' + imgChecked + ' onchange="updateVisualSelection(\'' + item.id + '\', \'image\', this.checked, \'' + dateStr + '\')" style="accent-color:#16a34a;">' +
+            '<img src="' + escapeHTML(existingImageUrl) + '" style="width:32px; height:32px; object-fit:cover; border-radius:4px;">' +
+          '</label>' +
+          (existingVideoUrl ? '<label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:11px;">' +
+            '<input type="checkbox"' + vidChecked + ' onchange="updateVisualSelection(\'' + item.id + '\', \'video\', this.checked, \'' + dateStr + '\')" style="accent-color:#7c3aed;">' +
+            '<span style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:rgba(124,58,237,0.1); border-radius:4px; font-size:14px;">&#9654;</span>' +
+          '</label>' : '') +
+        '</div>';
+      }
+
       return '<div class="content-platform-card" data-id="' + item.id + '" style="margin-bottom:0;">' +
         '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
           '<div class="platform-label ' + platformClass + '">' + escapeHTML(item.platform || '') + '</div>' +
           (isScript ? '<div class="script-badge">SCRIPT</div>' : '') +
+          '<span class="status-badge ' + statusClass + '" style="margin-left:auto;">' + statusClass + '</span>' +
         '</div>' +
-        '<div class="post-preview" style="max-height:none; overflow:visible; white-space:pre-wrap;">' + escapeHTML(fullText) + '</div>' +
+        '<div class="post-preview post-inline-editable" contenteditable="false" data-item-id="' + item.id + '" data-date="' + dateStr + '"' +
+          ' style="max-height:none; overflow:visible; white-space:pre-wrap; cursor:text; border:1px solid transparent; border-radius:8px; padding:8px; transition:border-color 0.2s;"' +
+          ' onclick="this.contentEditable=\'true\'; this.style.borderColor=\'rgba(22,163,74,0.4)\'; this.style.background=\'rgba(255,255,255,0.8)\';"' +
+          ' onblur="saveInlineEdit(this, \'' + item.id + '\', \'' + dateStr + '\')">' +
+          escapeHTML(fullText) +
+        '</div>' +
         hashtagsHtml +
-        '<div class="card-actions" style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;">' +
-          '<span class="status-badge ' + statusClass + '">' + statusClass + '</span>' +
+        visualHtml +
+        '<div class="card-actions" style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0; display:flex; gap:6px; align-items:center;">' +
           (item.status !== 'approved'
-            ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();quickApprove(\'' + item.id + '\',\'' + dateStr + '\')">Approve</button>' +
-              '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">Edit</button>' +
+            ? '<button class="btn btn-primary btn-sm"' + approveDisabledAttr + ' style="' + approveDisabledStyle + '" onclick="event.stopPropagation();quickApprove(\'' + item.id + '\',\'' + dateStr + '\')">Approve</button>' +
               '<button class="btn btn-outline btn-sm" style="color:#ef4444;" onclick="event.stopPropagation();quickReject(\'' + item.id + '\',\'' + dateStr + '\')">Reject</button>'
-            : '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showContentById(\'' + item.id + '\')">Edit</button>'
+            : '<span style="color:#16a34a; font-size:12px; font-weight:600;">&#10003; Approved</span>'
           ) +
         '</div>' +
       '</div>';
@@ -7839,7 +7923,162 @@ function openDayModal(dateStr) {
 }
 window.openDayModal = openDayModal;
 
-async function generateDayImages(dateStr) {
+// ============================================================
+// INLINE EDITING: Save post text on blur
+// ============================================================
+async function saveInlineEdit(el, itemId, dateStr) {
+  el.contentEditable = 'false';
+  el.style.borderColor = 'transparent';
+  el.style.background = 'transparent';
+  const newText = el.innerText.trim();
+  if (!newText || !itemId) return;
+  try {
+    await window.supabase.from('content_items')
+      .update({ content: newText, updated_at: new Date().toISOString() })
+      .eq('id', itemId);
+    // Update local data
+    if (_contentByDate[dateStr]) {
+      const item = _contentByDate[dateStr].find(i => i.id === itemId);
+      if (item) item.content = newText;
+    }
+    showSavedIndicator();
+  } catch (err) {
+    showToast('Failed to save edit: ' + err.message, 'error');
+  }
+}
+window.saveInlineEdit = saveInlineEdit;
+
+// ============================================================
+// VISUAL CONTENT SELECTION: image/video/both per post
+// ============================================================
+async function updateVisualSelection(itemId, mediaType, checked, dateStr) {
+  try {
+    // Determine new selected_visual value
+    const item = (_contentByDate[dateStr] || []).find(i => i.id === itemId);
+    let current = item?.selected_visual || 'image';
+    if (mediaType === 'image') {
+      current = checked ? (current === 'video' ? 'both' : 'image') : 'video';
+    } else {
+      current = checked ? (current === 'image' ? 'both' : 'video') : 'image';
+    }
+    await window.supabase.from('content_items')
+      .update({ selected_visual: current, updated_at: new Date().toISOString() })
+      .eq('id', itemId);
+    if (item) item.selected_visual = current;
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+}
+window.updateVisualSelection = updateVisualSelection;
+
+// ============================================================
+// IMAGE THEME: Set theme for a day's content items
+// ============================================================
+async function setImageTheme(dateStr, themeId) {
+  if (!themeId) return;
+  try {
+    const items = _contentByDate[dateStr] || [];
+    for (const item of items) {
+      await window.supabase.from('content_items')
+        .update({ image_theme_id: themeId, updated_at: new Date().toISOString() })
+        .eq('id', item.id);
+      item.image_theme_id = themeId;
+    }
+    showToast('Image theme set', 'success');
+  } catch (err) {
+    showToast('Error setting theme: ' + err.message, 'error');
+  }
+}
+window.setImageTheme = setImageTheme;
+
+// Load image themes from Supabase on init
+window._imageThemes = [];
+async function loadImageThemes() {
+  try {
+    const { data } = await window.supabase
+      .from('image_themes')
+      .select('*')
+      .eq('is_active', true)
+      .order('theme_name');
+    window._imageThemes = data || [];
+  } catch (err) {
+    console.warn('Failed to load image themes:', err);
+  }
+}
+
+// ============================================================
+// REGENERATION POPUP: Shows theme + direction before regenerating
+// ============================================================
+function showRegenerationPopup(dateStr) {
+  const existing = document.getElementById('regen-popup-overlay');
+  if (existing) existing.remove();
+
+  const currentThemeId = (_contentByDate[dateStr] || [])[0]?.image_theme_id || '';
+  let themeOptions = '<option value="">Default</option>';
+  if (window._imageThemes) {
+    window._imageThemes.forEach(t => {
+      themeOptions += '<option value="' + t.id + '"' + (t.id === currentThemeId ? ' selected' : '') + '>' + t.theme_name + '</option>';
+    });
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'regen-popup-overlay';
+  overlay.style.cssText = 'position:fixed; inset:0; z-index:10001; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);';
+  overlay.innerHTML = `
+    <div style="background:rgba(255,255,255,0.95); backdrop-filter:blur(20px); border-radius:20px; padding:28px; max-width:440px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+      <h3 style="margin:0 0 8px; font-size:16px;">Regenerate Image</h3>
+      <p style="margin:0 0 20px; font-size:13px; color:var(--text-secondary);">A new image will be generated from your original product photo.</p>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Image Theme</label>
+        <select id="regen-theme-select" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.1); font-size:13px;">${themeOptions}</select>
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">Image Direction (optional)</label>
+        <input id="regen-direction" type="text" placeholder="e.g., dramatic lighting, outdoor scene..." style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.1); font-size:13px; box-sizing:border-box;">
+      </div>
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button class="btn" onclick="document.getElementById('regen-popup-overlay').remove()" style="padding:8px 20px; border-radius:10px; background:rgba(226,232,240,0.5); color:var(--text-secondary);">Cancel</button>
+        <button class="btn btn-primary" onclick="executeRegeneration('${dateStr}')" style="padding:8px 20px; border-radius:10px;">Generate Image</button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+window.showRegenerationPopup = showRegenerationPopup;
+
+async function executeRegeneration(dateStr) {
+  const themeId = document.getElementById('regen-theme-select')?.value;
+  const direction = document.getElementById('regen-direction')?.value || '';
+  document.getElementById('regen-popup-overlay')?.remove();
+
+  // Set theme if selected
+  if (themeId) await setImageTheme(dateStr, themeId);
+
+  // TODO: Pass direction text to image generation pipeline
+  // For now, store direction as a hint and trigger standard generation
+  generateDayImages(dateStr, direction);
+}
+window.executeRegeneration = executeRegeneration;
+
+// ============================================================
+// CONTENT REVIEW: WeekNav rendering
+// ============================================================
+function renderContentWeekNav() {
+  const container = document.getElementById('week-nav-content');
+  if (!container) return;
+  const weeks = getCampaignWeeks();
+  if (!weeks || weeks.length === 0) return;
+  const contentWeek = window._contentReviewWeek || 1;
+  WeekNav.render(container, weeks, contentWeek, (weekNum) => {
+    window._contentReviewWeek = weekNum;
+    renderContentWeekNav();
+    renderContentReview();
+  });
+}
+window.renderContentWeekNav = renderContentWeekNav;
+
+async function generateDayImages(dateStr, directionHint) {
   dayImageApproved[dateStr] = false;
   generatingImageDates.add(dateStr);
   updateDayCardSpinner(dateStr, true);
