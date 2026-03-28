@@ -8153,6 +8153,13 @@ async function generateDayImages(dateStr, directionHint) {
       }
     }
 
+    // Look up image theme prompt if set
+    let imageThemePrompt = '';
+    if (firstItem.image_theme_id && window._imageThemes) {
+      const theme = window._imageThemes.find(t => t.id === firstItem.image_theme_id);
+      if (theme) imageThemePrompt = theme.theme_prompt || '';
+    }
+
     // Fire-and-forget — workflow generates image and saves to Supabase
     const response = await fetch(N8N_BASE_URL + '/eluxr-tools-image', {
       method: 'POST',
@@ -8162,7 +8169,9 @@ async function generateDayImages(dateStr, directionHint) {
         productImageUrl: productImageUrl,
         content_id: firstItem.id,
         product_name: productName,
-        product_category: productCategory
+        product_category: productCategory,
+        image_theme_prompt: imageThemePrompt,
+        direction_hint: directionHint || ''
       })
     });
 
@@ -8519,6 +8528,13 @@ async function generateImageForItem(itemId, reopenDate) {
     const productImgs = getProductImagesForDate(item.date);
     const productImageUrl = productImgs.length > 0 ? productImgs[0] : '';
 
+    // Look up image theme if set
+    let imageThemePrompt = '';
+    if (item.image_theme_id && window._imageThemes) {
+      const theme = window._imageThemes.find(t => t.id === item.image_theme_id);
+      if (theme) imageThemePrompt = theme.theme_prompt || '';
+    }
+
     // Fire and forget — workflow saves image_url to Supabase when done
     const response = await fetch(N8N_BASE_URL + '/eluxr-tools-image', {
       method: 'POST',
@@ -8526,7 +8542,8 @@ async function generateImageForItem(itemId, reopenDate) {
       body: JSON.stringify({
         topic: topic,
         productImageUrl: productImageUrl,
-        content_id: itemId
+        content_id: itemId,
+        image_theme_prompt: imageThemePrompt
       })
     });
 
