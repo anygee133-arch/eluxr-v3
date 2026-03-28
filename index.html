@@ -2933,7 +2933,7 @@ details .details-content { padding: 20px; }
     </div>
 
     <div id="products-section-empty" class="card" style="text-align:center; padding:40px;">
-      <p style="color:var(--text-secondary); margin-bottom:16px;">Complete Step 1 to discover your products.</p>
+      <p style="color:var(--text-secondary); margin-bottom:16px;">Complete Section 1 to discover your products.</p>
     </div>
   </div>
 </section>
@@ -3214,16 +3214,16 @@ details .details-content { padding: 20px; }
 
     <!-- Calendar and week-view removed — schedule + stats are the primary Step 5 view -->
 
-    <!-- Reset Button -->
-    <div style="text-align:center; padding:40px 20px 20px; border-top:1px solid rgba(226,232,240,0.3); margin-top:40px;">
-      <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px;">Want to start over with a new business or fresh data?</p>
-      <button class="btn" onclick="resetAllData()" style="background:transparent; color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:13px; padding:8px 20px;">
-        Reset &amp; Start Fresh
-      </button>
-    </div>
-
   </div>
 </section>
+
+<!-- Reset Button (outside sections so it's always accessible) -->
+<div style="text-align:center; padding:40px 20px 60px; max-width:900px; margin:0 auto;">
+  <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px;">Want to start over with a new business or fresh data?</p>
+  <button class="btn" onclick="resetAllData()" style="background:transparent; color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:13px; padding:8px 20px;">
+    Reset &amp; Start Fresh
+  </button>
+</div>
 
 <!-- ===== FIXED STATS BAR (Bottom) ===== -->
 <div class="stats-bar-fixed" id="stats-bar-fixed">
@@ -4425,18 +4425,36 @@ document.addEventListener('DOMContentLoaded', () => {
   if (monthInput) monthInput.value = currentMonthValue;
   currentMonth = currentMonthValue || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  // Initialize step dots (all disabled except first)
+  // Initialize: lock all sections except first, disable dots
   document.querySelectorAll('.section-dot').forEach((dot, i) => {
     if (i > 0) dot.classList.add('disabled');
   });
+  ['section-profile', 'section-products', 'section-campaign', 'section-topics', 'section-content', 'section-calendar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('locked');
+  });
 
-  // Try to load any existing content — if content exists, unlock appropriate steps
+  // Try to load any existing content — if content exists, unlock appropriate sections
   fetchAndDisplayCalendar(true).then(calData => {
     if (calData && calData.all && calData.all.length > 0) {
-      // User has content — unlock all steps
+      // User has content — unlock all sections
       ['section-profile', 'section-products', 'section-campaign', 'section-topics', 'section-content', 'section-calendar'].forEach(id => unlockSection(id));
       renderContentReview();
       loadScheduleThemes();
+    } else {
+      // Check if ICP/products exist (partial progress)
+      window.supabase.from('icps').select('id').limit(1).then(({ data }) => {
+        if (data && data.length > 0) {
+          unlockSection('section-profile');
+          unlockSection('section-products');
+        }
+      });
+      window.supabase.from('products').select('id').eq('is_active', true).limit(1).then(({ data }) => {
+        if (data && data.length > 0) {
+          unlockSection('section-products');
+          unlockSection('section-campaign');
+        }
+      });
     }
   }).catch(() => {});
 
