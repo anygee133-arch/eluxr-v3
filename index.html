@@ -3046,6 +3046,14 @@ details .details-content { padding: 20px; }
           </button>
         </div>
       </form>
+
+      <!-- Stop Campaign (only visible when campaign is active) -->
+      <div id="stop-campaign-container" style="display:none; text-align:center; margin-top:24px; padding-top:20px; border-top:1px solid rgba(0,0,0,0.06);">
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">Campaign is active and running.</p>
+        <button class="btn" onclick="stopCampaign()" style="background:transparent; color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-size:13px; padding:8px 20px;">
+          Stop Campaign
+        </button>
+      </div>
     </div>
   </div>
 </section>
@@ -8975,6 +8983,36 @@ async function handleCampaignSubmit(e) {
   }
 }
 window.handleCampaignSubmit = handleCampaignSubmit;
+
+async function stopCampaign() {
+  const confirmed = await showConfirmDialog({
+    title: 'Stop Campaign?',
+    message: 'No new topics or content will be generated. Existing content remains viewable and any scheduled posts will still publish.',
+    confirmText: 'Stop Campaign',
+    cancelText: 'Keep Running',
+    destructive: true
+  });
+  if (!confirmed) return;
+
+  try {
+    if (!window.currentCampaignId) { showToast('No active campaign', 'error'); return; }
+    await window.supabase.from('campaigns')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', window.currentCampaignId);
+    showToast('Campaign stopped. Existing content is preserved.', 'success');
+    // Update UI
+    const stopContainer = document.getElementById('stop-campaign-container');
+    if (stopContainer) {
+      stopContainer.innerHTML = '<p style="font-size:13px; color:var(--text-muted);">Campaign stopped.</p>';
+    }
+    // Disable generate buttons
+    const genBtn = document.getElementById('btn-generate-topics');
+    if (genBtn) { genBtn.disabled = true; genBtn.textContent = 'Campaign Stopped'; }
+  } catch (err) {
+    showToast('Error stopping campaign: ' + err.message, 'error');
+  }
+}
+window.stopCampaign = stopCampaign;
 
 async function handleBrandDocUpload(input) {
   const file = input.files[0];
