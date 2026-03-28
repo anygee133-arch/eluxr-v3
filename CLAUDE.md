@@ -6,7 +6,7 @@ Multi-tenant SaaS social media content platform. Businesses enter their URL, get
 
 ## Tech Stack
 
-- **Frontend:** Vanilla HTML/CSS/JS — single `index.html` (~6600 lines), no framework
+- **Frontend:** Vanilla HTML/CSS/JS — single `index.html` (~9,150 lines), no framework
 - **Backend:** n8n Cloud (flowbound.app.n8n.cloud) — 16 workflows + 1 orchestrator
 - **Database:** Supabase (PostgreSQL + Auth + Realtime + RLS)
 - **Hosting:** Vercel (static site)
@@ -39,13 +39,19 @@ tests/              — Verification docs
 
 ## Current State (March 2026)
 
-- **Content pipeline fully working end-to-end**
-- All 16 n8n workflows operational
-- Single-page 5-step app flow: Login → Setup → Products/ICP → Weekly Topics → Content Review → Calendar
+- **v3 Revision Spec M1 in progress** — restructured from 5 steps to 7 sections
+- 7-section app flow: Login → Business Profile → ICP Output → Products → Campaign Setup → Weekly Topics → Content Review → Posting Calendar
+- Business analysis decoupled from campaign planning (Section 1 vs Section 4)
+- Campaign Theme (single for all weeks) replaces per-week storytelling theme
+- Brand Voice + Document Upload in Section 4 (Campaign Setup)
+- Image themes (Product on Model, Hero Shot, Nature) in Section 6
+- Image-before-approval gate, inline post editing, regeneration popup
+- Date-based week navigation (WeekNav) with partial week support across Sections 5-7
+- Fixed stats bar at bottom with clickable navigation
+- Zernio integration planned for Milestone 2 (DB tables created, API calls deferred)
+- New DB tables: image_themes, brand_documents, platform_connections
 - ICP generation: Jina scraping → Perplexity research ×3 → Claude synthesis → Supabase
-- Content generation: 7 topics/week × 4 platforms/day = 28 content items per week
-- Product rotation: workflow 15 excludes products used in prior weeks
-- Pending: Vercel production deployment, full E2E browser testing
+- Content generation: variable topics/week × selected platforms = dynamic content items per week
 
 ## Coding Conventions
 
