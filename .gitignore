@@ -8,6 +8,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Claude Code local settings (personal hooks, not team config)
+.claude/settings.local.json
+
 # Supabase local temp
 supabase/.temp/
 .vercel

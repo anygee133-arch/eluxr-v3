@@ -1371,14 +1371,7 @@ details .details-content { padding: 20px; }
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
 }
-.products-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 12px;
-  margin-top: 8px;
-  border-top: 1px solid rgba(241, 245, 249, 0.5);
-}
+/* products-actions removed — Add Product always visible, no Save button */
 .btn-add-product {
   display: inline-flex;
   align-items: center;
@@ -1398,26 +1391,7 @@ details .details-content { padding: 20px; }
   background: rgba(248, 250, 253, 0.5);
   border-color: rgba(0, 0, 0, 0.3);
 }
-.btn-save-products {
-  display: none;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  background: var(--green);
-  color: #fff;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.25s var(--transition);
-}
-.btn-save-products:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-.btn-save-products.visible {
-  display: inline-flex;
-}
+/* Save button removed — products auto-save */
 .products-empty {
   text-align: center;
   padding: 24px 16px;
@@ -1877,6 +1851,29 @@ details .details-content { padding: 20px; }
   box-shadow: none;
 }
 .brand-voice-chip input[type="checkbox"] {
+  width: 14px; height: 14px; accent-color: #000;
+}
+.platform-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(226, 232, 240, 0.5);
+  font-size: 13px; font-weight: 500; color: var(--text-secondary);
+  cursor: pointer; transition: all 0.25s var(--transition);
+  backdrop-filter: blur(8px);
+}
+.platform-chip:hover {
+  background: rgba(248, 250, 253, 0.5);
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #0f172a;
+}
+.platform-chip:has(input:checked) {
+  background: rgba(248, 250, 253, 0.8);
+  border-color: #000;
+  color: #0f172a;
+  font-weight: 600;
+}
+.platform-chip input[type="checkbox"] {
   width: 14px; height: 14px; accent-color: #000;
 }
 
@@ -2918,17 +2915,16 @@ details .details-content { padding: 20px; }
       </div>
       <div class="products-list" id="products-list">
         <div class="products-empty" id="products-empty">No products found yet. Run the analysis to discover your products.</div>
-        <div class="products-actions" id="products-actions" style="display: none;">
+        <div style="padding:8px 0;">
           <button type="button" class="btn-add-product" onclick="addCustomProduct()">+ Add Custom Product</button>
-          <button type="button" class="btn-save-products" id="btn-save-products" onclick="saveProductChanges()">Save Changes</button>
         </div>
         <div id="products-items"></div>
       </div>
     </div>
 
-    <div id="generate-topics-btn-container" class="nav-buttons" style="margin-top:24px; display:none;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-week-topics" onclick="generateTopicsFromProducts()">
-        Generate Week 1 Topics
+    <div id="products-continue-btn" class="nav-buttons" style="margin-top:24px; display:none;">
+      <button class="btn btn-primary btn-lg" onclick="unlockSection('section-campaign'); smoothTransitionToSection('section-campaign', 800);">
+        Continue to Campaign Setup &#8594;
       </button>
     </div>
 
@@ -3070,15 +3066,7 @@ details .details-content { padding: 20px; }
       <!-- Week Navigation (date-based, rendered by WeekNav component) -->
       <div id="week-nav-topics"></div>
 
-      <!-- Generate Topics Button (shown when week has no topics) -->
-      <div id="topics-generate-section" style="padding:40px 20px;">
-        <p style="color:var(--text-secondary); margin-bottom:16px; text-align:center;">Generate 7 daily content topics for this week.</p>
-        <div class="nav-buttons" style="border-top:none; margin-top:0; padding-top:0;">
-          <button class="btn btn-primary" id="btn-generate-topics" onclick="generateTopicsFromProducts()">
-            Generate Topics for Week <span id="generate-week-num">1</span>
-          </button>
-        </div>
-      </div>
+      <!-- Generate Topics button removed — only in Section 4 -->
 
       <!-- Topics Loading -->
       <div id="topics-loading" style="display:none; text-align:center; padding:40px;">
@@ -4058,18 +4046,19 @@ async function loadProducts() {
 function renderProductsCard(products) {
   const itemsContainer = document.getElementById('products-items');
   const emptyEl = document.getElementById('products-empty');
-  const actionsEl = document.getElementById('products-actions');
+  const continueBtn = document.getElementById('products-continue-btn');
   if (!itemsContainer) return;
 
   if (!products || products.length === 0) {
     if (emptyEl) emptyEl.style.display = 'block';
-    if (actionsEl) actionsEl.style.display = 'none';
+    if (continueBtn) continueBtn.style.display = 'none';
     itemsContainer.innerHTML = '';
     return;
   }
 
   if (emptyEl) emptyEl.style.display = 'none';
-  if (actionsEl) actionsEl.style.display = 'flex';
+  // Show "Continue to Campaign Setup" button when products exist
+  if (continueBtn) continueBtn.style.display = 'flex';
 
   itemsContainer.innerHTML = products.map((p, idx) => {
     const nameVal = escapeHTML(p.name || '');
@@ -4242,22 +4231,71 @@ function addCustomProduct() {
     </div>
     <div class="product-info" style="flex:1;">
       <div class="product-name">
-        <input type="text" value="" placeholder="Product name / description..." onchange="markProductsModified()" autofocus style="width:100%;" />
+        <input type="text" value="" placeholder="Product name / description..." onblur="autoSaveNewProduct(this)" autofocus style="width:100%;" />
       </div>
       <div style="margin-top:6px;">
-        <input type="text" class="product-url-input" placeholder="Product URL (optional)" style="width:100%; font-size:12px; padding:4px 8px; border-radius:6px; border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.5);" />
+        <input type="text" class="product-url-input" placeholder="Product URL (optional)" onblur="autoSaveNewProduct(this)" style="width:100%; font-size:12px; padding:4px 8px; border-radius:6px; border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.5);" />
       </div>
     </div>
     <button type="button" class="product-remove" onclick="removeProduct(this)" title="Remove product">&times;</button>
   </div>`;
   // Insert at TOP (position 0)
   itemsContainer.insertAdjacentHTML('afterbegin', html);
-  markProductsModified();
   const newInput = itemsContainer.querySelector('[data-product-id="' + newId + '"] .product-name input');
   if (newInput) newInput.focus();
   const card = document.getElementById('products-card-container');
   if (card && !card.classList.contains('expanded')) card.classList.add('expanded');
 }
+
+// Auto-save new product to Supabase when user fills in name (on blur)
+async function autoSaveNewProduct(inputEl) {
+  const item = inputEl.closest('.product-item');
+  if (!item || item.getAttribute('data-new') !== 'true') return;
+  const nameInput = item.querySelector('.product-name input');
+  const name = nameInput ? nameInput.value.trim() : '';
+  if (!name) return; // Don't save empty products
+  // Check if already saved (data-new removed)
+  if (item.getAttribute('data-saved') === 'true') {
+    // Update existing product
+    const productId = item.getAttribute('data-product-id');
+    const urlInput = item.querySelector('.product-url-input');
+    const productUrl = urlInput ? urlInput.value.trim() : '';
+    await window.supabase.from('products').update({
+      name: name,
+      product_url: productUrl || null,
+      updated_at: new Date().toISOString()
+    }).eq('id', productId);
+    showToast('Product updated', 'success');
+    return;
+  }
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    const urlInput = item.querySelector('.product-url-input');
+    const productUrl = urlInput ? urlInput.value.trim() : '';
+    const { data, error } = await window.supabase.from('products').insert({
+      user_id: user.id,
+      name: name,
+      category: 'Custom',
+      product_url: productUrl || null,
+      sort_order: 0,
+      is_active: true
+    }).select('id').single();
+    if (error) throw error;
+    // Mark as saved and update product ID
+    item.setAttribute('data-saved', 'true');
+    item.setAttribute('data-new', 'false');
+    item.setAttribute('data-product-id', data.id);
+    showToast('Product saved', 'success');
+    // Update product count
+    const countEl = document.getElementById('product-count');
+    if (countEl) countEl.textContent = parseInt(countEl.textContent || '0') + 1;
+  } catch (err) {
+    console.error('Auto-save product error:', err);
+    showToast('Failed to save product: ' + err.message, 'error');
+  }
+}
+window.autoSaveNewProduct = autoSaveNewProduct;
 
 async function handleProductImageUpload(input, productId) {
   const file = input.files[0];
@@ -5173,16 +5211,12 @@ function renderProgress(run) {
     // Re-enable generate button
     const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
     if (generateBtn) generateBtn.disabled = false;
-    // Unlock up to campaign setup (not topics — user must go through Section 4 first)
+    // Sequential unlock: profile (ICP ready) and products (scraped)
+    // Campaign (Section 4) stays locked until user reviews products
     unlockSection('section-profile');
     unlockSection('section-products');
-    unlockSection('section-campaign');
-    const topicsSection = document.getElementById('topics-section');
-    if (topicsSection) topicsSection.style.display = 'block';
-    // Load any existing topics
-    loadExistingTopics();
-    // Scroll to Step 3 (topics) after a brief delay so user sees products first
-    setTimeout(() => smoothTransitionToSection('section-topics', 1000), 2000);
+    // Scroll to Section 2 (ICP output) — user reviews ICP, then products, then campaign
+    setTimeout(() => smoothTransitionToSection('section-profile', 800), 500);
   } else if (run.status === 'failed') {
     cleanupProgress();
     document.getElementById('pipeline-progress-card').style.display = 'none';
@@ -5456,12 +5490,29 @@ function renderScheduleGrid(themes, approvalData) {
 
     if (hasContent || theme) hasAnyContent = true;
 
+    // Get all content items for this day
+    const allDayItems = [...approved, ...pending];
+
     let statusClass = 'not-generated';
     let statusText = 'No Content';
 
-    if (approved.length > 0) {
+    // Check for scheduled/posted/failed statuses
+    const scheduled = allDayItems.filter(i => i.status === 'scheduled');
+    const posted = allDayItems.filter(i => i.status === 'posted');
+    const failed = allDayItems.filter(i => i.status === 'failed');
+
+    if (posted.length > 0) {
+      statusClass = 'approved';
+      statusText = `${posted.length} Posted`;
+    } else if (scheduled.length > 0) {
+      statusClass = 'approved';
+      statusText = `${scheduled.length} Scheduled`;
+    } else if (approved.length > 0) {
       statusClass = 'approved';
       statusText = `${approved.length} Approved`;
+    } else if (failed.length > 0) {
+      statusClass = 'pending';
+      statusText = `${failed.length} Failed`;
     } else if (pending.length > 0) {
       statusClass = 'pending';
       statusText = `${pending.length} Pending`;
@@ -5471,9 +5522,6 @@ function renderScheduleGrid(themes, approvalData) {
     }
 
     const cardClass = approved.length > 0 ? 'generated' : (pending.length > 0 ? 'pending' : '');
-
-    // Get all content items for this day
-    const allDayItems = [...approved, ...pending];
     const displayItem = allDayItems[0] || theme || {};
     const displayTheme = displayItem.theme || displayItem.post_text?.substring(0, 60) || 'No content';
 
@@ -7192,7 +7240,8 @@ async function generateTopics(assignedProducts) {
   }
 
   // Show loading
-  document.getElementById('topics-generate-section').style.display = 'none';
+  const genSection = document.getElementById('topics-generate-section');
+  if (genSection) genSection.style.display = 'none';
   document.getElementById('topics-loading').style.display = 'block';
 
   try {
@@ -7201,9 +7250,17 @@ async function generateTopics(assignedProducts) {
       `Day ${day} (${f.day}): ${f.theme} — ${f.tagline}`
     ).join('\n');
 
+    // Get day count for current week (partial week support)
+    const weeks = getCampaignWeeks();
+    const weekInfo = weeks ? weeks.find(w => w.weekNum === currentWeek) : null;
+    const dayCount = weekInfo ? weekInfo.dayCount : 7;
+
     var bodyObj = {
       campaign_id: campaignId,
       week_number: currentWeek,
+      day_count: dayCount,
+      start_date: weekInfo ? weekInfo.startDate.toISOString().slice(0, 10) : '',
+      end_date: weekInfo ? weekInfo.endDate.toISOString().slice(0, 10) : '',
       storytelling_framework: frameworkContext,
       content_language: getBusinessContext().content_language || 'English'
     };
