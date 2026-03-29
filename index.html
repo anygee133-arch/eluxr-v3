@@ -3571,14 +3571,9 @@ details .details-content { padding: 20px; }
             // Load content calendar and review after auth confirmed
             // Always load Step 5 schedule after auth
             if (window.loadScheduleThemes) window.loadScheduleThemes();
-            if (window.fetchAndDisplayCalendar) {
-              window.fetchAndDisplayCalendar(true).then(calData => {
-                if (calData && calData.all && calData.all.length > 0) {
-                  ['section-profile', 'section-products', 'section-campaign', 'section-topics', 'section-content', 'section-calendar'].forEach(id => window.unlockSection && window.unlockSection(id));
-                  if (window.renderContentReview) window.renderContentReview();
-                  if (window.updateStats) window.updateStats();
-                }
-              }).catch(() => {});
+            // Progressive unlock based on actual data state (not bulk unlock)
+            if (window.progressiveUnlockFromState) {
+              window.progressiveUnlockFromState();
             }
             // Check for active pipeline run after login confirmed
             if (window.checkActivePipeline) {
@@ -3898,8 +3893,7 @@ async function loadICP() {
     if (icpContent) icpContent.style.display = 'block';
     renderICPCard(icp);
     icpLoaded = true;
-    // Unlock products step when ICP exists
-    if (window.unlockSection) unlockSection('section-products');
+    // Don't auto-unlock here — progressive unlock handled by progressiveUnlockFromState
   } catch (err) {
     console.error('loadICP error:', err);
   }
@@ -4050,10 +4044,9 @@ async function loadProducts() {
     if (productsData.length > 0) {
       container.style.display = 'block';
       renderProductsCard(productsData);
-      // Hide empty state, unlock topics step
+      // Hide empty state — don't auto-unlock, progressive unlock handles it
       const emptyState = document.getElementById('products-section-empty');
       if (emptyState) emptyState.style.display = 'none';
-      if (window.unlockSection) unlockSection('section-topics');
     } else {
       container.style.display = 'none';
     }
@@ -4435,28 +4428,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Try to load any existing content — if content exists, unlock appropriate sections
-  fetchAndDisplayCalendar(true).then(calData => {
-    if (calData && calData.all && calData.all.length > 0) {
-      // User has content — unlock all sections
-      ['section-profile', 'section-products', 'section-campaign', 'section-topics', 'section-content', 'section-calendar'].forEach(id => unlockSection(id));
-      renderContentReview();
-      loadScheduleThemes();
-    } else {
-      // Check if ICP/products exist (partial progress)
-      window.supabase.from('icps').select('id').limit(1).then(({ data }) => {
-        if (data && data.length > 0) {
-          unlockSection('section-profile');
-          unlockSection('section-products');
-        }
-      });
-      window.supabase.from('products').select('id').eq('is_active', true).limit(1).then(({ data }) => {
-        if (data && data.length > 0) {
-          unlockSection('section-products');
-          unlockSection('section-campaign');
-        }
-      });
-    }
-  }).catch(() => {});
+  // Progressive unlock handled by progressiveUnlockFromState (called from auth handler)
+  // Don't duplicate unlock logic here
 
   document.getElementById('business-form').addEventListener('submit', handleFormSubmit);
 });
@@ -5188,12 +5161,14 @@ function renderProgress(run) {
     cleanupProgress();
     // Hide progress card
     document.getElementById('pipeline-progress-card').style.display = 'none';
-    showToast('Business analysis complete! Now review your products and generate topics.', 'success');
+    showToast('Business analysis complete! Review your products, then set up your campaign.', 'success');
     // Re-enable generate button
     const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
     if (generateBtn) generateBtn.disabled = false;
-    // Unlock topics step and show topics section
-    unlockSection('section-topics');
+    // Unlock up to campaign setup (not topics — user must go through Section 4 first)
+    unlockSection('section-profile');
+    unlockSection('section-products');
+    unlockSection('section-campaign');
     const topicsSection = document.getElementById('topics-section');
     if (topicsSection) topicsSection.style.display = 'block';
     // Load any existing topics
@@ -7512,9 +7487,8 @@ async function lockInAndGenerate() {
       }
 
       if (window.fetchAndDisplayCalendar) fetchAndDisplayCalendar(true);
-      // Unlock content review and calendar steps
+      // Unlock content review — calendar unlocks when posts are approved
       unlockSection('section-content');
-      unlockSection('section-calendar');
       startCalendarAutoRefresh();
       loadScheduleThemes();
       // Pre-render content review in background (no scroll)
@@ -8366,6 +8340,8 @@ async function quickApprove(itemId, reopenDate) {
     await renderContentReview();
     fetchAndDisplayCalendar();
     updateStats();
+    // Unlock calendar once first post is approved
+    unlockSection('section-calendar');
     if (reopenDate) openDayModal(reopenDate);
   } catch (e) {
     showToast('Error approving: ' + e.message, 'error');
@@ -8881,6 +8857,59 @@ window.WeekNav = {
 // SHARED COMPONENT: Confirmation Dialog (Glassmorphic)
 // Replaces raw confirm() calls with styled promise-based dialog
 // ============================================================
+// ============================================================
+// PROGRESSIVE UNLOCK: Checks actual DB state and unlocks sections
+// up to the appropriate point. Called on login/page load.
+// ============================================================
+window.progressiveUnlockFromState = async function() {
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+
+    // Check ICP exists → unlock profile + products
+    const { data: icps } = await window.supabase.from('icps').select('id').eq('user_id', user.id).limit(1);
+    const hasICP = icps && icps.length > 0;
+    if (!hasICP) return; // Nothing to unlock
+
+    unlockSection('section-profile');
+    unlockSection('section-products');
+
+    // Check products exist (7+) → unlock campaign
+    const { data: products } = await window.supabase.from('products').select('id').eq('user_id', user.id).eq('is_active', true);
+    const hasProducts = products && products.length >= 7;
+    if (!hasProducts) return;
+
+    unlockSection('section-campaign');
+
+    // Check campaign exists → unlock topics
+    const { data: campaigns } = await window.supabase.from('campaigns').select('id').eq('user_id', user.id).limit(1);
+    const hasCampaign = campaigns && campaigns.length > 0;
+    if (!hasCampaign) return;
+
+    window.currentCampaignId = campaigns[0].id;
+    unlockSection('section-topics');
+    if (window.loadExistingTopics) loadExistingTopics();
+
+    // Check content exists → unlock content review
+    const { data: content } = await window.supabase.from('content_items').select('id, status').eq('user_id', user.id).limit(1);
+    const hasContent = content && content.length > 0;
+    if (!hasContent) return;
+
+    unlockSection('section-content');
+    if (window.renderContentReview) renderContentReview();
+    if (window.updateStats) updateStats();
+
+    // Check approved content exists → unlock calendar
+    const { data: approved } = await window.supabase.from('content_items').select('id').eq('user_id', user.id).eq('status', 'approved').limit(1);
+    if (approved && approved.length > 0) {
+      unlockSection('section-calendar');
+      if (window.loadScheduleThemes) loadScheduleThemes();
+    }
+  } catch (err) {
+    console.error('progressiveUnlockFromState error:', err);
+  }
+};
+
 window.showConfirmDialog = function({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', destructive = false }) {
   return new Promise((resolve) => {
     // Remove any existing dialog
