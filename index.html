@@ -8874,6 +8874,10 @@ window.progressiveUnlockFromState = async function() {
     const { data: { user } } = await window.supabase.auth.getUser();
     if (!user) return;
 
+    // Hide stale progress card if pipeline already completed
+    const progressCard = document.getElementById('pipeline-progress-card');
+    if (progressCard) progressCard.style.display = 'none';
+
     // Check ICP exists → unlock profile + products
     const { data: icps } = await window.supabase.from('icps').select('id').eq('user_id', user.id).limit(1);
     const hasICP = icps && icps.length > 0;
