@@ -4575,10 +4575,15 @@ async function handleFormSubmit(e) {
     notes: formData.notes
   };
 
-  // Re-analysis check: if ICP/products/campaign data exists, confirm before clearing
-  const hasExistingData = document.getElementById('icp-content')?.style.display === 'block'
-    || (productsData && productsData.length > 0)
-    || window.currentCampaignId;
+  // Re-analysis check: only show dialog if real data exists in Supabase
+  let hasExistingData = false;
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (user) {
+      const { data: icps } = await window.supabase.from('icps').select('id').eq('user_id', user.id).limit(1);
+      hasExistingData = (icps && icps.length > 0) || (productsData && productsData.length > 0) || !!window.currentCampaignId;
+    }
+  } catch(e) { /* ignore */ }
 
   if (hasExistingData) {
     const confirmed = await showConfirmDialog({
@@ -4636,12 +4641,11 @@ async function handleFormSubmit(e) {
     console.error('Error saving profile:', err);
   }
 
-  // Unlock Section 2 (profile) + Section 3 (products), show pipeline progress
+  // Unlock only Section 2 (profile) — stay here while ICP loads
+  // Section 3 (products) unlocks when pipeline completes
   unlockSection('section-profile');
-  unlockSection('section-products');
-  document.getElementById('pipeline-progress-card').style.display = 'block';
 
-  // Show ICP card with loading spinner
+  // Show ICP card with loading spinner in Section 2
   const icpCard = document.getElementById('icp-card');
   const icpSkeleton = document.getElementById('icp-skeleton');
   const icpContent = document.getElementById('icp-content');
@@ -4651,7 +4655,11 @@ async function handleFormSubmit(e) {
     if (icpContent) icpContent.style.display = 'none';
   }
 
-  smoothTransitionToSection('section-profile', 1500);
+  // Show pipeline progress in Section 3 but don't unlock it yet
+  document.getElementById('pipeline-progress-card').style.display = 'block';
+
+  // Scroll to Section 2 where the ICP skeleton is loading
+  smoothTransitionToSection('section-profile', 800);
 
   try {
     await generateContent(formData);
