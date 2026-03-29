@@ -3560,13 +3560,16 @@ details .details-content { padding: 20px; }
             // Always load Step 5 schedule after auth
             if (window.loadScheduleThemes) window.loadScheduleThemes();
             // Progressive unlock based on actual data state (not bulk unlock)
-            if (window.progressiveUnlockFromState) {
-              window.progressiveUnlockFromState();
-            }
-            // Check for active pipeline run after login confirmed
-            if (window.checkActivePipeline) {
-              window.checkActivePipeline();
-            }
+            // Delay slightly to ensure JWT is fully propagated to Supabase client
+            setTimeout(() => {
+              if (window.progressiveUnlockFromState) {
+                window.progressiveUnlockFromState();
+              }
+              // Check for active pipeline run after login confirmed
+              if (window.checkActivePipeline) {
+                window.checkActivePipeline();
+              }
+            }, 1000);
           }
           break
         case 'SIGNED_OUT':
@@ -4613,15 +4616,17 @@ async function handleFormSubmit(e) {
     notes: formData.notes
   };
 
-  // Re-analysis check: only show dialog if real data exists in Supabase
+  // Re-analysis check: only show dialog if real data exists in Supabase (DB only, not JS vars)
   let hasExistingData = false;
-  try {
-    const { data: { user } } = await window.supabase.auth.getUser();
-    if (user) {
-      const { data: icps } = await window.supabase.from('icps').select('id').eq('user_id', user.id).limit(1);
-      hasExistingData = (icps && icps.length > 0) || (productsData && productsData.length > 0) || !!window.currentCampaignId;
-    }
-  } catch(e) { /* ignore */ }
+  const { data: { user: authUser } } = await window.supabase.auth.getUser();
+  if (authUser) {
+    try {
+      const { data: icps } = await window.supabase.from('icps').select('id').eq('user_id', authUser.id).limit(1);
+      const { data: prods } = await window.supabase.from('products').select('id').eq('user_id', authUser.id).limit(1);
+      const { data: camps } = await window.supabase.from('campaigns').select('id').eq('user_id', authUser.id).limit(1);
+      hasExistingData = (icps && icps.length > 0) || (prods && prods.length > 0) || (camps && camps.length > 0);
+    } catch(e) { /* ignore */ }
+  }
 
   if (hasExistingData) {
     const confirmed = await showConfirmDialog({
@@ -4635,24 +4640,30 @@ async function handleFormSubmit(e) {
 
     // Clear downstream data
     try {
-      const { data: { user } } = await window.supabase.auth.getUser();
-      if (user) {
-        const uid = user.id;
-        await window.supabase.from('content_items').delete().eq('user_id', uid).neq('status', 'posted');
-        await window.supabase.from('weekly_topics').delete().eq('user_id', uid);
-        await window.supabase.from('themes').delete().eq('user_id', uid);
-        await window.supabase.from('brand_documents').delete().eq('user_id', uid);
-        await window.supabase.from('campaigns').delete().eq('user_id', uid);
-        await window.supabase.from('products').delete().eq('user_id', uid);
-        await window.supabase.from('icps').delete().eq('user_id', uid);
-      }
+      const uid = authUser.id;
+      await window.supabase.from('content_items').delete().eq('user_id', uid).neq('status', 'posted');
+      await window.supabase.from('weekly_topics').delete().eq('user_id', uid);
+      await window.supabase.from('themes').delete().eq('user_id', uid);
+      await window.supabase.from('brand_documents').delete().eq('user_id', uid);
+      await window.supabase.from('campaigns').delete().eq('user_id', uid);
+      await window.supabase.from('products').delete().eq('user_id', uid);
+      await window.supabase.from('icps').delete().eq('user_id', uid);
+      // Mark any running pipelines as failed so they don't block new runs
+      await window.supabase.from('pipeline_runs').update({ status: 'failed', error_message: 'Cleared by re-analysis' }).eq('user_id', uid).eq('status', 'running');
       // Reset frontend state
       productsData = null;
       productOrder = [];
       weekTopics = {};
       contentData = [];
+      _campaignWeeks = null;
       if (typeof _contentByDate !== 'undefined') _contentByDate = {};
       window.currentCampaignId = null;
+      currentPipelineRunId = null;
+      // Clean up any existing Realtime subscription
+      if (progressChannel) {
+        window.supabase.removeChannel(progressChannel);
+        progressChannel = null;
+      }
       // Lock sections 2-7
       ['section-profile', 'section-products', 'section-campaign', 'section-topics', 'section-content', 'section-calendar'].forEach(id => {
         const el = document.getElementById(id);
@@ -4790,6 +4801,23 @@ async function generateContent(formData) {
   // Disable generate button to prevent duplicate runs
   const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
   if (generateBtn) generateBtn.disabled = true;
+
+  // Mark any existing running pipelines as failed to prevent conflicts
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (user) {
+      await window.supabase.from('pipeline_runs')
+        .update({ status: 'failed', error_message: 'Superseded by new analysis' })
+        .eq('user_id', user.id)
+        .eq('status', 'running');
+    }
+  } catch(e) { console.warn('Failed to clear old pipelines:', e); }
+
+  // Clean up any existing Realtime subscription
+  if (progressChannel) {
+    window.supabase.removeChannel(progressChannel);
+    progressChannel = null;
+  }
 
   try {
     // Single call to orchestrator -- returns 202 immediately
@@ -5127,13 +5155,20 @@ function resetProgressUI() {
   });
 }
 
+let _progressPollInterval = null;
+
 function subscribeToProgress(runId) {
-  // Clean up any existing subscription
+  // Clean up any existing subscription + polling
   if (progressChannel) {
     window.supabase.removeChannel(progressChannel);
     progressChannel = null;
   }
+  if (_progressPollInterval) {
+    clearInterval(_progressPollInterval);
+    _progressPollInterval = null;
+  }
 
+  // Try Realtime subscription
   progressChannel = window.supabase
     .channel(`pipeline-${runId}`)
     .on(
@@ -5154,9 +5189,27 @@ function subscribeToProgress(runId) {
         console.log('Subscribed to pipeline progress:', runId);
       } else if (status === 'CHANNEL_ERROR') {
         console.error('Realtime subscription error for pipeline:', runId);
-        showToast('Lost connection to progress updates. Refresh to check status.', 'error');
       }
     });
+
+  // Polling fallback — check every 5s in case Realtime doesn't deliver
+  _progressPollInterval = setInterval(async () => {
+    try {
+      const { data: run } = await window.supabase
+        .from('pipeline_runs')
+        .select('*')
+        .eq('id', runId)
+        .single();
+      if (run) {
+        renderProgress(run);
+        // Stop polling once completed or failed
+        if (run.status === 'completed' || run.status === 'failed') {
+          clearInterval(_progressPollInterval);
+          _progressPollInterval = null;
+        }
+      }
+    } catch (e) { /* ignore poll errors */ }
+  }, 5000);
 }
 
 function renderProgress(run) {
@@ -5169,16 +5222,16 @@ function renderProgress(run) {
   document.getElementById('progress-text').textContent = `${percentage}%`;
   document.getElementById('phase-text').textContent = run.step_label || STEP_LABELS[currentStep - 1] || 'Processing...';
 
-  // ICP card integration: show skeleton when pipeline starts, refresh after step 1 (ICP analysis) completes
+  // ICP card integration: show skeleton when pipeline starts
   if (currentStep === 0 && window.showICPSkeleton) {
     window.showICPSkeleton();
     icpLoaded = false;
   }
-  if (currentStep >= 2 && !icpLoaded && window.loadICP) {
+  // Load ICP + products after step 1 completes (1-step pipeline)
+  if (currentStep >= 1 && !icpLoaded && window.loadICP) {
     window.loadICP();
   }
-  // Products card: refresh after ICP analysis step completes (products were just scraped)
-  if (currentStep >= 2 && window.loadProducts) {
+  if (currentStep >= 1 && window.loadProducts) {
     window.loadProducts();
   }
 
@@ -5211,8 +5264,10 @@ function renderProgress(run) {
     // Re-enable generate button
     const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
     if (generateBtn) generateBtn.disabled = false;
+    // Load ICP and products data
+    if (window.loadICP) loadICP();
+    if (window.loadProducts) loadProducts();
     // Sequential unlock: profile (ICP ready) and products (scraped)
-    // Campaign (Section 4) stays locked until user reviews products
     unlockSection('section-profile');
     unlockSection('section-products');
     // Scroll to Section 2 (ICP output) — user reviews ICP, then products, then campaign
@@ -5231,6 +5286,10 @@ function cleanupProgress() {
     window.supabase.removeChannel(progressChannel);
     progressChannel = null;
   }
+  if (_progressPollInterval) {
+    clearInterval(_progressPollInterval);
+    _progressPollInterval = null;
+  }
   currentPipelineRunId = null;
 }
 
@@ -5248,11 +5307,11 @@ async function checkActivePipeline() {
 
     const activeRun = runs[0];
 
-    // Check if run is stale (> 15 minutes)
+    // Check if run is stale (> 5 minutes)
     const startedAt = new Date(activeRun.started_at || activeRun.created_at);
     const minutesElapsed = (Date.now() - startedAt.getTime()) / 60000;
 
-    if (minutesElapsed > 15) {
+    if (minutesElapsed > 5) {
       // Stale run -- mark as failed and clean up
       console.warn('Stale pipeline run detected:', activeRun.id, `(${Math.round(minutesElapsed)} min old)`);
       await window.supabase.from('pipeline_runs')
@@ -6966,13 +7025,11 @@ async function ensureCampaign() {
     const { data: { user } } = await window.supabase.auth.getUser();
     if (!user) return null;
 
-    // Look for existing campaign for current month
-    const month = getSelectedMonth ? getSelectedMonth() : new Date().toISOString().slice(0, 7);
+    // Look for existing campaign (any month, most recent)
     const { data: campaigns } = await window.supabase
       .from('campaigns')
       .select('id')
       .eq('user_id', user.id)
-      .eq('month', month)
       .order('created_at', { ascending: false })
       .limit(1);
 
@@ -6981,17 +7038,8 @@ async function ensureCampaign() {
       return window.currentCampaignId;
     }
 
-    // Create new campaign
-    const { data: newCampaign } = await window.supabase
-      .from('campaigns')
-      .insert({ user_id: user.id, month, current_week: 0 })
-      .select('id')
-      .single();
-
-    if (newCampaign) {
-      window.currentCampaignId = newCampaign.id;
-    }
-    return window.currentCampaignId;
+    // Do NOT auto-create campaigns — campaign creation happens in Section 4 (handleCampaignSubmit)
+    return null;
   } catch (err) {
     console.error('ensureCampaign error:', err);
     return null;
@@ -7059,9 +7107,11 @@ async function loadExistingTopics() {
 
 // Campaign weeks cache
 let _campaignWeeks = null;
+let _contentGeneratingWeek = null; // Track which week is generating content
 
 function getCampaignWeeks() {
   if (_campaignWeeks) return _campaignWeeks;
+  // Use campaign start_date from Supabase if available, otherwise calculate
   const month = currentMonth || new Date().toISOString().slice(0, 7);
   const now = new Date();
   const [selYear, selMonth] = month.split('-').map(Number);
@@ -7069,6 +7119,21 @@ function getCampaignWeeks() {
   const startDate = isCurrentMonth ? now : new Date(`${month}-01T00:00:00`);
   _campaignWeeks = WeekNav.calculateWeeks(month, startDate);
   return _campaignWeeks;
+}
+
+// Get the actual day-of-week name for a topic based on campaign start date and week info
+function getTopicDayName(dayNum) {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const weeks = getCampaignWeeks();
+  const weekInfo = weeks ? weeks.find(w => w.weekNum === currentWeek) : null;
+  if (weekInfo && weekInfo.startDate) {
+    const d = new Date(weekInfo.startDate);
+    d.setDate(d.getDate() + (dayNum - 1));
+    return dayNames[d.getDay()];
+  }
+  // Fallback to framework day names
+  const fw = getActiveFramework()[dayNum];
+  return fw ? fw.day : 'Day ' + dayNum;
 }
 
 function renderTopicsWeekNav() {
@@ -7110,12 +7175,42 @@ function renderWeekView(n) {
   const genWeekNum = document.getElementById('generate-week-num');
   if (genWeekNum) genWeekNum.textContent = weekLabel;
 
+  // If content is currently generating for a week, show progress
+  if (_contentGeneratingWeek === n) {
+    progressSection.style.display = 'block';
+    return;
+  }
+
   if (!topics || topics.length === 0) {
-    // Show generate button
-    generateSection.style.display = 'block';
-    // Update generate description for partial weeks
-    const genDesc = generateSection.querySelector('p');
-    if (genDesc) genDesc.textContent = `Generate ${dayCount} daily content topics for ${weekLabel}.`;
+    // No topics for this week
+    if (gridSection) {
+      gridSection.style.display = 'block';
+      const cardsEl = document.getElementById('topics-cards');
+      if (cardsEl) {
+        // Only show generate button for weeks 2+ (week 1 comes from Section 4)
+        const hasWeek1Topics = weekTopics[1] && weekTopics[1].length > 0;
+        if (n > 1 && hasWeek1Topics) {
+          // Calculate product slice for this week
+          const allWeeks = getCampaignWeeks();
+          let weekStartIdx = 0;
+          for (let i = 0; i < allWeeks.length; i++) {
+            if (allWeeks[i].weekNum === n) break;
+            weekStartIdx += allWeeks[i].dayCount;
+          }
+          const availableProducts = getOrderedProducts().length - weekStartIdx;
+          const hasEnoughProducts = availableProducts >= dayCount;
+
+          cardsEl.innerHTML = '<div style="text-align:center; padding:40px;">' +
+            '<p style="color:var(--text-secondary); margin-bottom:16px;">Generate ' + dayCount + ' daily content topics for ' + weekLabel + '.</p>' +
+            (hasEnoughProducts
+              ? '<button class="btn btn-primary" onclick="generateTopicsForWeek(' + n + ')">Generate Topics for ' + weekLabel + '</button>'
+              : '<p style="color:var(--text-muted); font-size:13px;">Need at least ' + dayCount + ' more products (have ' + availableProducts + ' remaining).</p>') +
+            '</div>';
+        } else {
+          cardsEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted);">No topics for this week yet.</div>';
+        }
+      }
+    }
   } else {
     // Check if content already generated for this week
     const allApproved = topics.every(t => t.status === 'approved');
@@ -7197,7 +7292,7 @@ function renderTopicCards(topics, isImplemented) {
       '<div class="topic-day-badge">' + (isApproved ? '&#10003;' : dayNum) + '</div>' +
       '<div class="topic-body" style="flex:1; min-width:0;">' +
         '<div class="topic-day-theme">' +
-          '<span class="day-name">' + framework.day + '</span>' +
+          '<span class="day-name">' + getTopicDayName(dayNum) + '</span>' +
           '<span class="theme-label">' + escapeHTML(framework.theme) + '</span>' +
         '</div>' +
         '<h4>' + escapeHTML(t.topic || '') + '</h4>' +
@@ -7255,6 +7350,19 @@ async function generateTopics(assignedProducts) {
     const weekInfo = weeks ? weeks.find(w => w.weekNum === currentWeek) : null;
     const dayCount = weekInfo ? weekInfo.dayCount : 7;
 
+    // Get brand voice from campaign (stored in Supabase by handleCampaignSubmit)
+    let brandVoiceTraits = [];
+    let brandVoiceNotes = '';
+    let campaignTheme = '';
+    if (window.currentCampaignId) {
+      const { data: camp } = await window.supabase.from('campaigns').select('brand_voice_traits, brand_voice_notes, campaign_theme').eq('id', window.currentCampaignId).single();
+      if (camp) {
+        brandVoiceTraits = camp.brand_voice_traits || [];
+        brandVoiceNotes = camp.brand_voice_notes || '';
+        campaignTheme = camp.campaign_theme || '';
+      }
+    }
+
     var bodyObj = {
       campaign_id: campaignId,
       week_number: currentWeek,
@@ -7262,7 +7370,10 @@ async function generateTopics(assignedProducts) {
       start_date: weekInfo ? weekInfo.startDate.toISOString().slice(0, 10) : '',
       end_date: weekInfo ? weekInfo.endDate.toISOString().slice(0, 10) : '',
       storytelling_framework: frameworkContext,
-      content_language: getBusinessContext().content_language || 'English'
+      content_language: getBusinessContext().content_language || 'English',
+      brand_voice_traits: brandVoiceTraits,
+      brand_voice_notes: brandVoiceNotes,
+      campaign_theme: campaignTheme
     };
     if (assignedProducts && assignedProducts.length > 0) {
       bodyObj.assigned_products = assignedProducts.map(function(p) {
@@ -7372,6 +7483,36 @@ async function approveAllAndGenerate() {
 }
 window.approveAllAndGenerate = approveAllAndGenerate;
 
+// Generate topics for a specific week (called from Section 5 week tab)
+async function generateTopicsForWeek(weekNum) {
+  const weeks = getCampaignWeeks();
+  const weekInfo = weeks.find(w => w.weekNum === weekNum);
+  if (!weekInfo) { showToast('Week not found', 'error'); return; }
+  const dayCount = weekInfo.dayCount;
+
+  // Ensure products loaded
+  if (!productsData || productsData.length === 0) await loadProducts();
+  initProductOrder();
+
+  // Calculate product slice for this week
+  let weekStartIdx = 0;
+  for (let i = 0; i < weeks.length; i++) {
+    if (weeks[i].weekNum === weekNum) break;
+    weekStartIdx += weeks[i].dayCount;
+  }
+  const weekProducts = getOrderedProducts().slice(weekStartIdx, weekStartIdx + dayCount);
+  if (weekProducts.length < dayCount) {
+    showToast(`Need at least ${dayCount} products for this week (have ${weekProducts.length} remaining).`, 'error');
+    return;
+  }
+
+  // Set current week and generate
+  currentWeek = weekNum;
+  renderTopicsWeekNav();
+  await generateTopics(weekProducts);
+}
+window.generateTopicsForWeek = generateTopicsForWeek;
+
 async function approveTopic(topicId) {
   const topics = weekTopics[currentWeek];
   if (!topics) return;
@@ -7456,6 +7597,9 @@ async function lockInAndGenerate() {
     return;
   }
 
+  // Track which week is generating content (persists across tab switches)
+  _contentGeneratingWeek = currentWeek;
+
   // Show content generation progress
   document.getElementById('topics-grid').style.display = 'none';
   const progressSection = document.getElementById('week-content-progress');
@@ -7474,23 +7618,33 @@ async function lockInAndGenerate() {
       .eq('user_id', user.id)
       .eq('campaign_id', campaignId);
 
+    // Read campaign data from Supabase for platforms + month
+    const { data: campData } = await window.supabase.from('campaigns').select('platforms, month, brand_voice_traits, brand_voice_notes, campaign_theme').eq('id', campaignId).single();
+    const campPlatforms = (campData && campData.platforms && campData.platforms.length > 0) ? campData.platforms : ['linkedin', 'instagram', 'x', 'youtube'];
+    const campMonth = (campData && campData.month) ? campData.month : new Date().toISOString().slice(0, 7);
+
     // Fire off content studio — do NOT await (webhook blocks until workflow finishes)
-    // Start it in background and immediately begin polling for results
     authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
       method: 'POST',
       body: JSON.stringify({
         campaign_id: campaignId,
         week_number: currentWeek,
-        month: getSelectedMonth ? getSelectedMonth() : new Date().toISOString().slice(0, 7),
-        platforms: getSelectedPlatforms ? getSelectedPlatforms() : ['linkedin', 'instagram'],
-        content_language: getBusinessContext().content_language || 'English'
+        month: campMonth,
+        platforms: campPlatforms,
+        content_language: getBusinessContext().content_language || 'English',
+        brand_voice_traits: campData ? campData.brand_voice_traits : [],
+        brand_voice_notes: campData ? campData.brand_voice_notes : '',
+        campaign_theme: campData ? campData.campaign_theme : ''
       })
     }).catch(err => console.warn('Content studio call completed or timed out:', err));
 
     // Poll Supabase for new content items (workflow runs in background)
     let progress = 10;
-    const platforms = getSelectedPlatforms ? getSelectedPlatforms() : ['linkedin', 'instagram', 'x', 'youtube'];
-    const expectedItems = 7 * platforms.length; // 7 days × platforms
+    const platforms = campPlatforms;
+    const weeks = getCampaignWeeks();
+    const weekInfo = weeks ? weeks.find(w => w.weekNum === currentWeek) : null;
+    const weekDayCount = weekInfo ? weekInfo.dayCount : 7;
+    const expectedItems = weekDayCount * platforms.length; // days × platforms
     const maxPolls = 60; // 5 minutes max (60 * 5s)
     let polls = 0;
 
@@ -7510,7 +7664,7 @@ async function lockInAndGenerate() {
           const daysComplete = Math.floor(newItems / platforms.length);
           progress = Math.min(10 + (newItems / expectedItems) * 85, 95);
           document.getElementById('week-progress-bar').style.width = progress + '%';
-          document.getElementById('week-progress-text').textContent = 'Generating content... ' + daysComplete + ' of 7 days complete (' + newItems + '/' + expectedItems + ' posts)';
+          document.getElementById('week-progress-text').textContent = 'Generating content... ' + daysComplete + ' of ' + weekDayCount + ' days complete (' + newItems + '/' + expectedItems + ' posts)';
 
           if (newItems >= expectedItems) {
             clearInterval(interval);
@@ -7526,6 +7680,9 @@ async function lockInAndGenerate() {
     });
 
     const success = await pollForContent();
+
+    // Clear generating state
+    _contentGeneratingWeek = null;
 
     // Complete
     document.getElementById('week-progress-bar').style.width = '100%';
@@ -9094,20 +9251,31 @@ async function handleCampaignSubmit(e) {
     businessContext.brand_voice = brandTraits.join(', ') + (brandNotes ? '. ' + brandNotes : '');
     businessContext.content_language = campaignData.content_language;
 
+    // Clear cached weeks so they recalculate for new campaign month
+    _campaignWeeks = null;
+
     showToast('Campaign created! Generating topics...', 'success');
     unlockSection('section-topics');
     scrollToSection('section-topics');
+
+    // Ensure products are fully loaded before slicing
+    if (!productsData || productsData.length === 0) {
+      await loadProducts();
+    }
+    initProductOrder();
 
     // Trigger topic generation for all weeks
     const weeks = WeekNav.calculateWeeks(monthInput, startDate);
     if (weeks.length > 0) {
       // Generate topics for week 1 first
       currentWeek = 1;
-      const weekProducts = getOrderedProducts().slice(0, weeks[0].dayCount);
+      const allProducts = getOrderedProducts();
+      const weekProducts = allProducts.slice(0, weeks[0].dayCount);
+      console.log('Products available:', allProducts.length, 'Sending for week 1:', weekProducts.length, 'dayCount:', weeks[0].dayCount);
       if (weekProducts.length >= weeks[0].dayCount) {
         await generateTopics(weekProducts);
       } else {
-        showToast(`Need at least ${weeks[0].dayCount} products for this week`, 'error');
+        showToast(`Need at least ${weeks[0].dayCount} products for this week (have ${allProducts.length}). Review your products first.`, 'error');
       }
     }
   } catch (err) {

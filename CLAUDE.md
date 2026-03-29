@@ -53,6 +53,24 @@ tests/              — Verification docs
 - ICP generation: Jina scraping → Perplexity research ×3 → Claude synthesis → Supabase
 - Content generation: variable topics/week × selected platforms = dynamic content items per week
 
+## Obsidian Second Brain (REQUIRED)
+
+**Before making ANY changes to this project, you MUST read the relevant Obsidian brain docs first.**
+
+Brain vault: `/Users/andrewgershan/Documents/eluxr-brain/01_Projects/eluxr/architecture/`
+
+| Changing... | Read first |
+|-------------|-----------|
+| index.html JS functions | `frontend-functions.md` |
+| n8n webhook payloads | `api-contracts.md` |
+| n8n workflow nodes | `n8n-workflows.md` |
+| Database schema | `data-model.md` |
+| Content generation flow | `creative-pipeline.md` |
+| Section structure/navigation | `system-overview.md`, `index-html-map.md` |
+| Auth or data flow | `auth-flow.md`, `dependency-map.md` |
+
+This is non-negotiable. The brain has architecture docs, data flow diagrams, and API contracts that prevent bugs caused by missing context (e.g., forgetting to pass data through a chain of n8n nodes). Read first, code second.
+
 ## Coding Conventions
 
 - No build step — edit `index.html` directly
