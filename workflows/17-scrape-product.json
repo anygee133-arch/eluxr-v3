@@ -1,0 +1,280 @@
+{
+  "name": "17-Scrape-Product",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-scrape-product",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "17-scrape-0001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 200],
+      "webhookId": "eluxr-scrape-product"
+    },
+    {
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG"
+      },
+      "id": "17-scrape-0002",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [220, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "17-scrape-0003",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst body = input.body || {};\nconst product_id = body.product_id || '';\nconst product_url = body.product_url || '';\nconst user_id = input.user_id || body.user_id || '';\n\nreturn {\n  json: {\n    product_id,\n    product_url,\n    user_id\n  }\n};"
+      },
+      "id": "17-scrape-0010",
+      "name": "Extract Params",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://r.jina.ai/{{ $json.product_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "text/markdown"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "17-scrape-0020",
+      "name": "Jina Reader",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('Extract Params').item.json;\nconst jinaResponse = $input.item.json;\n\nlet pageContent = '';\nif (typeof jinaResponse === 'string') {\n  pageContent = jinaResponse;\n} else if (jinaResponse.data) {\n  pageContent = typeof jinaResponse.data === 'string' ? jinaResponse.data : JSON.stringify(jinaResponse.data);\n} else if (jinaResponse.body) {\n  pageContent = jinaResponse.body;\n} else {\n  pageContent = JSON.stringify(jinaResponse);\n}\n\n// Truncate to 3000 chars to keep Claude prompt reasonable\npageContent = pageContent.substring(0, 3000);\n\nconst prompt = `Extract product information from this webpage content. Return JSON only:\\n{\\n  \"name\": \"product name\",\\n  \"description\": \"short product description (max 200 chars)\",\\n  \"image_url\": \"main product image URL or null\",\\n  \"image_urls\": [\"all product image URLs found\"],\\n  \"price\": \"price string or null\",\\n  \"category\": \"product category\"\\n}\\n\\nWebpage content:\\n${pageContent}`;\n\nconst apiBody = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 1024,\n  messages: [{ role: 'user', content: prompt }]\n};\n\nreturn {\n  json: {\n    apiBody: JSON.stringify(apiBody),\n    product_id: params.product_id,\n    user_id: params.user_id\n  }\n};"
+      },
+      "id": "17-scrape-0030",
+      "name": "Prepare Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.apiBody }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "17-scrape-0040",
+      "name": "Extract with Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 200],
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('Extract Params').item.json;\nconst claudeResponse = $input.item.json;\n\nlet raw = '';\nif (claudeResponse.content && claudeResponse.content[0]) {\n  raw = claudeResponse.content[0].text;\n} else if (typeof claudeResponse === 'string') {\n  raw = claudeResponse;\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try {\n    parsed = JSON.parse(stripped);\n  } catch(e2) {\n    const match = stripped.match(/[\\[{][\\s\\S]*[\\]}]/);\n    if (match) {\n      try { parsed = JSON.parse(match[0]); } catch(e3) { parsed = {}; }\n    } else {\n      parsed = {};\n    }\n  }\n}\n\nreturn {\n  json: {\n    product_id: params.product_id,\n    name: parsed.name || null,\n    description: parsed.description || null,\n    image_url: parsed.image_url || null,\n    image_urls: parsed.image_urls || [],\n    price: parsed.price || null,\n    category: parsed.category || null\n  }\n};"
+      },
+      "id": "17-scrape-0050",
+      "name": "Parse Claude Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?id=eq.{{ $json.product_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ description: $json.description, image_url: $json.image_url, category: $json.category || 'Custom', updated_at: new Date().toISOString() }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "17-scrape-0060",
+      "name": "Update Product in Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const scraped = $('Parse Claude Response').item.json;\n\nreturn {\n  json: {\n    success: true,\n    product_id: scraped.product_id,\n    name: scraped.name,\n    description: scraped.description,\n    image_url: scraped.image_url,\n    image_urls: scraped.image_urls,\n    price: scraped.price,\n    category: scraped.category\n  }\n};"
+      },
+      "id": "17-scrape-0070",
+      "name": "Return Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return { json: { success: false, error: 'Unauthorized' } };"
+      },
+      "id": "17-scrape-0099",
+      "name": "Auth Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Auth Validator", "type": "main", "index": 0 }]
+      ]
+    },
+    "Auth Validator": {
+      "main": [
+        [{ "node": "Auth OK?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [{ "node": "Extract Params", "type": "main", "index": 0 }],
+        [{ "node": "Auth Failed", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Params": {
+      "main": [
+        [{ "node": "Jina Reader", "type": "main", "index": 0 }]
+      ]
+    },
+    "Jina Reader": {
+      "main": [
+        [{ "node": "Prepare Claude Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Claude Prompt": {
+      "main": [
+        [{ "node": "Extract with Claude", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract with Claude": {
+      "main": [
+        [{ "node": "Parse Claude Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Claude Response": {
+      "main": [
+        [{ "node": "Update Product in Supabase", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Product in Supabase": {
+      "main": [
+        [{ "node": "Return Response", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
