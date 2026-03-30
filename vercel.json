@@ -7,7 +7,6 @@
     }
   },
   "rewrites": [
-    { "source": "/api/n8n/:path*", "destination": "/api/n8n/:path*" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
