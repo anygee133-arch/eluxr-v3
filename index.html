@@ -9477,10 +9477,10 @@ async function handleCampaignSubmit(e) {
 
     // Create themes records so WF04 Content Studio can find them
     // WF04 reads from themes table by user_id + week_number
-    const weeks = WeekNav.calculateWeeks(monthInput, startDate);
+    const campaignWeeks = WeekNav.calculateWeeks(monthInput, startDate);
     // Delete old themes for this user first, then insert fresh
     await window.supabase.from('themes').delete().eq('user_id', user.id);
-    const themeRows = weeks.map(week => ({
+    const themeRows = campaignWeeks.map(week => ({
       user_id: user.id,
       campaign_id: campaign.id,
       week_number: week.weekNum,
