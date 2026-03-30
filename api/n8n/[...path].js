@@ -51,9 +51,17 @@ module.exports = async function handler(req, res) {
 
   // Extract webhook path from the catch-all route segments
   // req.query.path is an array, e.g. ['eluxr-phase4-studio']
-  const pathSegments = req.query.path;
+  // Fallback: parse from URL if query.path is empty (Vercel routing edge case)
+  let pathSegments = req.query.path;
   if (!pathSegments || pathSegments.length === 0) {
-    return res.status(400).json({ error: 'Missing webhook path' });
+    const urlPath = req.url.replace(/\?.*$/, ''); // strip query string
+    const match = urlPath.match(/^\/api\/n8n\/(.+)/);
+    if (match) {
+      pathSegments = match[1].split('/');
+    }
+  }
+  if (!pathSegments || pathSegments.length === 0) {
+    return res.status(400).json({ error: 'Missing webhook path', debug: { url: req.url, query: req.query } });
   }
 
   const webhookPath = pathSegments.join('/');
