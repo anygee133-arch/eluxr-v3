@@ -7194,9 +7194,10 @@ function getCampaignWeeks() {
   const [selYear, selMonth] = month.split('-').map(Number);
   const isCurrentMonth = selYear === now.getFullYear() && selMonth === (now.getMonth() + 1);
   // Use cached campaign start date if available, otherwise calculate
+  // IMPORTANT: Always parse dates with T00:00:00 to force local time (not UTC)
   let startDate;
   if (window._campaignStartDate) {
-    startDate = new Date(window._campaignStartDate);
+    startDate = new Date(window._campaignStartDate + 'T00:00:00');
   } else {
     startDate = isCurrentMonth ? now : new Date(`${month}-01T00:00:00`);
   }
@@ -7210,8 +7211,9 @@ function getTopicDayName(dayNum) {
   const weeks = getCampaignWeeks();
   const weekInfo = weeks ? weeks.find(w => w.weekNum === currentWeek) : null;
   if (weekInfo && weekInfo.startDate) {
-    const d = new Date(weekInfo.startDate);
-    d.setDate(d.getDate() + (dayNum - 1));
+    // Force local time parsing to avoid UTC timezone shift
+    const ds = weekInfo.startDate instanceof Date ? weekInfo.startDate : new Date(weekInfo.startDate + 'T00:00:00');
+    const d = new Date(ds.getFullYear(), ds.getMonth(), ds.getDate() + (dayNum - 1));
     return dayNames[d.getDay()];
   }
   // Fallback to framework day names
