@@ -8909,7 +8909,7 @@ async function generateVideoForItem(itemId) {
     const refImage = productImgs.length > 0 ? productImgs[0] : (item.image_url || '');
 
     // Call the video creator workflow
-    const response = await authenticatedFetch('https://n8n-dev.eluxr.com/webhook/eluxr-tools-video', {
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-tools-video`, {
       method: 'POST',
       body: JSON.stringify({
         prompt: scriptText.substring(0, 500),
@@ -9657,7 +9657,7 @@ async function handleBrandDocUpload(input) {
     renderBrandDocList(user.id);
 
     // Trigger n8n workflow for text extraction + summarization
-    const N8N_BASE_URL = window.ELUXR_CONFIG?.N8N_WEBHOOK_BASE || 'https://flowbound.app.n8n.cloud/webhook';
+    const N8N_BASE_URL = window.ELUXR_CONFIG?.N8N_WEBHOOK_BASE || '/api/n8n';
     authenticatedFetch(`${N8N_BASE_URL}/eluxr-process-brand-doc`, {
       method: 'POST',
       body: JSON.stringify({ document_id: doc.id, file_url: urlData.publicUrl || filePath, user_id: user.id })
