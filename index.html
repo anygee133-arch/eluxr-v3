@@ -8540,23 +8540,23 @@ async function generateDayImages(dateStr, directionHint) {
     }
 
     // Fire-and-forget — workflow generates image and saves to Supabase
-    const response = await fetch(N8N_BASE_URL + '/eluxr-tools-image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        topic: topic,
-        productImageUrl: productImageUrl,
-        content_id: firstItem.id,
-        product_name: productName,
-        product_category: productCategory,
-        image_theme_prompt: imageThemePrompt,
-        direction_hint: directionHint || ''
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Webhook returned ' + response.status);
-    }
+    // The webhook may time out (Vercel proxy 60s limit) but n8n continues processing.
+    // We ignore errors and always poll Supabase for the result.
+    try {
+      fetch(N8N_BASE_URL + '/eluxr-tools-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: topic,
+          productImageUrl: productImageUrl,
+          content_id: firstItem.id,
+          product_name: productName,
+          product_category: productCategory,
+          image_theme_prompt: imageThemePrompt,
+          direction_hint: directionHint || ''
+        })
+      }).catch(() => {}); // Ignore timeout/errors — n8n processes async
+    } catch (e) { /* ignore */ }
 
     showToast('Image generation started. Polling for result...', 'success');
 
