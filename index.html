@@ -2829,6 +2829,25 @@ details .details-content { padding: 20px; }
       <h2>Section 2: Your Business Profile</h2>
     </div>
 
+    <!-- Progress indicator (shown during pipeline) -->
+    <div id="pipeline-progress-card" class="card progress-card card-glass fade-in-up stagger-1" style="display:none; margin-bottom: 24px;">
+      <div class="progress-container">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+      <div id="progress-text" class="progress-text">0%</div>
+      <div id="phase-text" class="phase-text">Initializing...</div>
+      <div class="phase-list">
+        <div class="phase-item" data-step="1">
+          <span class="phase-icon">1</span>
+          <span>Analyzing your business</span>
+        </div>
+        <div class="phase-item" data-step="2">
+          <span class="phase-icon">2</span>
+          <span>Creating content themes</span>
+        </div>
+      </div>
+    </div>
+
     <div id="icp-card" class="card card-glass fade-in-up stagger-1" style="display: none;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 style="margin: 0; color: var(--text-primary, #e2e8f0); font-size: 18px;">
@@ -2871,8 +2890,9 @@ details .details-content { padding: 20px; }
       </div>
     </div>
 
-    <div style="text-align: center; margin-top: 16px;">
+    <div style="text-align: center; margin-top: 16px; display: flex; justify-content: center; gap: 12px; align-items: center;">
       <button class="btn btn-secondary" onclick="scrollToSection('section-business')" style="font-size: 13px; padding: 8px 20px;">Re-Analyze Business</button>
+      <button id="icp-continue-btn" type="button" class="btn btn-primary" style="display:none;" onclick="unlockSection('section-products'); smoothTransitionToSection('section-products', 800);">Continue to Products &#8594;</button>
     </div>
   </div>
 </section>
@@ -2882,25 +2902,6 @@ details .details-content { padding: 20px; }
   <div class="section-inner">
     <div class="phase-header fade-in-up">
       <h2>Section 3: Your Products</h2>
-    </div>
-
-    <!-- Progress indicator (shown during pipeline) -->
-    <div id="pipeline-progress-card" class="card progress-card card-glass fade-in-up stagger-1" style="display:none;">
-      <div class="progress-container">
-        <div id="progress-bar" class="progress-bar"></div>
-      </div>
-      <div id="progress-text" class="progress-text">0%</div>
-      <div id="phase-text" class="phase-text">Initializing...</div>
-      <div class="phase-list">
-        <div class="phase-item" data-step="1">
-          <span class="phase-icon">1</span>
-          <span>Analyzing your business</span>
-        </div>
-        <div class="phase-item" data-step="2">
-          <span class="phase-icon">2</span>
-          <span>Creating content themes</span>
-        </div>
-      </div>
     </div>
 
     <!-- Products display -->
@@ -3772,7 +3773,7 @@ async function loadUserProfile() {
     const { data: profile, error } = await window.supabase
       .from('profiles')
       .select('business_url, industry')
-      .single();
+      .maybeSingle();
     if (profile && !error) {
       businessContext = { business_url: profile.business_url || '', industry: profile.industry || '' };
       const urlInput = document.getElementById('business-url');
@@ -3870,7 +3871,7 @@ async function loadICP() {
   const icpContent = document.getElementById('icp-content');
   if (!icpCard) return;
   try {
-    const { data: icp, error } = await window.supabase.from('icps').select('*').single();
+    const { data: icp, error } = await window.supabase.from('icps').select('*').maybeSingle();
     if (error && error.code !== 'PGRST116') {
       console.error('Error loading ICP:', error);
       return;
@@ -4256,13 +4257,15 @@ async function autoSaveNewProduct(inputEl) {
   if (!item || item.getAttribute('data-new') !== 'true') return;
   const nameInput = item.querySelector('.product-name input');
   const name = nameInput ? nameInput.value.trim() : '';
-  if (!name) return; // Don't save empty products
+  const urlInput = item.querySelector('.product-url-input');
+  const productUrl = urlInput ? urlInput.value.trim() : '';
+  
+  if (!name && !productUrl) return; // Don't save if both are empty
+
   // Check if already saved (data-new removed)
   if (item.getAttribute('data-saved') === 'true') {
     // Update existing product
     const productId = item.getAttribute('data-product-id');
-    const urlInput = item.querySelector('.product-url-input');
-    const productUrl = urlInput ? urlInput.value.trim() : '';
     await window.supabase.from('products').update({
       name: name,
       product_url: productUrl || null,
@@ -4278,11 +4281,9 @@ async function autoSaveNewProduct(inputEl) {
   try {
     const { data: { user } } = await window.supabase.auth.getUser();
     if (!user) return;
-    const urlInput = item.querySelector('.product-url-input');
-    const productUrl = urlInput ? urlInput.value.trim() : '';
     const { data, error } = await window.supabase.from('products').insert({
       user_id: user.id,
-      name: name,
+      name: name || 'Loading product...', // temporary name
       category: 'Custom',
       product_url: productUrl || null,
       sort_order: 0,
@@ -4475,7 +4476,7 @@ function getSelectedPlatforms() {
 }
 
 function getSelectedMonth() {
-  const monthInput = document.getElementById('month');
+  const monthInput = document.getElementById('campaign_month');
   return monthInput ? monthInput.value : '';
 }
 
@@ -4504,7 +4505,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initPlatformToggles();
   loadImageThemes(); // Load image themes for Section 6
   const now = new Date();
-  const monthInput = document.getElementById('month');
+  const monthInput = document.getElementById('campaign_month');
   const currentMonthValue = monthInput ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}` : null;
   if (monthInput) monthInput.value = currentMonthValue;
   currentMonth = currentMonthValue || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -5199,6 +5200,9 @@ const STEP_LABELS = [
 ];
 
 function resetProgressUI() {
+  const card = document.getElementById('pipeline-progress-card');
+  if (card) card.style.display = 'block';
+  
   document.getElementById('progress-bar').style.width = '0%';
   document.getElementById('progress-text').textContent = '0%';
   document.getElementById('phase-text').textContent = 'Starting pipeline...';
@@ -5315,29 +5319,32 @@ function renderProgress(run) {
     }
   });
 
-  // Handle completion
+    // Handle completion
   if (run.status === 'completed') {
     cleanupProgress();
     // Hide progress card
-    document.getElementById('pipeline-progress-card').style.display = 'none';
+    const pCard = document.getElementById('pipeline-progress-card');
+    if (pCard) pCard.style.display = 'none';
     showToast('Business analysis complete! Review your products, then set up your campaign.', 'success');
     // Re-enable generate button
     const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
     if (generateBtn) generateBtn.disabled = false;
-    // Sequential unlock: ICP first, then products after ICP loads
-    // Stay on Section 2 — let user review ICP before moving to products
+    
+    // Show Continue button to manual-scroll to products
+    const contBtn = document.getElementById('icp-continue-btn');
+    if (contBtn) contBtn.style.display = 'block';
+
+    // Sequential unlock: ICP only! Let user explicitly click "Continue to Products"
     unlockSection('section-profile');
-    smoothTransitionToSection('section-profile', 800);
     if (window.loadICP) {
       loadICP().then(() => {
-        // Unlock products section silently (no scroll, no progress card)
-        unlockSection('section-products');
         if (window.loadProducts) loadProducts();
       });
     }
   } else if (run.status === 'failed') {
     cleanupProgress();
-    document.getElementById('pipeline-progress-card').style.display = 'none';
+    const pCard = document.getElementById('pipeline-progress-card');
+    if (pCard) pCard.style.display = 'none';
     showToast(`Generation failed: ${run.error_message || 'Unknown error'}`, 'error');
     const generateBtn = document.querySelector('.btn-generate, [onclick*="handleFormSubmit"]');
     if (generateBtn) generateBtn.disabled = false;
@@ -5449,7 +5456,9 @@ let selectedScheduleItem = null;
 
 async function loadScheduleThemes() {
   const grid = document.getElementById('schedule-grid');
-  grid.innerHTML = '<div class="schedule-loading" style="grid-column: 1 / -1;"><div class="spinner" style="width:30px;height:30px;margin:0 auto 12px;"></div><p>Loading...</p></div>';
+  if (grid) {
+    grid.innerHTML = '<div class="schedule-loading" style="grid-column: 1 / -1;"><div class="spinner" style="width:30px;height:30px;margin:0 auto 12px;"></div><p>Loading...</p></div>';
+  }
 
   // 1. Load themes (optional, don't let failure block everything)
   try {
@@ -7143,7 +7152,14 @@ async function loadExistingTopics() {
     if (!topics || topics.length === 0) {
       const topicsSection = document.getElementById('topics-section');
       if (topicsSection) topicsSection.style.display = 'block';
-      renderWeekView(currentWeek);
+      if (!window._topicsGenerating) {
+        renderWeekView(currentWeek);
+      } else {
+        const topicsLoading = document.getElementById('topics-loading');
+        const topicsGrid = document.getElementById('topics-grid');
+        if (topicsLoading) topicsLoading.style.display = 'block';
+        if (topicsGrid) topicsGrid.style.display = 'none';
+      }
       return;
     }
 
@@ -7746,22 +7762,23 @@ async function lockInAndGenerate() {
       if (icp) icpSummary = icp.icp_summary || '';
     } catch(e) { /* non-fatal */ }
 
-    // Fire off content studio — do NOT await (webhook blocks until workflow finishes)
-    authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
-      method: 'POST',
-      body: JSON.stringify({
-        campaign_id: campaignId,
-        week_number: currentWeek,
-        month: campMonth,
-        start_date: weekStartDate,
-        end_date: weekEndDate,
-        day_count: weekDayCount,
-        platforms: campPlatforms,
-        content_language: getBusinessContext().content_language || 'English',
-        brand_voice_traits: campData ? campData.brand_voice_traits : [],
-        brand_voice_notes: campData ? campData.brand_voice_notes : '',
-        campaign_theme: campData ? campData.campaign_theme : '',
-        icp_summary: icpSummary,
+        const platformInstructions = '\n\nCRITICAL FORMATTING RULES:\n- For visual platforms (TikTok, YouTube Shorts, Instagram Reels, Pinterest): Produce ONLY the textual CAPTION to accompany an image/video hook. DO NOT return video scripts, camera angles, storyboards, voice overs, or visual cues. Return only the final text output that a user can copy-paste as a caption.\n- For text platforms (LinkedIn, X, Facebook, Threads): Provide the standalone written post.\n- NO MATTER THE PLATFORM, NEVER start the text with a platform label like "Instagram: " or "Caption: ". Just provide the raw text.\n';
+        
+        authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase4-studio`, {
+          method: 'POST',
+          body: JSON.stringify({
+            campaign_id: campaignId,
+            week_number: currentWeek,
+            month: campMonth,
+            start_date: weekStartDate,
+            end_date: weekEndDate,
+            day_count: weekDayCount,
+            platforms: campPlatforms,
+            content_language: getBusinessContext().content_language || 'English',
+            brand_voice_traits: campData ? campData.brand_voice_traits : [],
+            brand_voice_notes: (campData ? campData.brand_voice_notes : '') + platformInstructions,
+            campaign_theme: campData ? campData.campaign_theme : '',
+            icp_summary: icpSummary,
         business_notes: getBusinessContext().notes || '',
         topics: topics.map(t => ({
           day_number: t.day_number,
@@ -7954,19 +7971,26 @@ async function renderContentReview() {
     // Group dates into weeks using campaign week boundaries (partial week support)
     const campaignWeeks = getCampaignWeeks();
     const weeks = campaignWeeks.map(w => {
-      const start = w.startDate instanceof Date ? w.startDate : new Date(w.startDate);
-      const end = w.endDate instanceof Date ? w.endDate : new Date(w.endDate);
-      return sortedDates.filter(d => {
+      const start = w.startDate instanceof Date ? w.startDate : new Date(w.startDate + 'T00:00:00');
+      const end = w.endDate instanceof Date ? w.endDate : new Date(w.endDate + 'T00:00:00');
+      
+      const formatStr = d => d.toISOString().slice(0, 10);
+      const startStr = formatStr(start);
+      const endStr = formatStr(end);
+
+      const matchedDates = sortedDates.filter(d => {
         const date = new Date(d + 'T00:00:00');
-        return date >= start && date <= end;
+        return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
       });
-    }).filter(w => w.length > 0);
+      return { startStr, endStr, dates: matchedDates };
+    }).filter(w => w.dates.length > 0);
 
     // Render day cards grouped by week
-    container.innerHTML = weeks.map((weekDates, weekIdx) => {
+    const htmlOutput = weeks.map((weekObj, weekIdx) => {
       const weekNum = weekIdx + 1;
-      const weekStart = weekDates[0];
-      const weekEnd = weekDates[weekDates.length - 1];
+      const weekDates = weekObj.dates;
+      const weekStart = weekObj.startStr;
+      const weekEnd = weekObj.endStr;
       const weekApproved = weekDates.reduce((sum, d) => sum + (_contentByDate[d] || []).filter(i => i.status === 'approved').length, 0);
       const weekTotal = weekDates.reduce((sum, d) => sum + (_contentByDate[d] || []).length, 0);
 
@@ -8006,6 +8030,11 @@ async function renderContentReview() {
         }).join('') + '</div>' +
       '</div>';
     }).join('');
+    
+    // Prevent scroll layout thrashing during replacement
+    const currentScroll = window.scrollY;
+    container.innerHTML = htmlOutput;
+    window.scrollTo(0, currentScroll);
 
   } catch (err) {
     console.error('renderContentReview error:', err);
@@ -8691,7 +8720,7 @@ async function generateDayVideo(dateStr) {
 
   try {
     // POST to video generator webhook (responds immediately with 200)
-    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-tools-video`, {
+    const response = await authenticatedFetch(`https://n8n-dev.eluxr.com/webhook/eluxr-tools-video`, {
       method: 'POST',
       body: JSON.stringify({
         content_id: firstItem.id,
@@ -9313,13 +9342,12 @@ window.progressiveUnlockFromState = async function() {
     const progressCard = document.getElementById('pipeline-progress-card');
     if (progressCard) progressCard.style.display = 'none';
 
-    // Check ICP exists → unlock profile + products
+    // Check ICP exists → unlock profile
     const { data: icps } = await window.supabase.from('icps').select('id').eq('user_id', user.id).limit(1);
     const hasICP = icps && icps.length > 0;
     if (!hasICP) return; // Nothing to unlock
 
     unlockSection('section-profile');
-    unlockSection('section-products');
 
     // Check products exist (7+) → unlock campaign
     const { data: products } = await window.supabase.from('products').select('id').eq('user_id', user.id).eq('is_active', true);
