@@ -8460,8 +8460,6 @@ async function executeRegeneration(dateStr) {
   // Set theme if selected
   if (themeId) await setImageTheme(dateStr, themeId);
 
-  // TODO: Pass direction text to image generation pipeline
-  // For now, store direction as a hint and trigger standard generation
   generateDayImages(dateStr, direction);
 }
 window.executeRegeneration = executeRegeneration;
