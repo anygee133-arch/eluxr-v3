@@ -2839,11 +2839,11 @@ details .details-content { padding: 20px; }
       <div class="phase-list">
         <div class="phase-item" data-step="1">
           <span class="phase-icon">1</span>
-          <span>Analyzing your business</span>
+          <span>Scraping &amp; researching your business</span>
         </div>
         <div class="phase-item" data-step="2">
           <span class="phase-icon">2</span>
-          <span>Creating content themes</span>
+          <span>Building your customer profile</span>
         </div>
       </div>
     </div>
@@ -5195,8 +5195,8 @@ async function fetchAndDisplayCalendar(silent = false) {
 let progressChannel = null;
 
 const STEP_LABELS = [
-  'Analyzing your business...',
-  'Creating content themes...'
+  'Scraping & researching your business...',
+  'Building your customer profile...'
 ];
 
 function resetProgressUI() {
@@ -5274,8 +5274,11 @@ function subscribeToProgress(runId) {
 
 function renderProgress(run) {
   const currentStep = run.current_step || 0;
-  const totalSteps = run.total_steps || 6;
-  const percentage = Math.min(Math.round((currentStep / totalSteps) * 100), 100);
+  const totalSteps = run.total_steps || 2;
+  // Cap at 90% until pipeline is fully completed AND ICP is loaded
+  let percentage = Math.min(Math.round((currentStep / totalSteps) * 100), 100);
+  if (percentage >= 100 && run.status !== 'completed') percentage = 90;
+  if (run.status === 'completed' && !icpLoaded) percentage = 95;
 
   // Update progress bar
   document.getElementById('progress-bar').style.width = `${percentage}%`;
