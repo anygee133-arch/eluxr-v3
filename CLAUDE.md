@@ -6,16 +6,19 @@ Multi-tenant SaaS social media content platform. Businesses enter their URL, get
 
 ## Tech Stack
 
-- **Frontend:** Vanilla HTML/CSS/JS — single `index.html` (~9,150 lines), no framework
-- **Backend:** n8n Cloud (flowbound.app.n8n.cloud) — 16 workflows + 1 orchestrator
+- **Frontend:** Vanilla HTML/CSS/JS — single `index.html` (~9,739 lines), no framework
+- **Backend:** n8n Cloud (flowbound.app.n8n.cloud) — 17 workflows + 1 orchestrator
 - **Database:** Supabase (PostgreSQL + Auth + Realtime + RLS)
-- **Hosting:** Vercel (static site)
-- **AI:** Claude (content), Perplexity (research/trends), image/video generation
-- **Design:** Premium glassmorphism aesthetic — frosted glass cards, animated gradient orbs, green (#16a34a) + purple (#7c3aed) accents
+- **Hosting:** Vercel (static site + serverless proxy)
+- **AI:** Claude (content/ICP), Perplexity (research/trends), KIE Nano Banana Pro (images), KIE Veo 3 (videos via n8n-dev.eluxr.com)
+- **Design:** Premium glassmorphism aesthetic — frosted glass cards, black-and-white theme
 
 ## Architecture
 
 - Config-driven via `config.js` — auto-detects dev/prod by hostname
+- **Production:** All n8n calls go through Vercel serverless proxy at `api/n8n/[...path].js` (eliminates CORS)
+- **Development:** Calls n8n directly at `flowbound.app.n8n.cloud/webhook`
+- Video generation routes to external n8n at `n8n-dev.eluxr.com` (friend's instance) via proxy EXTERNAL_ROUTES
 - Auth: Supabase email/password → JWT → `authenticatedFetch()` → n8n webhooks with Auth Validator
 - All API keys live in n8n credential store, never in frontend
 - Row-Level Security in Supabase for multi-tenant isolation
@@ -24,9 +27,10 @@ Multi-tenant SaaS social media content platform. Businesses enter their URL, get
 
 ```
 index.html          — Main app (all HTML/CSS/JS)
-config.js           — Supabase + n8n endpoint config
-vercel.json         — Deployment config
-workflows/          — n8n workflow JSONs (01-14)
+config.js           — Supabase + n8n endpoint config (/api/n8n in prod, direct in dev)
+vercel.json         — Deployment config (rewrites, headers, function timeout)
+api/n8n/[...path].js — Vercel serverless proxy for n8n webhooks (CORS fix)
+workflows/          — n8n workflow JSONs (01-17)
 supabase/           — Config, migrations, tests
 scripts/            — Deployment/test scripts
 tests/              — Verification docs
@@ -35,11 +39,11 @@ tests/              — Verification docs
 
 ## Key Workflows (n8n)
 
-01-icp-analyzer, 02-theme-generator, 03-themes-list, 04-content-studio, 05-content-submit, 06-approval-list, 07-approval-action, 08-clear-pending, 09-calendar-sync, 10-chat, 11-image-generator, 12-video-script-builder, 13-video-creator, 14-pipeline-orchestrator, 15-generate-topics, 16-regenerate-topic
+01-icp-analyzer, 02-theme-generator, 03-themes-list, 04-content-studio, 05-content-submit, 06-approval-list, 07-approval-action, 08-clear-pending, 09-calendar-sync, 10-chat, 11-image-generator, 12-video-script-builder, 13-video-creator, 14-pipeline-orchestrator, 15-generate-topics, 16-regenerate-topic, 17-scrape-product
 
 ## Current State (March 2026)
 
-- **v3 Revision Spec M1 in progress** — restructured from 5 steps to 7 sections
+- **v3 Revision Spec M1 completed and deployed** — restructured from 5 steps to 7 sections
 - 7-section app flow: Login → Business Profile → ICP Output → Products → Campaign Setup → Weekly Topics → Content Review → Posting Calendar
 - Business analysis decoupled from campaign planning (Section 1 vs Section 4)
 - Campaign Theme (single for all weeks) replaces per-week storytelling theme
@@ -88,4 +92,5 @@ This is non-negotiable. The brain has architecture docs, data flow diagrams, and
 | n8n Cloud | flowbound.app.n8n.cloud |
 | Supabase | Configured in config.js |
 | GitHub | github.com/anygee133-arch/eluxr-v3 |
-| Vercel | Static deployment target |
+| Vercel | https://eluxr-v3.vercel.app (static + serverless proxy) |
+| Video n8n | n8n-dev.eluxr.com (friend's instance, Veo 3 video gen) |
