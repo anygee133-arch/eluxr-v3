@@ -4388,22 +4388,13 @@ async function saveNewProduct(btn) {
       is_active: true
     }).select('id').single();
     if (error) throw error;
-    item.setAttribute('data-saved', 'true');
-    item.setAttribute('data-new', 'false');
-    item.setAttribute('data-product-id', data.id);
-    // Hide save/cancel, show remove button
-    const btnsDiv = btn.closest('div');
-    if (btnsDiv) btnsDiv.style.display = 'none';
-    let removeBtn = item.querySelector('.product-remove');
-    if (!removeBtn) {
-      item.insertAdjacentHTML('beforeend', '<button type="button" class="product-remove" onclick="removeProduct(this)" title="Remove product">&times;</button>');
-    } else {
-      removeBtn.style.display = 'block';
-    }
-    const countEl = document.getElementById('product-count');
-    if (countEl) countEl.textContent = parseInt(countEl.textContent || '0') + 1;
     showToast('Product saved!', 'success');
-    if (productUrl) scrapeProductUrl(data.id, productUrl, item);
+    // Re-render the full product list so the new product appears properly
+    if (window.loadProducts) await loadProducts();
+    if (productUrl) {
+      const newItemEl = document.querySelector('[data-product-id="' + data.id + '"]');
+      scrapeProductUrl(data.id, productUrl, newItemEl);
+    }
   } catch (err) {
     showToast('Failed to save product: ' + err.message, 'error');
     btn.disabled = false;
@@ -4419,8 +4410,8 @@ function cancelNewProduct(btn) {
 window.cancelNewProduct = cancelNewProduct;
 
 async function scrapeProductUrl(productId, productUrl, itemEl) {
-  // Show spinner on the product card
-  const thumb = itemEl.querySelector('.product-thumb-placeholder') || itemEl.querySelector('.product-thumb');
+  // Show spinner on the product card (itemEl may be null if list was re-rendered)
+  const thumb = itemEl ? (itemEl.querySelector('.product-thumb-placeholder') || itemEl.querySelector('.product-thumb')) : null;
   let spinnerEl = null;
   if (thumb) {
     spinnerEl = document.createElement('div');
@@ -4438,18 +4429,9 @@ async function scrapeProductUrl(productId, productUrl, itemEl) {
     });
 
     if (response.ok) {
-      const result = await safeJson(response, {});
-      // Update product card UI with scraped data
-      if (result.image_url && thumb) {
-        thumb.innerHTML = '<img src="' + result.image_url + '" style="width:100%; height:100%; object-fit:cover; border-radius:8px;" />';
-      }
-      if (result.description) {
-        const nameInput = itemEl.querySelector('.product-name input');
-        if (nameInput && !nameInput.value.trim()) {
-          nameInput.value = result.name || result.description.substring(0, 80);
-        }
-      }
       showToast('Product details scraped from URL', 'success');
+      // Reload products to show scraped image/description
+      if (window.loadProducts) await loadProducts();
     }
   } catch (err) {
     console.error('Product scrape error:', err);
