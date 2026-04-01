@@ -2892,7 +2892,7 @@ details .details-content { padding: 20px; }
 
     <div style="text-align: center; margin-top: 16px; display: flex; justify-content: center; gap: 12px; align-items: center;">
       <button class="btn btn-secondary" onclick="scrollToSection('section-business')" style="font-size: 13px; padding: 8px 20px;">Re-Analyze Business</button>
-      <button id="icp-continue-btn" type="button" class="btn btn-primary" style="display:none;" onclick="unlockSection('section-products'); smoothTransitionToSection('section-products', 800);">Continue to Products &#8594;</button>
+      <button id="icp-continue-btn" type="button" class="btn btn-primary" style="display:none;" onclick="unlockSection('section-products'); if(window.loadProducts) loadProducts(); smoothTransitionToSection('section-products', 800);">Continue to Products &#8594;</button>
     </div>
   </div>
 </section>
