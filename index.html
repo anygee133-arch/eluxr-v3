@@ -8044,8 +8044,16 @@ let _contentByDate = {};
 let _contentDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 async function renderContentReview() {
-  const container = document.getElementById('content-review-days');
-  const empty = document.getElementById('content-review-empty');
+  let container = document.getElementById('content-review-days');
+  let empty = document.getElementById('content-review-empty');
+  // Restore container structure if destroyed (e.g. by content generation spinner)
+  if (!container) {
+    const parent = document.getElementById('content-review-container');
+    if (!parent) return;
+    parent.innerHTML = '<div id="content-review-empty" class="card" style="text-align:center; padding:40px; display:none;"><p style="color:var(--text-muted);">Generate content in Section 5 to review it here.</p></div><div id="content-review-days" style="display:none;"></div>';
+    container = document.getElementById('content-review-days');
+    empty = document.getElementById('content-review-empty');
+  }
   if (!container) return;
 
   try {
