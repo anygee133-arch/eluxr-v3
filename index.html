@@ -6214,26 +6214,26 @@ async function openScheduleCard(dateStr) {
   if (sortedItems.length === 0) {
     bodyHtml = '<p style="text-align:center; color:var(--text-muted); padding:20px;">No content for this day.</p>';
   } else {
-    // Show only the selected visual (image or video) based on selected_visual field
-    const primaryItem = dayItems.find(i => i.selected_visual) || dayItems[0];
-    const selectedVis = primaryItem ? (primaryItem.selected_visual || 'image') : 'image';
-
-    if (selectedVis === 'video') {
-      const dayVideo = dayItems.find(i => i.video_url);
-      if (dayVideo) {
-        bodyHtml += '<div style="margin-bottom:16px; text-align:center;">' +
-          '<video controls style="max-width:100%; max-height:300px; border-radius:12px;"><source src="' + escapeHTML(dayVideo.video_url) + '" type="video/mp4"></video>' +
-          '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(dayVideo.video_url) + '\', \'video-' + dateStr + '.mp4\')">&#8681; Download</button></div>' +
-        '</div>';
-      }
-    } else {
-      const dayImage = dayItems.find(i => i.image_url);
+    // Show both image and video when available
+    const dayImage = dayItems.find(i => i.image_url);
+    const dayVideo = dayItems.find(i => i.video_url);
+    if (dayImage || dayVideo) {
+      bodyHtml += '<div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">';
       if (dayImage) {
-        bodyHtml += '<div style="margin-bottom:16px; text-align:center;">' +
-          '<img src="' + escapeHTML(dayImage.image_url) + '" style="max-width:100%; max-height:300px; border-radius:12px; object-fit:cover;" />' +
+        bodyHtml += '<div style="flex:1; min-width:200px; text-align:center;">' +
+          '<div style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">Image</div>' +
+          '<img src="' + escapeHTML(dayImage.image_url) + '" style="width:100%; max-height:280px; border-radius:12px; object-fit:cover;" />' +
           '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(dayImage.image_url) + '\', \'image-' + dateStr + '.png\')">&#8681; Download</button></div>' +
         '</div>';
       }
+      if (dayVideo) {
+        bodyHtml += '<div style="flex:1; min-width:200px; text-align:center;">' +
+          '<div style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">Video</div>' +
+          '<video controls style="width:100%; max-height:280px; border-radius:12px; background:#000;"><source src="' + escapeHTML(dayVideo.video_url) + '" type="video/mp4"></video>' +
+          '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(dayVideo.video_url) + '\', \'video-' + dateStr + '.mp4\')">&#8681; Download</button></div>' +
+        '</div>';
+      }
+      bodyHtml += '</div>';
     }
 
     // Show each platform post
