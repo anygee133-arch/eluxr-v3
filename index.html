@@ -6096,12 +6096,21 @@ function renderScheduleGrid(themes, approvalData) {
       }).join('') + '</div>';
     }
 
-    // Show approved image thumbnail if available
+    // Show approved image and video thumbnails if available
     const dayImage = allDayItems.find(i => i.image_url);
+    const dayVideo = allDayItems.find(i => i.video_url);
     const dayImageUrl = dayImage ? dayImage.image_url : null;
-    let imageThumbHtml = '';
-    if (dayImageUrl) {
-      imageThumbHtml = `<img src="${dayImageUrl}" class="schedule-card-thumb" alt="Day image" />`;
+    const dayVideoUrl = dayVideo ? dayVideo.video_url : null;
+    let mediaThumbHtml = '';
+    if (dayImageUrl || dayVideoUrl) {
+      mediaThumbHtml = '<div style="display:flex;gap:6px;margin:6px 0;">';
+      if (dayImageUrl) {
+        mediaThumbHtml += `<img src="${dayImageUrl}" class="schedule-card-thumb" alt="Day image" style="flex:1;min-width:0;border-radius:8px;object-fit:cover;max-height:120px;" />`;
+      }
+      if (dayVideoUrl) {
+        mediaThumbHtml += `<div style="flex:1;min-width:0;position:relative;border-radius:8px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;max-height:120px;"><video src="${dayVideoUrl}" style="width:100%;height:100%;object-fit:cover;" muted></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><span style="background:rgba(0,0,0,0.6);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;">&#9654;</span></div></div>`;
+      }
+      mediaThumbHtml += '</div>';
     }
 
     // Build approved post preview (first approved post snippet)
@@ -6117,7 +6126,7 @@ function renderScheduleGrid(themes, approvalData) {
       <div class="schedule-card ${cardClass}" onclick="openScheduleCard('${dateStr}')" style="${isToday ? 'border: 2px solid var(--green);' : ''}">
         <div class="schedule-card-date">${dayNames[date.getDay()]}</div>
         <div class="schedule-card-day">${date.getDate()}</div>
-        ${imageThumbHtml}
+        ${mediaThumbHtml}
         ${platformDotsHtml}
         <div class="schedule-card-theme">${displayTheme}</div>
         ${postPreviewHtml}
