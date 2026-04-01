@@ -4,6 +4,9 @@
   "functions": {
     "api/n8n/[...path].js": {
       "maxDuration": 300
+    },
+    "api/zernio/[...path].js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [

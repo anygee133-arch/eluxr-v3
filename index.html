@@ -2235,6 +2235,18 @@ details .details-content { padding: 20px; }
   background: var(--green-bg);
   color: var(--green);
 }
+.schedule-card-status.scheduled {
+  background: #dbeafe;
+  color: #2563eb;
+}
+.schedule-card-status.posted {
+  background: #d1fae5;
+  color: #059669;
+}
+.schedule-card-status.failed {
+  background: #fee2e2;
+  color: #dc2626;
+}
 .schedule-card-actions {
   display: flex;
   gap: 6px;
@@ -3575,6 +3587,8 @@ details .details-content { padding: 20px; }
               if (window.checkActivePipeline) {
                 window.checkActivePipeline();
               }
+              // Initialize Zernio platform connections
+              if (typeof initZernio === 'function') initZernio();
             }, 1000);
           }
           break
@@ -5053,6 +5067,11 @@ async function submitApproval(action, contentId, feedback = '') {
     }).catch(() => {});
   } catch (e) {}
 
+  // Zernio: auto-schedule approved posts if platform is connected (non-blocking)
+  if (action === 'approved' && typeof tryZernioSchedule === 'function') {
+    tryZernioSchedule(contentId).catch(() => {});
+  }
+
   return { success: true };
 }
 
@@ -5549,6 +5568,305 @@ window.copyToClipboard = copyToClipboard;
 window.clearPendingContent = clearPendingContent;
 
 // =============================================
+// ZERNIO INTEGRATION (Milestone 2)
+// Platform OAuth, post scheduling, status tracking
+// =============================================
+
+const ZERNIO_API = '/api/zernio';
+
+// Cache of connected platforms: { instagram: { accountId, connectedAt }, ... }
+let _zernioConnections = {};
+let _zernioProfileId = null;
+
+// --- Profile Management ---
+
+async function ensureZernioProfile() {
+  if (_zernioProfileId) return _zernioProfileId;
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return null;
+    // Check DB first
+    const { data: profile } = await window.supabase
+      .from('profiles')
+      .select('zernio_profile_id, business_url')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (profile && profile.zernio_profile_id) {
+      _zernioProfileId = profile.zernio_profile_id;
+      return _zernioProfileId;
+    }
+    // Create profile via Zernio API
+    const businessName = profile?.business_url || 'ELUXR User';
+    const resp = await fetch(`${ZERNIO_API}/profiles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: businessName, description: 'ELUXR user' })
+    });
+    if (!resp.ok) {
+      console.warn('Zernio profile creation failed:', resp.status);
+      return null;
+    }
+    const result = await resp.json();
+    const profileId = result._id || result.id;
+    if (profileId) {
+      await window.supabase.from('profiles')
+        .update({ zernio_profile_id: profileId })
+        .eq('id', user.id);
+      _zernioProfileId = profileId;
+    }
+    return _zernioProfileId;
+  } catch (err) {
+    console.warn('ensureZernioProfile error (non-fatal):', err);
+    return null;
+  }
+}
+
+// --- Platform Connections ---
+
+async function loadPlatformConnections() {
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return {};
+    const { data: connections } = await window.supabase
+      .from('platform_connections')
+      .select('platform, zernio_account_id, is_active, connected_at')
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+    _zernioConnections = {};
+    (connections || []).forEach(c => {
+      _zernioConnections[c.platform] = {
+        accountId: c.zernio_account_id,
+        connectedAt: c.connected_at
+      };
+    });
+    return _zernioConnections;
+  } catch (err) {
+    console.warn('loadPlatformConnections error:', err);
+    return {};
+  }
+}
+
+async function connectPlatform(platform) {
+  try {
+    const profileId = await ensureZernioProfile();
+    if (!profileId) {
+      showToast('Unable to create Zernio profile. Please try again.', 'error');
+      return;
+    }
+    // Map platform names: 'x' -> 'twitter' for Zernio API
+    const zernioPlat = platform === 'x' ? 'twitter' : platform;
+    const resp = await fetch(`${ZERNIO_API}/connect/${zernioPlat}?profileId=${profileId}`);
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      showToast('Failed to get connect URL: ' + (err.error || resp.status), 'error');
+      return;
+    }
+    const result = await resp.json();
+    if (result.authUrl) {
+      // Redirect to platform OAuth
+      window.location.href = result.authUrl;
+    } else {
+      showToast('No auth URL returned from Zernio', 'error');
+    }
+  } catch (err) {
+    showToast('Connection error: ' + err.message, 'error');
+  }
+}
+
+async function disconnectPlatform(platform) {
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    await window.supabase
+      .from('platform_connections')
+      .update({ is_active: false })
+      .eq('user_id', user.id)
+      .eq('platform', platform);
+    delete _zernioConnections[platform];
+    renderPlatformConnectionStatus();
+    showToast(platform.charAt(0).toUpperCase() + platform.slice(1) + ' disconnected', 'info');
+  } catch (err) {
+    showToast('Disconnect failed: ' + err.message, 'error');
+  }
+}
+
+async function syncZernioAccounts() {
+  try {
+    const profileId = await ensureZernioProfile();
+    if (!profileId) return;
+    const resp = await fetch(`${ZERNIO_API}/accounts?profileId=${profileId}`);
+    if (!resp.ok) return;
+    const accounts = await resp.json();
+    if (!Array.isArray(accounts)) return;
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    for (const acct of accounts) {
+      // Map 'twitter' back to 'x' for our DB
+      const platform = acct.platform === 'twitter' ? 'x' : acct.platform;
+      const accountId = acct._id || acct.id;
+      await window.supabase.from('platform_connections').upsert({
+        user_id: user.id,
+        platform: platform,
+        zernio_account_id: accountId,
+        is_active: true,
+        connected_at: new Date().toISOString()
+      }, { onConflict: 'user_id,platform' });
+    }
+    await loadPlatformConnections();
+  } catch (err) {
+    console.warn('syncZernioAccounts error:', err);
+  }
+}
+
+// --- OAuth Callback Handler ---
+
+async function handleZernioCallback() {
+  const path = window.location.pathname;
+  if (!path.startsWith('/auth/zernio/callback')) return false;
+  // Show loading state
+  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;"><div style="text-align:center;"><div style="width:40px;height:40px;border:3px solid rgba(0,0,0,0.1);border-top-color:#000;border-radius:50%;animation:spin 0.6s linear infinite;margin:0 auto 16px;"></div><h2>Connecting platform...</h2><p style="color:#666;">Please wait while we confirm your connection.</p></div></div>';
+  try {
+    await syncZernioAccounts();
+    // Redirect to app with success flag
+    window.location.href = '/?zernio_connected=1#section-campaign';
+  } catch (err) {
+    window.location.href = '/?zernio_error=1#section-campaign';
+  }
+  return true;
+}
+
+// --- Platform Connection UI ---
+
+function renderPlatformConnectionStatus() {
+  const container = document.getElementById('campaign-platform-selector');
+  if (!container) return;
+  const chips = container.querySelectorAll('.platform-chip');
+  chips.forEach(chip => {
+    const input = chip.querySelector('input[name="campaign_platforms"]');
+    if (!input) return;
+    const platform = input.value;
+    const conn = _zernioConnections[platform];
+    // Remove existing status indicator
+    const existing = chip.querySelector('.zernio-status');
+    if (existing) existing.remove();
+    // Add status indicator
+    const indicator = document.createElement('span');
+    indicator.className = 'zernio-status';
+    indicator.style.cssText = 'margin-left:6px; font-size:11px; cursor:pointer;';
+    if (conn && conn.accountId) {
+      indicator.innerHTML = '<span style="color:#16a34a;" title="Connected via Zernio">&#10003;</span>';
+      indicator.onclick = (e) => { e.preventDefault(); e.stopPropagation(); disconnectPlatform(platform); };
+    } else {
+      indicator.innerHTML = '<span style="color:var(--text-muted); opacity:0.6;" title="Click to connect via Zernio">&#128279;</span>';
+      indicator.onclick = (e) => { e.preventDefault(); e.stopPropagation(); connectPlatform(platform); };
+    }
+    chip.appendChild(indicator);
+  });
+}
+
+// --- Post Scheduling ---
+
+async function schedulePostViaZernio(contentItem) {
+  if (!contentItem || !contentItem.id) return null;
+  const platform = (contentItem.platform || '').toLowerCase();
+  const zernioPlat = platform === 'x' ? 'twitter' : platform;
+  const conn = _zernioConnections[platform];
+  if (!conn || !conn.accountId) return null; // Platform not connected
+  try {
+    const postText = contentItem.post_text || contentItem.content || '';
+    const scheduledDate = contentItem.scheduled_date || contentItem.date;
+    // Default to 10am on the scheduled date
+    const scheduledFor = scheduledDate ? scheduledDate + 'T10:00:00' : new Date().toISOString();
+    const body = {
+      content: postText,
+      scheduledFor: scheduledFor,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+      platforms: [{ platform: zernioPlat, accountId: conn.accountId }]
+    };
+    // Attach media if available
+    const visual = contentItem.selected_visual || 'image';
+    if (visual === 'video' && contentItem.video_url) {
+      body.mediaUrl = contentItem.video_url;
+      body.mediaType = 'video';
+    } else if (contentItem.image_url) {
+      body.mediaUrl = contentItem.image_url;
+      body.mediaType = 'image';
+    }
+    const resp = await fetch(`${ZERNIO_API}/posts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      console.warn('Zernio schedule failed:', resp.status);
+      return null;
+    }
+    const result = await resp.json();
+    const postId = result._id || result.id;
+    if (postId) {
+      // Update content_item with Zernio post ID and scheduled status
+      await window.supabase.from('content_items').update({
+        zernio_post_id: postId,
+        status: 'scheduled',
+        updated_at: new Date().toISOString()
+      }).eq('id', contentItem.id);
+      return postId;
+    }
+    return null;
+  } catch (err) {
+    console.warn('schedulePostViaZernio error (non-fatal):', err);
+    return null;
+  }
+}
+
+// Try to schedule all approved posts for a given content item
+async function tryZernioSchedule(contentId) {
+  try {
+    const { data: item } = await window.supabase
+      .from('content_items')
+      .select('*')
+      .eq('id', contentId)
+      .single();
+    if (!item || item.status !== 'approved') return;
+    const mapped = mapContentItem(item, null);
+    const postId = await schedulePostViaZernio(mapped);
+    if (postId) {
+      showToast('Post scheduled via Zernio', 'success');
+    }
+  } catch (err) {
+    // Non-fatal — post stays as approved
+  }
+}
+
+// --- Initialize on page load ---
+
+async function initZernio() {
+  // Handle OAuth callback first
+  if (await handleZernioCallback()) return;
+  // Check for success/error flags from callback redirect
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('zernio_connected') === '1') {
+    showToast('Platform connected successfully!', 'success');
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+  } else if (params.get('zernio_error') === '1') {
+    showToast('Platform connection failed. Please try again.', 'error');
+    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+  }
+  // Load connections (non-blocking)
+  loadPlatformConnections().then(() => {
+    renderPlatformConnectionStatus();
+  });
+}
+
+// Export functions
+window.connectPlatform = connectPlatform;
+window.disconnectPlatform = disconnectPlatform;
+window.schedulePostViaZernio = schedulePostViaZernio;
+window.tryZernioSchedule = tryZernioSchedule;
+window.renderPlatformConnectionStatus = renderPlatformConnectionStatus;
+
+// =============================================
 // CONTENT SCHEDULE FUNCTIONS
 // =============================================
 
@@ -5744,16 +6062,16 @@ function renderScheduleGrid(themes, approvalData) {
     const failed = allDayItems.filter(i => i.status === 'failed');
 
     if (posted.length > 0) {
-      statusClass = 'approved';
+      statusClass = 'posted';
       statusText = `${posted.length} Posted`;
     } else if (scheduled.length > 0) {
-      statusClass = 'approved';
+      statusClass = 'scheduled';
       statusText = `${scheduled.length} Scheduled`;
     } else if (approved.length > 0) {
       statusClass = 'approved';
       statusText = `${approved.length} Approved`;
     } else if (failed.length > 0) {
-      statusClass = 'pending';
+      statusClass = 'failed';
       statusText = `${failed.length} Failed`;
     } else if (pending.length > 0) {
       statusClass = 'pending';
