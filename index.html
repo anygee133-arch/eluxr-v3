@@ -920,11 +920,11 @@ details .details-content { padding: 20px; }
   z-index: 1500; display: flex; align-items: center; justify-content: center;
   opacity: 0; pointer-events: none; transition: opacity 0.3s var(--transition);
 }
-.content-day-modal.visible { opacity: 1; pointer-events: auto; }
+.content-day-modal.visible { opacity: 1; pointer-events: auto; overflow-y: auto; }
 .content-day-modal-content {
   background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: var(--radius-lg); padding: 28px; max-width: 900px; width: 92%;
-  max-height: 85vh; overflow-y: auto; position: relative;
+  margin: 20px auto; position: relative;
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 24px 64px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.6) inset;
   animation: modalSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
@@ -2972,35 +2972,39 @@ details .details-content { padding: 20px; }
         <div class="form-group" style="margin-bottom: 24px;">
           <label class="form-label">Campaign Theme *</label>
           <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">One theme for your entire campaign across all weeks.</p>
-          <div id="campaign-theme-selector" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+          <div id="campaign-theme-selector" style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
             <label class="theme-radio-card">
-              <input type="radio" name="campaign_theme" value="luxury-intrigue" checked>
+              <input type="radio" name="campaign_theme" value="luxury-intrigue" checked onchange="toggleThemeBreakdown('luxury-intrigue')">
               <div class="theme-radio-content">
                 <strong>Luxury Intrigue</strong>
                 <span>Mystery-driven storytelling — curiosity, craftsmanship, hidden details</span>
               </div>
             </label>
+            <div id="theme-breakdown-luxury-intrigue" class="theme-breakdown-panel" style="margin-left: 28px; padding: 10px 14px; background: rgba(0,0,0,0.02); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; font-size: 12px; line-height: 1.6;"></div>
             <label class="theme-radio-card">
-              <input type="radio" name="campaign_theme" value="emotional-journey">
+              <input type="radio" name="campaign_theme" value="emotional-journey" onchange="toggleThemeBreakdown('emotional-journey')">
               <div class="theme-radio-content">
                 <strong>Emotional Journey</strong>
                 <span>Story arc from desire to belonging through personal narrative</span>
               </div>
             </label>
+            <div id="theme-breakdown-emotional-journey" class="theme-breakdown-panel" style="display:none; margin-left: 28px; padding: 10px 14px; background: rgba(0,0,0,0.02); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; font-size: 12px; line-height: 1.6;"></div>
             <label class="theme-radio-card">
-              <input type="radio" name="campaign_theme" value="authority-educator">
+              <input type="radio" name="campaign_theme" value="authority-educator" onchange="toggleThemeBreakdown('authority-educator')">
               <div class="theme-radio-content">
                 <strong>Authority & Educator</strong>
                 <span>Position the brand as expert — teach, reveal secrets, build trust</span>
               </div>
             </label>
+            <div id="theme-breakdown-authority-educator" class="theme-breakdown-panel" style="display:none; margin-left: 28px; padding: 10px 14px; background: rgba(0,0,0,0.02); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; font-size: 12px; line-height: 1.6;"></div>
             <label class="theme-radio-card">
-              <input type="radio" name="campaign_theme" value="cinematic-series">
+              <input type="radio" name="campaign_theme" value="cinematic-series" onchange="toggleThemeBreakdown('cinematic-series')">
               <div class="theme-radio-content">
                 <strong>Cinematic Series</strong>
                 <span>Netflix-style weekly show with cliffhangers and visual drama</span>
               </div>
             </label>
+            <div id="theme-breakdown-cinematic-series" class="theme-breakdown-panel" style="display:none; margin-left: 28px; padding: 10px 14px; background: rgba(0,0,0,0.02); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; font-size: 12px; line-height: 1.6;"></div>
           </div>
         </div>
 
@@ -3864,12 +3868,15 @@ window.assignRelevantHashtags = assignRelevantHashtags;
 
 // === ICP (Ideal Customer Profile) LOADER ===
 let icpLoaded = false;
+let _icpLoading = false;
 
 async function loadICP() {
+  if (_icpLoading) return; // Prevent concurrent calls
+  _icpLoading = true;
   const icpCard = document.getElementById('icp-card');
   const icpSkeleton = document.getElementById('icp-skeleton');
   const icpContent = document.getElementById('icp-content');
-  if (!icpCard) return;
+  if (!icpCard) { _icpLoading = false; return; }
   try {
     const { data: icp, error } = await window.supabase.from('icps').select('*').maybeSingle();
     if (error && error.code !== 'PGRST116') {
@@ -3888,6 +3895,8 @@ async function loadICP() {
     // Don't auto-unlock here — progressive unlock handled by progressiveUnlockFromState
   } catch (err) {
     console.error('loadICP error:', err);
+  } finally {
+    _icpLoading = false;
   }
 }
 
@@ -4021,6 +4030,9 @@ async function loadProducts() {
   const container = document.getElementById('products-card-container');
   const countBadge = document.getElementById('product-count');
   if (!container) return;
+  // Don't re-render if user is actively editing a new product inline
+  const isEditingNew = document.querySelector('#products-items .product-item[data-new="true"]');
+  if (isEditingNew) return;
   try {
     const { data: products, error } = await window.supabase
       .from('products')
@@ -4125,6 +4137,39 @@ window.getOrderedProducts = getOrderedProducts;
 
 function initDragAndDrop() {
   var items = document.querySelectorAll('#products-items .product-item');
+  var container = document.getElementById('products-items');
+
+  // Remove existing top drop zone if any
+  var existingZone = document.getElementById('product-drop-zone-top');
+  if (existingZone) existingZone.remove();
+
+  // Add drop zone before first item for drag-to-first-position
+  if (container && items.length > 1) {
+    var dropZone = document.createElement('div');
+    dropZone.id = 'product-drop-zone-top';
+    dropZone.style.cssText = 'height:4px; border:2px dashed transparent; border-radius:4px; transition:all 0.2s; display:none;';
+    container.insertBefore(dropZone, container.firstChild);
+
+    dropZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      dropZone.style.height = '24px';
+      dropZone.style.borderColor = 'var(--green)';
+      dropZone.style.background = 'rgba(22,163,74,0.05)';
+    });
+    dropZone.addEventListener('dragleave', function() {
+      dropZone.style.height = '4px';
+      dropZone.style.borderColor = 'transparent';
+      dropZone.style.background = 'transparent';
+    });
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropZone.style.display = 'none';
+      var fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+      if (fromIndex > 0) reorderProducts(fromIndex, 0);
+    });
+  }
+
   items.forEach(function(item, idx) {
     item.setAttribute('draggable', 'true');
     item.dataset.orderIndex = idx;
@@ -4133,6 +4178,8 @@ function initDragAndDrop() {
       item.classList.add('dragging');
       e.dataTransfer.setData('text/plain', String(idx));
       e.dataTransfer.effectAllowed = 'move';
+      var dz = document.getElementById('product-drop-zone-top');
+      if (dz) dz.style.display = 'block';
     });
 
     item.addEventListener('dragend', function() {
@@ -4140,6 +4187,8 @@ function initDragAndDrop() {
       document.querySelectorAll('.product-item.drag-over').forEach(function(el) {
         el.classList.remove('drag-over');
       });
+      var dz = document.getElementById('product-drop-zone-top');
+      if (dz) dz.style.display = 'none';
     });
 
     item.addEventListener('dragover', function(e) {
@@ -4235,13 +4284,16 @@ function addCustomProduct() {
     </div>
     <div class="product-info" style="flex:1;">
       <div class="product-name">
-        <input type="text" value="" placeholder="Product name / description..." onblur="autoSaveNewProduct(this)" autofocus style="width:100%;" />
+        <input type="text" value="" placeholder="Product name / description..." autofocus style="width:100%;" />
       </div>
       <div style="margin-top:6px;">
-        <input type="text" class="product-url-input" placeholder="Product URL (optional)" onblur="autoSaveNewProduct(this)" style="width:100%; font-size:12px; padding:4px 8px; border-radius:6px; border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.5);" />
+        <input type="text" class="product-url-input" placeholder="Product URL (optional)" style="width:100%; font-size:12px; padding:4px 8px; border-radius:6px; border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.5);" />
+      </div>
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="saveNewProduct(this)" style="padding:6px 16px;">Save</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="cancelNewProduct(this)" style="padding:6px 12px;">Cancel</button>
       </div>
     </div>
-    <button type="button" class="product-remove" onclick="removeProduct(this)" title="Remove product">&times;</button>
   </div>`;
   // Insert at TOP (position 0)
   itemsContainer.insertAdjacentHTML('afterbegin', html);
@@ -4309,6 +4361,62 @@ async function autoSaveNewProduct(inputEl) {
   }
 }
 window.autoSaveNewProduct = autoSaveNewProduct;
+
+async function saveNewProduct(btn) {
+  const item = btn.closest('.product-item');
+  if (!item) return;
+  const nameInput = item.querySelector('.product-name input');
+  const urlInput = item.querySelector('.product-url-input');
+  const name = nameInput ? nameInput.value.trim() : '';
+  const productUrl = urlInput ? urlInput.value.trim() : '';
+  if (!name) {
+    showToast('Please enter a product name', 'error');
+    if (nameInput) nameInput.focus();
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    const { data, error } = await window.supabase.from('products').insert({
+      user_id: user.id,
+      name: name,
+      category: 'Custom',
+      product_url: productUrl || null,
+      sort_order: 0,
+      is_active: true
+    }).select('id').single();
+    if (error) throw error;
+    item.setAttribute('data-saved', 'true');
+    item.setAttribute('data-new', 'false');
+    item.setAttribute('data-product-id', data.id);
+    // Hide save/cancel, show remove button
+    const btnsDiv = btn.closest('div');
+    if (btnsDiv) btnsDiv.style.display = 'none';
+    let removeBtn = item.querySelector('.product-remove');
+    if (!removeBtn) {
+      item.insertAdjacentHTML('beforeend', '<button type="button" class="product-remove" onclick="removeProduct(this)" title="Remove product">&times;</button>');
+    } else {
+      removeBtn.style.display = 'block';
+    }
+    const countEl = document.getElementById('product-count');
+    if (countEl) countEl.textContent = parseInt(countEl.textContent || '0') + 1;
+    showToast('Product saved!', 'success');
+    if (productUrl) scrapeProductUrl(data.id, productUrl, item);
+  } catch (err) {
+    showToast('Failed to save product: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
+}
+window.saveNewProduct = saveNewProduct;
+
+function cancelNewProduct(btn) {
+  const item = btn.closest('.product-item');
+  if (item) item.remove();
+}
+window.cancelNewProduct = cancelNewProduct;
 
 async function scrapeProductUrl(productId, productUrl, itemEl) {
   // Show spinner on the product card
@@ -4594,8 +4702,13 @@ function unlockSection(stepId) {
   updateActiveSectionDot();
 
   // Auto-load data when specific steps unlock
-  if (stepId === 'section-topics' && window.loadExistingTopics) {
-    loadExistingTopics();
+  if (stepId === 'section-topics') {
+    if (window.loadExistingTopics) loadExistingTopics();
+    // Ensure week nav renders even if topics haven't loaded yet
+    setTimeout(() => { if (window.renderTopicsWeekNav) renderTopicsWeekNav(); }, 200);
+  }
+  if (stepId === 'section-content' && window.renderContentWeekNav) {
+    setTimeout(() => renderContentWeekNav(), 200);
   }
   if (stepId === 'section-calendar') {
     if (window.loadScheduleThemes) loadScheduleThemes();
@@ -4910,13 +5023,14 @@ async function generateContent(formData) {
   }
 }
 
-async function fetchCalendarData() {
+async function fetchCalendarData(approvedOnly) {
   try {
     const campaignId = await ensureCampaign();
     let query = window.supabase
       .from('content_items')
       .select('*')
       .order('scheduled_date', { ascending: true });
+    if (approvedOnly) query = query.in('status', ['approved', 'scheduled', 'posted']);
     if (campaignId) query = query.eq('campaign_id', campaignId);
     const { data: items, error } = await query;
     if (error) {
@@ -5110,7 +5224,7 @@ async function refreshCalendarData() {
   }
 
   try {
-    const data = await fetchCalendarData();
+    const data = await fetchCalendarData(true);
     if (data) {
       contentData = data.all || data.content || data.pending || [];
       renderCalendar(currentMonth, contentData);
@@ -5146,7 +5260,7 @@ function startCalendarAutoRefresh() {
 
 async function fetchAndDisplayCalendar(silent = false) {
   try {
-    const data = await fetchCalendarData();
+    const data = await fetchCalendarData(true);
     const rawContent = data.all || [];
 
     contentData = rawContent.map((item, index) => {
@@ -5291,9 +5405,9 @@ function renderProgress(run) {
     icpLoaded = false;
     window._productsLoaded = false;
   }
-  // Load ICP after step 1 completes — products load only after ICP finishes
-  if (currentStep >= 1 && !icpLoaded && window.loadICP) {
-    window.loadICP();
+  // Load ICP after step 1 completes — guard prevents concurrent calls
+  if (currentStep >= 1 && !icpLoaded && !_icpLoading && window.loadICP) {
+    window.loadICP().catch(err => console.error('Failed to load ICP:', err));
   }
   // Only load products after ICP has loaded (sequential unlock)
   if (currentStep >= 1 && icpLoaded && !window._productsLoaded && window.loadProducts) {
@@ -5339,10 +5453,13 @@ function renderProgress(run) {
 
     // Sequential unlock: ICP only! Let user explicitly click "Continue to Products"
     unlockSection('section-profile');
-    if (window.loadICP) {
+    // ICP should already be loaded from progress callback; call again only if needed
+    if (!icpLoaded && !_icpLoading && window.loadICP) {
       loadICP().then(() => {
         if (window.loadProducts) loadProducts();
-      });
+      }).catch(err => console.error('Final ICP load failed:', err));
+    } else if (icpLoaded && window.loadProducts) {
+      loadProducts();
     }
   } else if (run.status === 'failed') {
     cleanupProgress();
@@ -5788,22 +5905,26 @@ async function openScheduleCard(dateStr) {
   if (sortedItems.length === 0) {
     bodyHtml = '<p style="text-align:center; color:var(--text-muted); padding:20px;">No content for this day.</p>';
   } else {
-    // Show image if any item has one
-    const dayImage = dayItems.find(i => i.image_url);
-    if (dayImage) {
-      bodyHtml += '<div style="margin-bottom:16px; text-align:center;">' +
-        '<img src="' + escapeHTML(dayImage.image_url) + '" style="max-width:100%; max-height:300px; border-radius:12px; object-fit:cover;" />' +
-        '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(dayImage.image_url) + '\', \'image-' + dateStr + '.png\')">&#8681; Download Image</button></div>' +
-      '</div>';
-    }
+    // Show only the selected visual (image or video) based on selected_visual field
+    const primaryItem = dayItems.find(i => i.selected_visual) || dayItems[0];
+    const selectedVis = primaryItem ? (primaryItem.selected_visual || 'image') : 'image';
 
-    // Show video if any
-    const dayVideo = dayItems.find(i => i.video_url);
-    if (dayVideo) {
-      bodyHtml += '<div style="margin-bottom:16px; text-align:center;">' +
-        '<video controls style="max-width:100%; max-height:300px; border-radius:12px;"><source src="' + escapeHTML(dayVideo.video_url) + '" type="video/mp4"></video>' +
-        '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(dayVideo.video_url) + '\', \'video-' + dateStr + '.mp4\')">&#8681; Download Video</button></div>' +
-      '</div>';
+    if (selectedVis === 'video') {
+      const dayVideo = dayItems.find(i => i.video_url);
+      if (dayVideo) {
+        bodyHtml += '<div style="margin-bottom:16px; text-align:center;">' +
+          '<video controls style="max-width:100%; max-height:300px; border-radius:12px;"><source src="' + escapeHTML(dayVideo.video_url) + '" type="video/mp4"></video>' +
+          '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(dayVideo.video_url) + '\', \'video-' + dateStr + '.mp4\')">&#8681; Download</button></div>' +
+        '</div>';
+      }
+    } else {
+      const dayImage = dayItems.find(i => i.image_url);
+      if (dayImage) {
+        bodyHtml += '<div style="margin-bottom:16px; text-align:center;">' +
+          '<img src="' + escapeHTML(dayImage.image_url) + '" style="max-width:100%; max-height:300px; border-radius:12px; object-fit:cover;" />' +
+          '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(dayImage.image_url) + '\', \'image-' + dateStr + '.png\')">&#8681; Download</button></div>' +
+        '</div>';
+      }
     }
 
     // Show each platform post
@@ -5817,8 +5938,9 @@ async function openScheduleCard(dateStr) {
 
       var hashtagsHtml = '';
       if (item.hashtags && item.hashtags.length > 0) {
+        var calDisplayTags = item.hashtags.slice(0, 5);
         hashtagsHtml = '<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:8px;">' +
-          item.hashtags.map(function(h) { return '<span class="hashtag">' + escapeHTML(h) + '</span>'; }).join('') +
+          calDisplayTags.map(function(h) { return '<span class="hashtag">' + escapeHTML(h) + '</span>'; }).join('') +
         '</div>';
       }
 
@@ -6043,7 +6165,7 @@ async function renderWeekViewStrip() {
   // Fetch content for the week
   let contentByDate = {};
   try {
-    const calData = await fetchCalendarData();
+    const calData = await fetchCalendarData(true);
     (calData.all || []).forEach(item => {
       const d = item.date || '';
       if (!contentByDate[d]) contentByDate[d] = [];
@@ -6301,7 +6423,7 @@ async function approveContent() {
   try {
     await submitApproval('approved', content.id);
     // Re-fetch from Supabase after approval
-    const freshData = await fetchCalendarData();
+    const freshData = await fetchCalendarData(true);
     contentData = freshData.all;
     renderCalendar(currentMonth, contentData);
     updateStats();
@@ -6409,7 +6531,7 @@ async function rejectContent() {
   try {
     await submitApproval('rejected', content.id, feedback || '');
     // Re-fetch from Supabase after rejection
-    const freshData = await fetchCalendarData();
+    const freshData = await fetchCalendarData(true);
     contentData = freshData.all;
     renderCalendar(currentMonth, contentData);
     updateStats();
@@ -6478,7 +6600,7 @@ async function approveSelected() {
   }
   selectedItems.clear();
   // Re-fetch from Supabase after batch approval
-  const freshData = await fetchCalendarData();
+  const freshData = await fetchCalendarData(true);
   contentData = freshData.all;
   updateBatchBar();
   renderCalendar(currentMonth, contentData);
@@ -6914,7 +7036,7 @@ async function clearPendingContent(silent = false) {
   }
 
   // Re-fetch from Supabase to get current state
-  const freshData = await fetchCalendarData();
+  const freshData = await fetchCalendarData(true);
   contentData = freshData.all;
 
   // Update UI
@@ -7054,6 +7176,21 @@ const STORYTELLING_THEMES = {
 };
 
 let selectedThemeKey = 'luxury-intrigue';
+
+function toggleThemeBreakdown(key) {
+  document.querySelectorAll('.theme-breakdown-panel').forEach(p => p.style.display = 'none');
+  const panel = document.getElementById('theme-breakdown-' + key);
+  if (panel && STORYTELLING_THEMES[key] && STORYTELLING_THEMES[key].framework) {
+    const fw = STORYTELLING_THEMES[key].framework;
+    panel.innerHTML = Object.keys(fw).map(d =>
+      '<div style="margin-bottom:4px;"><strong>' + fw[d].day + ':</strong> ' + fw[d].theme + ' — <em style="color:var(--text-muted);">' + fw[d].tagline + '</em></div>'
+    ).join('');
+    panel.style.display = 'block';
+  }
+}
+window.toggleThemeBreakdown = toggleThemeBreakdown;
+// Initialize default theme breakdown on load
+setTimeout(() => toggleThemeBreakdown('luxury-intrigue'), 100);
 
 function getActiveFramework() {
   return STORYTELLING_THEMES[selectedThemeKey].framework;
@@ -7725,15 +7862,20 @@ async function lockInAndGenerate() {
   // Track which week is generating content (persists across tab switches)
   _contentGeneratingWeek = currentWeek;
 
-  // Show content generation progress
-  document.getElementById('topics-grid').style.display = 'none';
-  const progressSection = document.getElementById('week-content-progress');
-  progressSection.style.display = 'block';
-  document.getElementById('week-progress-bar').style.width = '10%';
-  document.getElementById('week-progress-text').textContent = 'Starting content generation for Week ' + currentWeek + '...';
-
-  // Re-anchor viewport after layout change (hiding tall topics-grid, showing small progress bar)
-  scrollToSection('section-topics');
+  // Show content generation progress in Section 6 (keep Section 5 open)
+  unlockSection('section-content');
+  const contentContainer = document.getElementById('content-review-container');
+  if (contentContainer) {
+    contentContainer.innerHTML = '<div style="text-align:center; padding:48px 20px;">' +
+      '<div class="spinner-ring" style="width:40px; height:40px; border-width:3px; margin:0 auto;"></div>' +
+      '<p style="color:var(--text-primary); margin-top:16px; font-weight:600;">Generating content for Week ' + currentWeek + '...</p>' +
+      '<p style="font-size:12px; color:var(--text-muted); margin-top:4px;">This may take 1-2 minutes per platform.</p>' +
+      '<div style="margin-top:16px; width:100%; max-width:300px; height:6px; background:rgba(0,0,0,0.06); border-radius:3px; margin-left:auto; margin-right:auto;">' +
+        '<div id="week-progress-bar-s6" style="width:10%; height:100%; background:var(--green); border-radius:3px; transition:width 0.5s ease;"></div>' +
+      '</div>' +
+    '</div>';
+  }
+  scrollToSection('section-content');
 
   try {
     // Get user for polling
@@ -7801,7 +7943,9 @@ async function lockInAndGenerate() {
     const maxPolls = 60; // 5 minutes max (60 * 5s)
     let polls = 0;
 
-    document.getElementById('week-progress-text').textContent = 'Generating content for Week ' + currentWeek + '... This takes a few minutes.';
+    // Update S6 progress indicator
+    const s6Bar = document.getElementById('week-progress-bar-s6');
+    const s6Container = document.getElementById('content-review-container');
 
     const pollForContent = () => new Promise((resolve, reject) => {
       const interval = setInterval(async () => {
@@ -7816,8 +7960,7 @@ async function lockInAndGenerate() {
           const newItems = (currentCount || 0) - (existingCount || 0);
           const daysComplete = Math.floor(newItems / platforms.length);
           progress = Math.min(10 + (newItems / expectedItems) * 85, 95);
-          document.getElementById('week-progress-bar').style.width = progress + '%';
-          document.getElementById('week-progress-text').textContent = 'Generating content... ' + daysComplete + ' of ' + weekDayCount + ' days complete (' + newItems + '/' + expectedItems + ' posts)';
+          if (s6Bar) s6Bar.style.width = progress + '%';
 
           if (newItems >= expectedItems) {
             clearInterval(interval);
@@ -7837,10 +7980,6 @@ async function lockInAndGenerate() {
     // Clear generating state
     _contentGeneratingWeek = null;
 
-    // Complete
-    document.getElementById('week-progress-bar').style.width = '100%';
-    document.getElementById('week-progress-text').textContent = success ? 'Content generation complete!' : 'Content generation may still be running. Check the calendar shortly.';
-
     // Update campaign current_week in Supabase
     await window.supabase
       .from('campaigns')
@@ -7850,11 +7989,8 @@ async function lockInAndGenerate() {
     // Unlock next week
     unlockNextWeek(currentWeek);
 
-    // Show completion — stay on Step 3, restore topics grid
+    // Show completion — render content review in S6, mark week tab
     setTimeout(() => {
-      progressSection.style.display = 'none';
-      document.getElementById('topics-grid').style.display = 'block';
-
       const tab = document.querySelector(`.week-tab[data-week="${currentWeek}"]`);
       if (tab) {
         tab.classList.remove('active');
@@ -7862,19 +7998,18 @@ async function lockInAndGenerate() {
       }
 
       if (window.fetchAndDisplayCalendar) fetchAndDisplayCalendar(true);
-      // Unlock content review — calendar unlocks when posts are approved
       unlockSection('section-content');
       startCalendarAutoRefresh();
       loadScheduleThemes();
-      // Pre-render content review in background (no scroll)
+      // Render content review (replaces the S6 loading spinner)
       if (window.renderContentReview) renderContentReview();
-      showToast('Week ' + currentWeek + ' content generated! Scroll down to Step 4 to review.', 'success');
+      showToast(success ? 'Week ' + currentWeek + ' content generated! Review below.' : 'Content generation may still be running.', success ? 'success' : 'info');
     }, 1000);
   } catch (err) {
     console.error('lockInAndGenerate error:', err);
     showToast('Error generating content: ' + err.message, 'error');
-    progressSection.style.display = 'none';
-    document.getElementById('topics-grid').style.display = 'block';
+    // Restore S6 with error state
+    if (window.renderContentReview) renderContentReview();
   }
 }
 
@@ -7967,6 +8102,18 @@ async function renderContentReview() {
       const date = item.date || 'unknown';
       if (!_contentByDate[date]) _contentByDate[date] = [];
       _contentByDate[date].push(item);
+    });
+
+    // Reconstruct dayImageApproved state from DB (Bug 6.8 persistence)
+    // If any post for a date is approved, the image was approved too
+    Object.keys(_contentByDate).forEach(dateStr => {
+      const items = _contentByDate[dateStr];
+      const hasApproved = items.some(i => i.status === 'approved');
+      const hasImage = items.some(i => i.image_url);
+      if (hasApproved && hasImage) dayImageApproved[dateStr] = true;
+      // Also restore approved image URL
+      const imgItem = items.find(i => i.image_url);
+      if (imgItem && imgItem.image_url) dayApprovedImage[dateStr] = imgItem.image_url;
     });
 
     const sortedDates = Object.keys(_contentByDate).sort();
@@ -8191,7 +8338,7 @@ function openDayModal(dateStr) {
       imageColHtml = '<div class="generated-media-display">' +
         '<img src="' + escapeHTML(existingImageUrl) + '" class="day-generated-image" />' +
         '<div class="media-action-buttons">' +
-          '<button class="btn btn-primary" onclick="approveDayImage(\'' + dateStr + '\')">Approve Image \u2713</button>' +
+          '<button class="btn btn-primary" onclick="approveDayImage(\'' + dateStr + '\')">Approve \u2713</button>' +
           '<button class="btn btn-outline" onclick="downloadMedia(\'' + escapeHTML(existingImageUrl) + '\', \'image-' + dateStr + '.png\')">&#8681; Download</button>' +
           '<button class="btn btn-outline" onclick="showRegenerationPopup(\'' + dateStr + '\')">Regenerate</button>' +
         '</div>' +
@@ -8273,12 +8420,13 @@ function openDayModal(dateStr) {
       const statusClass = item.status === 'approved' ? 'approved' : (item.status === 'rejected' ? 'rejected' : 'pending');
       const isScript = (platformClass === 'instagram' || platformClass === 'youtube');
       const fullText = parseContentText(item);
-      const selectedVisual = item.selected_visual || 'image';
+      const selectedVisual = item.selected_visual || (existingVideoUrl && existingImageUrl ? 'video' : 'image');
 
       var hashtagsHtml = '';
       if (item.hashtags && item.hashtags.length > 0) {
+        var displayTags = item.hashtags.slice(0, 5);
         hashtagsHtml = '<div class="post-hashtags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
-          item.hashtags.map(function(h) { return '<span class="hashtag">' + escapeHTML(h) + '</span>'; }).join('') +
+          displayTags.map(function(h) { return '<span class="hashtag">' + escapeHTML(h) + '</span>'; }).join('') +
         '</div>';
       }
 
@@ -8293,8 +8441,8 @@ function openDayModal(dateStr) {
             '<img src="' + escapeHTML(existingImageUrl) + '" style="width:32px; height:32px; object-fit:cover; border-radius:4px;">' +
           '</label>' +
           (existingVideoUrl ? '<label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:11px;">' +
-            '<input type="checkbox"' + vidChecked + ' onchange="updateVisualSelection(\'' + item.id + '\', \'video\', this.checked, \'' + dateStr + '\')" style="accent-color:#7c3aed;">' +
-            '<span style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:rgba(124,58,237,0.1); border-radius:4px; font-size:14px;">&#9654;</span>' +
+            '<input type="checkbox"' + vidChecked + ' onchange="updateVisualSelection(\'' + item.id + '\', \'video\', this.checked, \'' + dateStr + '\')" style="accent-color:#16a34a;">' +
+            '<span style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:rgba(22,163,74,0.1); border-radius:4px; font-size:14px; color:#16a34a;">&#9654;</span>' +
           '</label>' : '') +
         '</div>';
       }
@@ -8316,7 +8464,7 @@ function openDayModal(dateStr) {
         '<div class="card-actions" style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0; display:flex; gap:6px; align-items:center;">' +
           (item.status !== 'approved'
             ? '<button class="btn btn-primary btn-sm"' + approveDisabledAttr + ' style="' + approveDisabledStyle + '" onclick="event.stopPropagation();quickApprove(\'' + item.id + '\',\'' + dateStr + '\')">Approve</button>' +
-              '<button class="btn btn-outline btn-sm" style="color:#ef4444;" onclick="event.stopPropagation();quickReject(\'' + item.id + '\',\'' + dateStr + '\')">Reject</button>'
+              '<button class="btn btn-outline btn-sm" style="color:#16a34a;" onclick="event.stopPropagation();regeneratePostText(\'' + item.id + '\',\'' + dateStr + '\')">Regenerate</button>'
             : '<span style="color:#16a34a; font-size:12px; font-weight:600;">&#10003; Approved</span>'
           ) +
         '</div>' +
@@ -8666,9 +8814,10 @@ function selectDayImage(dateStr, index) {
 }
 window.selectDayImage = selectDayImage;
 
-function approveDayImage(dateStr) {
+async function approveDayImage(dateStr) {
   dayImageApproved[dateStr] = true;
-  showToast('Image approved! You can now generate a video.', 'success');
+  showToast('Image approved! You can now approve posts and generate a video.', 'success');
+  unlockSection('section-calendar');
   openDayModal(dateStr);
 }
 window.approveDayImage = approveDayImage;
@@ -8835,6 +8984,39 @@ async function quickReject(itemId, reopenDate) {
   }
 }
 window.quickReject = quickReject;
+
+async function regeneratePostText(itemId, reopenDate) {
+  try {
+    showToast('Regenerating post text...', 'info');
+    const { data: item } = await window.supabase.from('content_items').select('*').eq('id', itemId).single();
+    if (!item) { showToast('Content item not found', 'error'); return; }
+    const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-regenerate-topic`, {
+      method: 'POST',
+      body: JSON.stringify({
+        content_id: itemId,
+        platform: item.platform,
+        product_name: item.product_name || '',
+        topic: item.topic || '',
+        campaign_id: item.campaign_id,
+        regenerate_text: true
+      })
+    });
+    if (!response.ok) throw new Error('Regeneration failed: ' + response.status);
+    const result = await response.json();
+    if (result.content || result.post_text) {
+      await window.supabase.from('content_items').update({
+        content: result.content || result.post_text,
+        hashtags: result.hashtags || item.hashtags
+      }).eq('id', itemId);
+    }
+    showToast('Post text regenerated!', 'success');
+    await renderContentReview();
+    if (reopenDate) openDayModal(reopenDate);
+  } catch (e) {
+    showToast('Error regenerating: ' + e.message, 'error');
+  }
+}
+window.regeneratePostText = regeneratePostText;
 
 window.fetchAndDisplayCalendar = fetchAndDisplayCalendar;
 window.unlockSection = unlockSection;
@@ -9349,6 +9531,9 @@ window.progressiveUnlockFromState = async function() {
     if (!hasICP) return; // Nothing to unlock
 
     unlockSection('section-profile');
+    unlockSection('section-products');
+    // Load and render products from Supabase on page load
+    if (window.loadProducts) await loadProducts();
 
     // Check products exist (7+) → unlock campaign
     const { data: products } = await window.supabase.from('products').select('id').eq('user_id', user.id).eq('is_active', true);
