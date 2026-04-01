@@ -4029,7 +4029,6 @@ let productsModified = false;
 async function loadProducts() {
   const container = document.getElementById('products-card-container');
   const countBadge = document.getElementById('product-count');
-  if (!container) return;
   // Don't re-render if user is actively editing a new product inline
   const isEditingNew = document.querySelector('#products-items .product-item[data-new="true"]');
   if (isEditingNew) return;
@@ -4045,10 +4044,10 @@ async function loadProducts() {
     }
     productsData = (products || []);
     if (countBadge) countBadge.textContent = productsData.length;
+    if (!container) return; // Can't render UI but data is loaded
     if (productsData.length > 0) {
       container.style.display = 'block';
       renderProductsCard(productsData);
-      // Hide empty state — don't auto-unlock, progressive unlock handles it
       const emptyState = document.getElementById('products-section-empty');
       if (emptyState) emptyState.style.display = 'none';
     } else {
@@ -7680,6 +7679,11 @@ async function generateTopicsFromProducts() {
   const weeks = getCampaignWeeks();
   const weekInfo = weeks.find(w => w.weekNum === currentWeek);
   const dayCount = weekInfo ? weekInfo.dayCount : 7;
+
+  // Ensure productsData is loaded (may be empty if loadProducts wasn't awaited)
+  if (!productsData || productsData.length === 0) {
+    await loadProducts();
+  }
 
   if (!productsData || productsData.length < dayCount) {
     showToast(`You need at least ${dayCount} products for this week (1 per day). Currently: ${productsData ? productsData.length : 0}.`, 'error');
