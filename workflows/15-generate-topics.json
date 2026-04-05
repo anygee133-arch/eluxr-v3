@@ -116,7 +116,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?user_id=eq.{{ $('Extract Params').item.json.user_id }}&is_active=eq.true&select=id,name,description,category",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?user_id=eq.{{ $('Extract Params').item.json.user_id }}&is_active=eq.true&select=id,name,description,category,image_url,image_urls,product_url",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

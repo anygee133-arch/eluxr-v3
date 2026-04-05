@@ -3023,21 +3023,9 @@ details .details-content { padding: 20px; }
 
         <!-- 4. Brand Voice -->
         <div class="form-group" style="margin-bottom: 24px;">
-          <label class="form-label">Brand Voice</label>
-          <div id="campaign-brand-voice-grid" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
-            <label class="brand-voice-chip"><input type="checkbox" name="campaign_brand_traits" value="elegant"> Elegant</label>
-            <label class="brand-voice-chip"><input type="checkbox" name="campaign_brand_traits" value="bold"> Bold</label>
-            <label class="brand-voice-chip"><input type="checkbox" name="campaign_brand_traits" value="playful"> Playful</label>
-            <label class="brand-voice-chip"><input type="checkbox" name="campaign_brand_traits" value="authoritative"> Authoritative</label>
-            <label class="brand-voice-chip"><input type="checkbox" name="campaign_brand_traits" value="warm"> Warm</label>
-            <label class="brand-voice-chip"><input type="checkbox" name="campaign_brand_traits" value="sophisticated"> Sophisticated</label>
-            <label class="brand-voice-chip"><input type="checkbox" name="campaign_brand_traits" value="edgy"> Edgy</label>
-            <label class="brand-voice-chip"><input type="checkbox" name="campaign_brand_traits" value="classic"> Classic</label>
-            <label class="brand-voice-chip"><input type="checkbox" name="campaign_brand_traits" value="inspirational"> Inspirational</label>
-            <label class="brand-voice-chip"><input type="checkbox" name="campaign_brand_traits" value="minimalist"> Minimalist</label>
-          </div>
-          <textarea id="campaign_brand_voice_notes" name="campaign_brand_voice_notes" rows="3" placeholder="Any additional brand voice details..."
-            style="width: 100%; margin-top: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background: rgba(255,255,255,0.6); font-size: 14px; font-family: 'DM Sans', sans-serif; resize: vertical;"></textarea>
+          <label class="form-label">Brand Voice & Tone</label>
+          <textarea id="campaign_brand_voice_notes" name="campaign_brand_voice_notes" rows="5" placeholder="Describe your brand's voice and tone in your own words. For example: 'Professional yet approachable, using technical language sparingly. We speak with authority but warmth...'"
+            style="width: 100%; margin-top: 8px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background: rgba(255,255,255,0.6); font-size: 14px; font-family: 'DM Sans', sans-serif; resize: vertical;"></textarea>
         </div>
 
         <!-- 5. Brand Voice Document Upload -->
@@ -3175,16 +3163,6 @@ details .details-content { padding: 20px; }
 
     <!-- WEEKLY CONTENT SCHEDULE -->
     <div class="content-schedule fade-in-up stagger-1" id="content-schedule">
-      <div class="content-schedule-header">
-        <h3>Posting Calendar</h3>
-        <div class="content-schedule-nav">
-          <button class="btn btn-outline btn-sm" onclick="changeScheduleWeek(-1)">&larr; Prev Week</button>
-          <span class="week-label" id="schedule-week-label">Loading...</span>
-          <button class="btn btn-outline btn-sm" onclick="changeScheduleWeek(1)">Next Week &rarr;</button>
-          <button class="btn btn-outline btn-sm" onclick="refreshSchedule()">&#8635; Refresh</button>
-          <button class="btn btn-outline btn-sm" onclick="exportToCSV()">Export CSV</button>
-        </div>
-      </div>
       <div id="schedule-grid" class="content-schedule-grid">
         <div class="schedule-loading">
           <div class="spinner" style="width:30px;height:30px;margin:0 auto 12px;"></div>
@@ -3589,6 +3567,8 @@ details .details-content { padding: 20px; }
               }
               // Initialize Zernio platform connections
               if (typeof initZernio === 'function') initZernio();
+              // Initialize brand doc drag-and-drop
+              if (typeof initBrandDocDragDrop === 'function') initBrandDocDragDrop();
             }, 1000);
           }
           break
@@ -3774,7 +3754,12 @@ function mapContentItem(dbRow, themeMap) {
     theme_id: dbRow.theme_id || null,
     product_id: dbRow.product_id || null,
     scheduled_date: scheduledDate,
-    video_script: dbRow.video_script || ''
+    video_script: dbRow.video_script || '',
+    image_approved: dbRow.image_approved != null ? dbRow.image_approved : null,
+    video_approved: dbRow.video_approved != null ? dbRow.video_approved : null,
+    video_status: dbRow.video_status || null,
+    image_theme_id: dbRow.image_theme_id || null,
+    product_name: dbRow.product_name || ''
   };
 }
 
@@ -4052,7 +4037,7 @@ async function loadProducts() {
       .from('products')
       .select('*')
       .eq('is_active', true)
-      .order('category');
+      .order('created_at', { ascending: false });
     if (error) {
       console.error('Error loading products:', error);
       return;
@@ -4290,23 +4275,38 @@ function addCustomProduct() {
   const itemsContainer = document.getElementById('products-items');
   if (!itemsContainer) return;
   const newId = 'new-' + Date.now();
-  const html = `<div class="product-item" data-product-id="${newId}" data-new="true">
-    <div class="product-thumb-placeholder" style="position:relative; cursor:pointer;" onclick="this.querySelector('input[type=file]').click()">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-      <input type="file" accept="image/jpeg,image/png" style="display:none;" onchange="handleProductImageUpload(this, '${newId}')">
-      <span style="font-size:9px; color:var(--text-muted); display:block; margin-top:2px;">Upload</span>
+  const html = `<div class="product-item" data-product-id="${newId}" data-new="true" style="flex-direction:column; padding:16px;">
+    <!-- Path A: Manual entry -->
+    <div class="product-path-a" id="product-path-a-${newId}">
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <div class="product-thumb-placeholder" style="position:relative; cursor:pointer; min-width:52px;" onclick="this.querySelector('input[type=file]').click()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+          <input type="file" accept="image/jpeg,image/png" style="display:none;" onchange="handleProductImageUpload(this, '${newId}'); toggleProductPath('${newId}', 'a');">
+          <span style="font-size:9px; color:var(--text-muted); display:block; margin-top:2px;">Upload</span>
+        </div>
+        <div style="flex:1;">
+          <div class="product-name">
+            <input type="text" value="" placeholder="Product name..." autofocus style="width:100%;" oninput="toggleProductPath('${newId}', 'a')" />
+          </div>
+          <textarea placeholder="Product description (optional)" rows="2" style="width:100%; margin-top:6px; font-size:12px; padding:6px 8px; border-radius:6px; border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.5); font-family:'DM Sans',sans-serif; resize:vertical;" oninput="toggleProductPath('${newId}', 'a')"></textarea>
+        </div>
+      </div>
     </div>
-    <div class="product-info" style="flex:1;">
-      <div class="product-name">
-        <input type="text" value="" placeholder="Product name / description..." autofocus style="width:100%;" />
-      </div>
-      <div style="margin-top:6px;">
-        <input type="text" class="product-url-input" placeholder="Product URL (optional)" style="width:100%; font-size:12px; padding:4px 8px; border-radius:6px; border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.5);" />
-      </div>
-      <div style="margin-top:8px; display:flex; gap:8px;">
-        <button type="button" class="btn btn-primary btn-sm" onclick="saveNewProduct(this)" style="padding:6px 16px;">Save</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="cancelNewProduct(this)" style="padding:6px 12px;">Cancel</button>
-      </div>
+    <!-- OR divider -->
+    <div class="or-divider" style="display:flex; align-items:center; gap:12px; margin:12px 0;">
+      <div style="flex:1; height:1px; background:rgba(0,0,0,0.1);"></div>
+      <span style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Or</span>
+      <div style="flex:1; height:1px; background:rgba(0,0,0,0.1);"></div>
+    </div>
+    <!-- Path B: URL -->
+    <div class="product-path-b" id="product-path-b-${newId}">
+      <input type="text" class="product-url-input" placeholder="Paste a product or collection URL..." style="width:100%; font-size:13px; padding:8px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6);" oninput="toggleProductPath('${newId}', 'b')" />
+      <p style="font-size:11px; color:var(--text-muted); margin:4px 0 0;">Single product or collection — we'll detect and import automatically</p>
+    </div>
+    <!-- Actions -->
+    <div style="margin-top:12px; display:flex; gap:8px;">
+      <button type="button" class="btn btn-primary btn-sm" onclick="saveNewProduct(this)" style="padding:6px 16px;">Save</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="cancelNewProduct(this)" style="padding:6px 12px;">Cancel</button>
     </div>
   </div>`;
   // Insert at TOP (position 0)
@@ -4376,6 +4376,36 @@ async function autoSaveNewProduct(inputEl) {
 }
 window.autoSaveNewProduct = autoSaveNewProduct;
 
+function toggleProductPath(newId, activePath) {
+  const pathA = document.getElementById('product-path-a-' + newId);
+  const pathB = document.getElementById('product-path-b-' + newId);
+  if (!pathA || !pathB) return;
+  const nameInput = pathA.querySelector('.product-name input');
+  const descInput = pathA.querySelector('textarea');
+  const nameVal = nameInput ? nameInput.value.trim() : '';
+  const descVal = descInput ? descInput.value.trim() : '';
+  const hasImage = pathA.querySelector('.product-thumb img') !== null;
+  const urlInput = pathB.querySelector('.product-url-input');
+  const urlVal = urlInput ? urlInput.value.trim() : '';
+  if (activePath === 'a' && (nameVal || descVal || hasImage)) {
+    pathB.style.opacity = '0.4';
+    pathB.style.pointerEvents = 'none';
+    pathA.style.opacity = '1';
+    pathA.style.pointerEvents = 'auto';
+  } else if (activePath === 'b' && urlVal) {
+    pathA.style.opacity = '0.4';
+    pathA.style.pointerEvents = 'none';
+    pathB.style.opacity = '1';
+    pathB.style.pointerEvents = 'auto';
+  } else {
+    pathA.style.opacity = '1';
+    pathA.style.pointerEvents = 'auto';
+    pathB.style.opacity = '1';
+    pathB.style.pointerEvents = 'auto';
+  }
+}
+window.toggleProductPath = toggleProductPath;
+
 async function saveNewProduct(btn) {
   const item = btn.closest('.product-item');
   if (!item) return;
@@ -4383,8 +4413,8 @@ async function saveNewProduct(btn) {
   const urlInput = item.querySelector('.product-url-input');
   const name = nameInput ? nameInput.value.trim() : '';
   const productUrl = urlInput ? urlInput.value.trim() : '';
-  if (!name) {
-    showToast('Please enter a product name', 'error');
+  if (!name && !productUrl) {
+    showToast('Please enter a product name or URL', 'error');
     if (nameInput) nameInput.focus();
     return;
   }
@@ -4393,17 +4423,49 @@ async function saveNewProduct(btn) {
   try {
     const { data: { user } } = await window.supabase.auth.getUser();
     if (!user) return;
+    if (productUrl && !name) {
+      // URL-only path: scrape directly, product will be created by scraper
+      showToast('Importing from URL...', 'success');
+      const { data: tempProd, error: tempErr } = await window.supabase.from('products').insert({
+        user_id: user.id,
+        name: 'Importing...',
+        category: 'Custom',
+        product_url: productUrl,
+        sort_order: 0,
+        is_active: true
+      }).select('id').single();
+      if (tempErr) throw tempErr;
+      // Only remove form after successful DB insert
+      item.remove();
+      if (window.loadProducts) await loadProducts();
+      const newItemEl = document.querySelector('[data-product-id="' + tempProd.id + '"]');
+      scrapeProductUrl(tempProd.id, productUrl, newItemEl);
+      return;
+    }
+    const descInput = item.querySelector('textarea');
+    const description = descInput ? descInput.value.trim() : '';
     const { data, error } = await window.supabase.from('products').insert({
       user_id: user.id,
       name: name,
+      description: description || null,
       category: 'Custom',
       product_url: productUrl || null,
       sort_order: 0,
       is_active: true
     }).select('id').single();
     if (error) throw error;
+    // If an image was uploaded while the product was still "new", link it now
+    const pendingImage = item.getAttribute('data-pending-image');
+    if (pendingImage) {
+      await window.supabase.from('products').update({
+        image_urls: [pendingImage],
+        updated_at: new Date().toISOString()
+      }).eq('id', data.id);
+    }
+    // Remove the new product form immediately so user sees success
+    item.remove();
     showToast('Product saved!', 'success');
-    // Re-render the full product list so the new product appears properly
+    // Re-render the full product list in background
     if (window.loadProducts) await loadProducts();
     if (productUrl) {
       const newItemEl = document.querySelector('[data-product-id="' + data.id + '"]');
@@ -4446,10 +4508,18 @@ async function scrapeProductUrl(productId, productUrl, itemEl) {
       showToast('Product details scraped from URL', 'success');
       // Reload products to show scraped image/description
       if (window.loadProducts) await loadProducts();
+    } else {
+      // Scrape failed — update placeholder name so user knows
+      await window.supabase.from('products').update({ name: 'Import failed — ' + productUrl }).eq('id', productId);
+      showToast('Failed to scrape product from URL', 'error');
+      if (window.loadProducts) await loadProducts();
     }
   } catch (err) {
     console.error('Product scrape error:', err);
-    // Non-fatal — product was already saved
+    // Update placeholder so user can identify the failed import
+    await window.supabase.from('products').update({ name: 'Import failed — ' + productUrl }).eq('id', productId).catch(() => {});
+    showToast('Failed to scrape product from URL', 'error');
+    if (window.loadProducts) await loadProducts();
   } finally {
     if (spinnerEl) spinnerEl.remove();
   }
@@ -4491,6 +4561,10 @@ async function handleProductImageUpload(input, productId) {
       const { data: prod } = await window.supabase.from('products').select('image_urls').eq('id', productId).single();
       const urls = Array.isArray(prod?.image_urls) ? [...prod.image_urls, imgUrl] : [imgUrl];
       await window.supabase.from('products').update({ image_urls: urls, updated_at: new Date().toISOString() }).eq('id', productId);
+    } else {
+      // New product not yet in DB — store URL on the form element for saveNewProduct to pick up
+      const item = input.closest('.product-item');
+      if (item) item.setAttribute('data-pending-image', imgUrl);
     }
     showToast('Image uploaded', 'success');
   } catch (err) {
@@ -5986,12 +6060,15 @@ function renderScheduleGrid(themes, approvalData) {
   const grid = document.getElementById('schedule-grid');
   const weekDates = getWeekDates(scheduleWeekOffset);
 
-  // Update week label
+  // Update week label (element may not exist if header was removed)
   const weekStart = weekDates[0];
   const weekEnd = weekDates[weekDates.length - 1];
   const options = { month: 'short', day: 'numeric' };
-  document.getElementById('schedule-week-label').textContent =
-    `${weekStart.toLocaleDateString('en-US', options)} - ${weekEnd.toLocaleDateString('en-US', options)}`;
+  const weekLabelEl = document.getElementById('schedule-week-label');
+  if (weekLabelEl) {
+    weekLabelEl.textContent =
+      `${weekStart.toLocaleDateString('en-US', options)} - ${weekEnd.toLocaleDateString('en-US', options)}`;
+  }
 
   // Build lookup for existing content
   const pendingByDate = {};
@@ -8426,16 +8503,29 @@ async function renderContentReview() {
       _contentByDate[date].push(item);
     });
 
-    // Reconstruct dayImageApproved state from DB (Bug 6.8 persistence)
-    // If any post for a date is approved, the image was approved too
+    // Reconstruct dayImageApproved + dayVideoApproved state from DB
     Object.keys(_contentByDate).forEach(dateStr => {
       const items = _contentByDate[dateStr];
-      const hasApproved = items.some(i => i.status === 'approved');
-      const hasImage = items.some(i => i.image_url);
-      if (hasApproved && hasImage) dayImageApproved[dateStr] = true;
-      // Also restore approved image URL
+      // Check explicit image_approved flag first (persisted in DB)
+      const hasExplicitImageApproval = items.some(i => i.image_approved === true);
+      const hasExplicitImageUnapproval = items.some(i => i.image_approved === false);
+      const allImageApprovalNull = items.every(i => i.image_approved === null || i.image_approved === undefined);
+      if (hasExplicitImageApproval) {
+        dayImageApproved[dateStr] = true;
+      } else if (hasExplicitImageUnapproval) {
+        // Explicitly un-approved — do NOT fall back to legacy
+        dayImageApproved[dateStr] = false;
+      } else if (allImageApprovalNull) {
+        // Pre-migration data (NULL) — use legacy fallback
+        const hasLegacyApproval = items.some(i => i.status === 'approved') && items.some(i => i.image_url);
+        if (hasLegacyApproval) dayImageApproved[dateStr] = true;
+      }
+      // Restore approved image URL
       const imgItem = items.find(i => i.image_url);
       if (imgItem && imgItem.image_url) dayApprovedImage[dateStr] = imgItem.image_url;
+      // Restore video approval state
+      const hasVideoApproval = items.some(i => i.video_approved === true);
+      if (hasVideoApproval) dayVideoApproved[dateStr] = true;
     });
 
     const sortedDates = Object.keys(_contentByDate).sort();
@@ -8467,17 +8557,6 @@ async function renderContentReview() {
       const weekTotal = weekDates.reduce((sum, d) => sum + (_contentByDate[d] || []).length, 0);
 
       return '<div class="content-week-group">' +
-        '<div class="content-week-header" onclick="this.parentElement.classList.toggle(\'collapsed\')">' +
-          '<div class="content-week-title">' +
-            '<span class="content-week-label">Week ' + weekNum + '</span>' +
-            '<span class="content-week-range">' + weekStart + ' to ' + weekEnd + '</span>' +
-          '</div>' +
-          '<div class="content-week-stats">' +
-            '<span>' + weekTotal + ' posts</span>' +
-            '<span class="approved-count">' + weekApproved + ' approved</span>' +
-            '<span class="content-week-toggle">&#9660;</span>' +
-          '</div>' +
-        '</div>' +
         '<div class="content-days-grid">' + weekDates.map((dateStr) => {
           const globalIdx = sortedDates.indexOf(dateStr);
           const dayItems = _contentByDate[dateStr];
@@ -8521,6 +8600,7 @@ let dayApprovedImage = {};
 let dayVideoUrl = {};
 let generatingImageDates = new Set();
 let dayImageApproved = {};
+let dayVideoApproved = {};
 
 function openDayModal(dateStr) {
   const modal = document.getElementById('content-day-modal');
@@ -8648,12 +8728,13 @@ function openDayModal(dateStr) {
     '</div>';
   } else if (existingImageUrl) {
     if (isImageApproved) {
+      const isVideoLocked = dayVideoApproved[dateStr] === true;
       imageColHtml = '<div class="generated-media-display approved">' +
         '<div class="media-approved-badge">\u2713 Approved</div>' +
         '<img src="' + escapeHTML(existingImageUrl) + '" class="day-generated-image" />' +
         '<div class="media-action-buttons">' +
           '<button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(existingImageUrl) + '\', \'image-' + dateStr + '.png\')">&#8681; Download</button>' +
-          '<button class="btn btn-outline btn-sm" onclick="showRegenerationPopup(\'' + dateStr + '\')">Regenerate</button>' +
+          (isVideoLocked ? '' : '<button class="btn btn-outline btn-sm" style="color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="unapproveImage(\'' + dateStr + '\')">Un-Approve</button>') +
         '</div>' +
       '</div>';
     } else {
@@ -8690,10 +8771,22 @@ function openDayModal(dateStr) {
       '<p style="margin-top:12px; font-weight:600;">Generating video…</p>' +
       '<p style="font-size:12px; color:var(--text-muted);">This takes 2-5 minutes</p>' +
     '</div>';
+  } else if (existingVideoUrl && dayVideoApproved[dateStr]) {
+    // Video approved — fully locked, no undo
+    videoColHtml = '<div class="generated-media-display approved">' +
+      '<div class="media-approved-badge">\u2713 Video Approved (Final)</div>' +
+      '<video controls class="day-generated-video"><source src="' + escapeHTML(existingVideoUrl) + '" type="video/mp4"></video>' +
+      '<div class="media-action-buttons">' +
+        '<button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(existingVideoUrl) + '\', \'video-' + dateStr + '.mp4\')">&#8681; Download</button>' +
+      '</div>' +
+      '<p style="font-size:11px; color:var(--text-muted); margin-top:6px; text-align:center;">Video approval is final and cannot be undone.</p>' +
+    '</div>';
   } else if (existingVideoUrl) {
+    // Video exists but not approved yet
     videoColHtml = '<div class="generated-media-display">' +
       '<video controls class="day-generated-video"><source src="' + escapeHTML(existingVideoUrl) + '" type="video/mp4"></video>' +
       '<div class="media-action-buttons">' +
+        '<button class="btn btn-success btn-sm" onclick="approveVideo(\'' + dateStr + '\')">Approve Video \u2713</button>' +
         '<button class="btn btn-outline btn-sm" onclick="downloadMedia(\'' + escapeHTML(existingVideoUrl) + '\', \'video-' + dateStr + '.mp4\')">&#8681; Download</button>' +
         '<button class="btn btn-outline btn-sm" onclick="generateDayVideo(\'' + dateStr + '\')">Regenerate Video</button>' +
       '</div>' +
@@ -9014,17 +9107,22 @@ async function generateDayImages(dateStr, directionHint) {
     // The webhook may time out (Vercel proxy 60s limit) but n8n continues processing.
     // We ignore errors and always poll Supabase for the result.
     try {
+      // Build varied prompt to avoid identical regeneration
+      let finalTopic = topic;
+      if (imageThemePrompt) finalTopic = imageThemePrompt + '. Subject: ' + topic;
+      if (directionHint) finalTopic += ' — Style variation: ' + directionHint;
       fetch(N8N_BASE_URL + '/eluxr-tools-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          topic: topic,
+          topic: finalTopic,
           productImageUrl: productImageUrl,
           content_id: firstItem.id,
           product_name: productName,
           product_category: productCategory,
           image_theme_prompt: imageThemePrompt,
-          direction_hint: directionHint || ''
+          direction_hint: directionHint || '',
+          variation_seed: Date.now()
         })
       }).catch(() => {}); // Ignore timeout/errors — n8n processes async
     } catch (e) { /* ignore */ }
@@ -9138,19 +9236,86 @@ window.selectDayImage = selectDayImage;
 
 async function approveDayImage(dateStr) {
   dayImageApproved[dateStr] = true;
+  // Persist image approval to DB
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (user) {
+      await window.supabase.from('content_items')
+        .update({ image_approved: true })
+        .eq('user_id', user.id)
+        .gte('scheduled_date', dateStr + 'T00:00:00')
+        .lte('scheduled_date', dateStr + 'T23:59:59');
+    }
+  } catch (e) { console.warn('Failed to persist image approval:', e); }
   showToast('Image approved! You can now approve posts and generate a video.', 'success');
   unlockSection('section-calendar');
   openDayModal(dateStr);
 }
 window.approveDayImage = approveDayImage;
 
-function unapproveAndRegenerateDayImage(dateStr) {
+async function unapproveImage(dateStr) {
   dayImageApproved[dateStr] = false;
+  delete dayApprovedImage[dateStr];
+  // Also invalidate any pending (non-approved) video for this date
+  dayVideoUrl[dateStr] = null;
+  dayVideoApproved[dateStr] = false;
+  // Clear video_url from in-memory content items so modal doesn't show stale video
+  var dateItems = _contentByDate[dateStr] || [];
+  dateItems.forEach(function(item) { item.video_url = ''; item.video_status = null; });
+  // Persist to DB
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (user) {
+      await window.supabase.from('content_items')
+        .update({ image_approved: false, video_approved: null, video_url: null, video_status: null })
+        .eq('user_id', user.id)
+        .gte('scheduled_date', dateStr + 'T00:00:00')
+        .lte('scheduled_date', dateStr + 'T23:59:59');
+    }
+  } catch (e) { console.warn('Failed to persist image un-approval:', e); }
+  showToast('Image un-approved. Video cleared. You can regenerate or re-approve.', 'info');
+  openDayModal(dateStr);
+}
+window.unapproveImage = unapproveImage;
+
+async function approveVideo(dateStr) {
+  if (!confirm('Video approval is final and cannot be undone. Continue?')) return;
+  dayVideoApproved[dateStr] = true;
+  // Persist to DB
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (user) {
+      await window.supabase.from('content_items')
+        .update({ video_approved: true })
+        .eq('user_id', user.id)
+        .gte('scheduled_date', dateStr + 'T00:00:00')
+        .lte('scheduled_date', dateStr + 'T23:59:59');
+    }
+  } catch (e) { console.warn('Failed to persist video approval:', e); }
+  showToast('Video approved! This decision is final.', 'success');
+  openDayModal(dateStr);
+}
+window.approveVideo = approveVideo;
+
+async function unapproveAndRegenerateDayImage(dateStr) {
+  dayImageApproved[dateStr] = false;
+  dayVideoApproved[dateStr] = false;
   dayVideoUrl[dateStr] = null;
   dayApprovedImage[dateStr] = null;
   dayImageOptions[dateStr] = [];
   var dayItems = _contentByDate[dateStr] || [];
   dayItems.forEach(function(item) { item.image_url = null; });
+  // Persist to DB
+  try {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (user) {
+      await window.supabase.from('content_items')
+        .update({ image_approved: null, video_approved: false })
+        .eq('user_id', user.id)
+        .gte('scheduled_date', dateStr + 'T00:00:00')
+        .lte('scheduled_date', dateStr + 'T23:59:59');
+    }
+  } catch (e) { console.warn('Failed to persist unapprove+regen:', e); }
   openDayModal(dateStr);
   generateDayImages(dateStr);
 }
@@ -9312,6 +9477,10 @@ async function regeneratePostText(itemId, reopenDate) {
     showToast('Regenerating post text...', 'info');
     const { data: item } = await window.supabase.from('content_items').select('*').eq('id', itemId).single();
     if (!item) { showToast('Content item not found', 'error'); return; }
+
+    // Get language from business context
+    const lang = (businessContext && businessContext.content_language) || 'English';
+
     const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-regenerate-topic`, {
       method: 'POST',
       body: JSON.stringify({
@@ -9320,18 +9489,26 @@ async function regeneratePostText(itemId, reopenDate) {
         product_name: item.product_name || '',
         topic: item.topic || '',
         campaign_id: item.campaign_id,
+        content_language: lang,
         regenerate_text: true
       })
     });
     if (!response.ok) throw new Error('Regeneration failed: ' + response.status);
     const result = await response.json();
-    if (result.content || result.post_text) {
-      await window.supabase.from('content_items').update({
-        content: result.content || result.post_text,
+    const newText = result.content || result.post_text || result.regenerated_text || null;
+    if (newText) {
+      const { error } = await window.supabase.from('content_items').update({
+        content: newText,
         hashtags: result.hashtags || item.hashtags
       }).eq('id', itemId);
+      if (error) {
+        showToast('Failed to save regenerated text', 'error');
+        return;
+      }
+      showToast('Post text regenerated!', 'success');
+    } else {
+      showToast('Regeneration returned no new text — try again', 'warning');
     }
-    showToast('Post text regenerated!', 'success');
     await renderContentReview();
     if (reopenDate) openDayModal(reopenDate);
   } catch (e) {
@@ -9722,11 +9899,12 @@ window.WeekNav = {
       let weekEnd;
 
       if (weekNum === 1) {
-        // First week: start date → nearest Sunday
+        // First week: start date → end of the week (7 days max)
         const dayOfWeek = current.getDay(); // 0=Sun, 1=Mon, ...
         if (dayOfWeek === 0) {
-          // Sunday start = one-day week
+          // Sunday start: 7-day week (Sun-Sat) to avoid 1-day week that skips content
           weekEnd = new Date(current);
+          weekEnd.setDate(weekEnd.getDate() + 6);
         } else {
           // Run to Sunday
           weekEnd = new Date(current);
@@ -9962,7 +10140,6 @@ async function handleCampaignSubmit(e) {
   }
 
   const campaignTheme = document.querySelector('input[name="campaign_theme"]:checked')?.value || 'luxury-intrigue';
-  const brandTraits = Array.from(document.querySelectorAll('#campaign-brand-voice-grid input:checked')).map(cb => cb.value);
   const brandNotes = document.getElementById('campaign_brand_voice_notes').value;
 
   // Calculate campaign start date
@@ -9991,7 +10168,7 @@ async function handleCampaignSubmit(e) {
       month: monthInput,
       status: 'draft',
       campaign_theme: campaignTheme,
-      brand_voice_traits: brandTraits,
+      brand_voice_traits: [],
       brand_voice_notes: brandNotes,
       platforms: platforms,
       content_language: document.getElementById('content_language')?.value || 'English',
@@ -10027,7 +10204,7 @@ async function handleCampaignSubmit(e) {
     // Store business context for downstream use
     if (!businessContext) businessContext = {};
     businessContext.platforms = platforms;
-    businessContext.brand_voice = brandTraits.join(', ') + (brandNotes ? '. ' + brandNotes : '');
+    businessContext.brand_voice = brandNotes || '';
     businessContext.content_language = campaignData.content_language;
 
     // Store campaign start date globally and clear cached weeks
@@ -10104,6 +10281,35 @@ async function stopCampaign() {
   }
 }
 window.stopCampaign = stopCampaign;
+
+function initBrandDocDragDrop() {
+  const dropArea = document.getElementById('brand-doc-upload-area');
+  if (!dropArea) return;
+  ['dragenter', 'dragover'].forEach(evt => {
+    dropArea.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropArea.classList.add('drag-over');
+    });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    dropArea.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropArea.classList.remove('drag-over');
+    });
+  });
+  dropArea.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const input = document.getElementById('brand-doc-input');
+      const dt = new DataTransfer();
+      dt.items.add(files[0]);
+      input.files = dt.files;
+      handleBrandDocUpload(input);
+    }
+  });
+}
 
 async function handleBrandDocUpload(input) {
   const file = input.files[0];
