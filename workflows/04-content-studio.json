@@ -1,5 +1,11 @@
 {
+  "updatedAt": "2026-04-07T02:53:57.630Z",
+  "createdAt": "2026-03-04T14:23:37.831Z",
+  "id": "TreszUaJqlykCrMi",
   "name": "04-Content-Studio",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -46,10 +52,10 @@
             {
               "id": "auth-check",
               "leftValue": "={{ $json.authenticated }}",
-              "rightValue": true,
               "operator": {
                 "type": "boolean",
-                "operation": "true"
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
@@ -85,7 +91,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.item.json;\nconst body = input.body || {};\n\nconst user_id = input.user_id || body.user_id || '';\nconst week_number = parseInt(body.week_number) || 1;\nconst month = body.month || '';\nconst platforms = body.platforms || ['linkedin'];\nconst pipeline_run_id = body.pipeline_run_id || null;\nconst callback_url = body.callback_url || null;\nconst business_url = body.business_url || '';\nconst industry = body.industry || '';\nconst start_date = body.start_date || '';\nconst end_date = body.end_date || '';\nconst day_count = parseInt(body.day_count) || 7;\nconst content_language = body.content_language || 'English';\n\n// Calculate step number: Week 1 = step 3, Week 4 = step 6\nconst step = week_number + 2;\n\nreturn {\n  json: {\n    user_id,\n    week_number,\n    month,\n    platforms,\n    pipeline_run_id,\n    callback_url,\n    business_url,\n    industry,\n    start_date,\n    end_date,\n    day_count,\n    content_language,\n    step\n  }\n};"
+        "jsCode": "const input = $input.item.json;\nconst body = input.body || {};\n\nconst user_id = input.user_id || body.user_id || '';\nconst week_number = parseInt(body.week_number) || 1;\nconst month = body.month || '';\nconst platforms = body.platforms || ['linkedin'];\nconst pipeline_run_id = body.pipeline_run_id || null;\nconst callback_url = body.callback_url || null;\nconst business_url = body.business_url || '';\nconst industry = body.industry || '';\nconst start_date = body.start_date || '';\nconst end_date = body.end_date || '';\nconst day_count = parseInt(body.day_count) || 7;\nconst content_language = body.content_language || 'English';\nconst campaign_theme = body.campaign_theme || '';\nconst brand_voice_notes = body.brand_voice_notes || '';\nconst brand_voice_traits = body.brand_voice_traits || [];\n\n// Calculate step number: Week 1 = step 3, Week 4 = step 6\nconst step = week_number + 2;\n\nreturn {\n  json: {\n    user_id,\n    week_number,\n    month,\n    platforms,\n    pipeline_run_id,\n    callback_url,\n    business_url,\n    industry,\n    start_date,\n    end_date,\n    day_count,\n    content_language,\n    campaign_theme,\n    brand_voice_notes,\n    brand_voice_traits,\n    step\n  }\n};"
       },
       "id": "04-studio-0010",
       "name": "Extract Params",
@@ -231,47 +237,21 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1320,
+        1540,
         200
       ],
       "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "const params = $('Extract Params').item.json;\nconst content_language = params.content_language || 'English';\nconst themeRaw = $('Read Theme').item.json;\nconst icpRaw = $('Read ICP').item.json;\nconst productsRaw = $('Read Products').item.json;\nconst weeklyTopicsRaw = $('Read Weekly Topics').item.json;\n\n// Parse theme (PostgREST returns array)\nconst themes = Array.isArray(themeRaw) ? themeRaw : [themeRaw];\nconst theme = themes[0] || {};\nconst campaign = theme.campaigns || {};\nconst campaign_id = campaign.id || theme.campaign_id || null;\nconst show_name = campaign.show_name || 'Content Series';\nconst theme_id = theme.id || null;\nconst theme_name = theme.theme_name || 'Weekly Theme';\nconst inspirational_theme = theme.inspirational_theme || '';\n\n// Check for approved weekly_topics from Supabase (preferred over theme.content_types)\nlet weeklyTopics = [];\ntry {\n  weeklyTopics = Array.isArray(weeklyTopicsRaw) ? weeklyTopicsRaw : [];\n} catch(e) { weeklyTopics = []; }\n\n// Parse daily assignments: prefer weekly_topics, fall back to theme.content_types\nlet dailyAssignments = [];\nif (weeklyTopics.length > 0) {\n  dailyAssignments = weeklyTopics.map(wt => ({\n    day_number: wt.day_number,\n    topic: wt.topic || 'Engagement',\n    content_angle: wt.content_angle || '',\n    product_id: wt.product_id || null,\n    product_name: wt.product_name || null\n  }));\n} else if (theme.content_types && Array.isArray(theme.content_types)) {\n  dailyAssignments = theme.content_types;\n} else if (typeof theme.content_types === 'string') {\n  try { dailyAssignments = JSON.parse(theme.content_types); } catch(e) { dailyAssignments = []; }\n}\n\n// Parse ICP\nconst icps = Array.isArray(icpRaw) ? icpRaw : [icpRaw];\nconst icp = icps[0] || {};\nconst icp_summary = (icp.icp_summary || '').substring(0, 500);\n\n// Parse products into lookup map\nconst products = Array.isArray(productsRaw) ? productsRaw : (productsRaw ? [productsRaw] : []);\nconst productMap = {};\nconst productList = [];\nfor (const p of products) {\n  if (p.id) {\n    productMap[p.id] = p;\n    productList.push({ id: p.id, name: p.name, description: p.description, image_url: p.image_url || null });\n  }\n}\n\nconst weekNum = params.week_number;\nconst platforms = params.platforms;\nconst month = params.month;\n\n// 7-Day Viral Storytelling Framework\nconst storyFramework = [\n  { day: 1, label: 'Monday', theme: 'Curiosity Hook', goal: 'Stop the scroll with intrigue and visual mystery', concept: 'Introduce the piece through partial reveal, light reflection, or extreme macro details that spark curiosity', angle: 'Focus on mystery rather than immediate explanation', hooks: ['The detail most people never notice...', 'A piece that changes everything.', 'Look closer.'], driver: 'Curiosity increases watch time and replays' },\n  { day: 2, label: 'Tuesday', theme: 'Craftsmanship', goal: 'Establish luxury credibility and authority', concept: 'Highlight craftsmanship behind the piece', angle: 'Show the making process or implied craftsmanship story', hooks: ['From raw material to wearable art.', 'Precision in every millimeter.', 'Crafted, not manufactured.'], driver: 'Craftsmanship content triggers fascination and trust' },\n  { day: 3, label: 'Wednesday', theme: 'Meaning & Symbolism', goal: 'Build emotional connection', concept: 'Position jewelry as a symbol of moments, relationships, or personal identity', angle: 'Storytelling around meaning rather than product specs', hooks: ['Some pieces mark a moment forever.', 'Jewelry is never just jewelry.', 'Every piece tells a story.'], driver: 'Emotion increases saves and comments' },\n  { day: 4, label: 'Thursday', theme: 'Transformation Moment', goal: 'Show the impact when the jewelry is worn', concept: 'The transformation from object to presence', angle: 'Reveal the moment the piece becomes part of identity or style', hooks: ['The moment everything changes.', 'From detail to statement.', 'Presence begins here.'], driver: 'Transformation visuals drive shares and engagement' },\n  { day: 5, label: 'Friday', theme: 'Hidden Detail / Surprise', goal: 'Encourage shares through discovery', concept: 'Reveal something unexpected about the piece, gemstone, or design', angle: 'Educational but visually captivating facts', hooks: ['Most people never notice this.', 'The secret behind the sparkle.', 'Why this cut catches light differently.'], driver: 'Surprise drives sharing behavior' },\n  { day: 6, label: 'Saturday', theme: 'Lifestyle Aspiration', goal: 'Inspire desire and aspiration', concept: 'Place jewelry in aspirational environments', angle: 'Luxury lifestyle storytelling', hooks: ['Luxury is a feeling.', 'Some moments deserve more.', 'Where elegance begins.'], driver: 'Aspirational content fuels desire' },\n  { day: 7, label: 'Sunday', theme: 'Legacy & Timelessness', goal: 'Build brand prestige and long-term emotional value', concept: 'Jewelry as heirloom, tradition, and timeless symbol', angle: 'Focus on longevity, legacy, and generational value', hooks: ['Some pieces outlive trends.', 'Designed to last generations.', 'What will your story be?'], driver: 'Legacy messaging strengthens brand authority' }\n];\n\n// Platform rules\nconst platformRules = [];\nfor (const plat of platforms) {\n  const p = plat.toLowerCase();\n  if (p === 'linkedin') platformRules.push('- LinkedIn: 1300-1800 chars, thought leadership tone, line breaks between paragraphs, 3-5 professional hashtags, product CTA');\n  if (p === 'instagram') platformRules.push('- Instagram: 150-300 char caption, 20-30 hashtags in separate first_comment field, emoji allowed, product CTA. Video will be generated from product image.');\n  if (p === 'x') platformRules.push('- X: Single tweet under 280 chars, punchy and conversational, product CTA, 3-5 hashtags');\n  if (p === 'youtube') platformRules.push('- YouTube: Write a video CAPTION (150-300 chars) for the YouTube Short post description. Also include title, hashtags, cta. Do NOT include scene breakdowns or video scripts in the caption. Video generated from actual product image.');\n  if (p === 'tiktok') platformRules.push('- TikTok: Short punchy caption (100-200 chars), trending hashtags, casual/fun tone, product CTA. Video will be generated from product image.');\n  if (p === 'facebook') platformRules.push('- Facebook: 200-400 char post, conversational tone, emoji-friendly, product CTA, 3-5 hashtags.');\n}\n\n// Day name lookup for actual scheduled dates\nconst dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];\n\n// Build day descriptions\nconst dayDescriptions = [];\nconst dayMeta = [];\nfor (let dayIdx = 0; dayIdx < 7; dayIdx++) {\n  const dayNumber = dayIdx + 1;\n  const framework = storyFramework[dayIdx];\n  const assignment = dailyAssignments[dayIdx] || {};\n  const product_id = assignment.product_id || null;\n  const product = product_id ? (productMap[product_id] || {}) : {};\n  const product_name = assignment.product_name || product.name || 'Featured Product';\n  const product_description = product.description || '';\n  const product_image_url = product.image_url || null;\n  const topic = assignment.topic || framework.theme;\n  const content_angle = assignment.content_angle || framework.angle;\n\n  // Use campaign start_date from frontend (falls back to today if missing)\n  let scheduledDate = '';\n  let startDateObj;\n  if (params.start_date) {\n    startDateObj = new Date(params.start_date + 'T00:00:00');\n  } else {\n    startDateObj = new Date();\n    startDateObj.setHours(0, 0, 0, 0);\n  }\n  const targetDate = new Date(startDateObj);\n  targetDate.setDate(startDateObj.getDate() + (dayNumber - 1));\n  const sy = targetDate.getFullYear();\n  const sm = String(targetDate.getMonth() + 1).padStart(2, '0');\n  const sd = String(targetDate.getDate()).padStart(2, '0');\n  scheduledDate = sy + '-' + sm + '-' + sd;\n  const actualDayName = dayNames[targetDate.getDay()];\n\n  dayDescriptions.push(\n    'Day ' + dayNumber + ' (' + actualDayName + ' - ' + framework.theme + '):\\n' +\n    '  Goal: ' + framework.goal + '\\n' +\n    '  Concept: ' + framework.concept + '\\n' +\n    '  Angle: ' + framework.angle + '\\n' +\n    '  Hooks: \"' + framework.hooks.join('\", \"') + '\"\\n' +\n    '  Driver: ' + framework.driver + '\\n' +\n    '  Product: ' + product_name + ' -- ' + product_description + '\\n' +\n    '  Topic: \"' + topic + '\"\\n' +\n    '  Angle: \"' + content_angle + '\"'\n  );\n  dayMeta.push({ day_number: dayNumber, product_id, product_name, product_description, product_image_url, topic, content_angle, scheduled_date: scheduledDate });\n}\n\n// Build JSON schema for response\nconst platSchemas = [];\nfor (const plat of platforms) {\n  const p = plat.toLowerCase();\n  if (p === 'linkedin') platSchemas.push('\"linkedin\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'instagram') platSchemas.push('\"instagram\": { \"text\": \"...\", \"hashtags\": [...], \"first_comment\": \"...\", \"cta\": \"...\" }');\n  if (p === 'x') platSchemas.push('\"x\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'youtube') platSchemas.push('\"youtube\": { \"caption\": \"...\", \"title\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'tiktok') platSchemas.push('\"tiktok\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'facebook') platSchemas.push('\"facebook\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n}\n\nconst megaPrompt = 'CRITICAL LANGUAGE REQUIREMENT: Generate ALL content exclusively in ' + content_language + '. Every word, caption, and hashtag must be in ' + content_language + '. No mixing languages. This is non-negotiable.\\n\\n' +\n'You are a luxury brand content strategist. Generate social media content for ALL 7 days following the Viral Storytelling Framework.\\n\\n' +\n'=== STORYTELLING FRAMEWORK ===\\n' +\n'Weekly rhythm: Curiosity > Craftsmanship > Emotion > Transformation > Surprise > Aspiration > Legacy\\n\\n' +\n'=== CONTEXT ===\\n' +\n'Show: \"' + show_name + '\"\\n' +\n'Season ' + weekNum + ': \"' + theme_name + '\" -- ' + inspirational_theme + '\\n' +\n'ICP: ' + icp_summary + '\\n' +\n'Platforms: ' + platforms.join(', ') + '\\n\\n' +\n'=== VIDEO NOTE ===\\n' +\n'For Instagram and YouTube, videos will use the ACTUAL PRODUCT IMAGE. Scripts should describe content anchored to real product photos.\\n\\n' +\n'=== 7-DAY PLAN ===\\n\\n' +\ndayDescriptions.join('\\n\\n') + '\\n\\n' +\n'=== PLATFORM RULES ===\\n' +\nplatformRules.join('\\n') + '\\n\\n' +\n'=== OUTPUT FORMAT ===\\n' +\n'Return JSON: { \"days\": [ { \"day_number\": 1, \"storytelling_theme\": \"Curiosity Hook\", \"posts\": { ' + platSchemas.join(', ') + ' }, \"image_prompt\": \"Detailed AI image prompt for this day (max 500 chars)\" }, ... (all 7 days) ] }\\n' +\n'Include ALL platforms for EVERY day. Do not skip any.\\n\\nREMINDER: ALL output must be in ' + content_language + ' only. No exceptions.';\n\nreturn {\n  json: {\n    prompt: megaPrompt,\n    day_meta: dayMeta,\n    user_id: params.user_id,\n    campaign_id,\n    theme_id,\n    show_name,\n    theme_name,\n    week_number: weekNum,\n    platforms,\n    pipeline_run_id: params.pipeline_run_id,\n    callback_url: params.callback_url,\n    step: params.step,\n    icp_summary,\n    inspirational_theme\n  }\n};"
+        "jsCode": "const params = $('Extract Params').item.json;\nconst content_language = params.content_language || 'English';\nconst themeRaw = $('Read Theme').item.json;\nconst icpRaw = $('Read ICP').item.json;\nconst productsRaw = $('Read Products').item.json;\nconst weeklyTopicsRaw = $('Read Weekly Topics').item.json;\n\n// Read brand context\nconst brandVoiceNotes = params.brand_voice_notes || '';\nlet brandDocSummary = '';\ntry {\n  const brandDocsItems = $('Read Brand Docs').all();\n  brandDocSummary = brandDocsItems\n    .map(item => item.json.summary_text || '')\n    .filter(Boolean)\n    .join('\\n---\\n')\n    .substring(0, 3000);\n} catch(e) { /* no brand docs */ }\n\nconst themes = Array.isArray(themeRaw) ? themeRaw : [themeRaw];\nconst theme = themes[0] || {};\nconst campaign = theme.campaigns || {};\nconst campaign_id = campaign.id || theme.campaign_id || null;\nconst show_name = campaign.show_name || 'Content Series';\nconst theme_id = theme.id || null;\nconst theme_name = theme.theme_name || 'Weekly Theme';\nconst inspirational_theme = theme.inspirational_theme || '';\n\nlet weeklyTopics = [];\ntry {\n  weeklyTopics = Array.isArray(weeklyTopicsRaw) ? weeklyTopicsRaw : [];\n} catch(e) { weeklyTopics = []; }\n\nlet dailyAssignments = [];\nif (weeklyTopics.length > 0) {\n  dailyAssignments = weeklyTopics.map(wt => ({\n    day_number: wt.day_number,\n    topic: wt.topic || 'Engagement',\n    content_angle: wt.content_angle || '',\n    product_id: wt.product_id || null,\n    product_name: wt.product_name || null\n  }));\n} else if (theme.content_types && Array.isArray(theme.content_types)) {\n  dailyAssignments = theme.content_types;\n} else if (typeof theme.content_types === 'string') {\n  try { dailyAssignments = JSON.parse(theme.content_types); } catch(e) { dailyAssignments = []; }\n}\n\nconst icps = Array.isArray(icpRaw) ? icpRaw : [icpRaw];\nconst icp = icps[0] || {};\nconst icp_summary = (icp.icp_summary || '').substring(0, 500);\n\nconst products = Array.isArray(productsRaw) ? productsRaw : (productsRaw ? [productsRaw] : []);\nconst productMap = {};\nconst productList = [];\nfor (const p of products) {\n  if (p.id) {\n    productMap[p.id] = p;\n    productList.push({ id: p.id, name: p.name, description: p.description, image_url: p.image_url || null });\n  }\n}\n\nconst weekNum = params.week_number;\nconst platforms = params.platforms;\nconst month = params.month;\n\n// ============================================================\n// ALL 4 STORYTELLING FRAMEWORKS\n// Each theme provides a complete 7-day narrative structure.\n// The campaign_theme param selects which one to use.\n// ============================================================\n\nconst storyFrameworks = {\n  'luxury-intrigue': [\n    { day: 1, label: 'Monday', theme: 'Curiosity Hook', goal: 'Stop the scroll with intrigue and visual mystery', concept: 'Introduce the piece through partial reveal, light reflection, or extreme macro details that spark curiosity', angle: 'Focus on mystery rather than immediate explanation', hooks: ['The detail most people never notice...', 'A piece that changes everything.', 'Look closer.'], driver: 'Curiosity increases watch time and replays' },\n    { day: 2, label: 'Tuesday', theme: 'Craftsmanship', goal: 'Establish luxury credibility and authority', concept: 'Highlight craftsmanship behind the piece', angle: 'Show the making process or implied craftsmanship story', hooks: ['From raw material to wearable art.', 'Precision in every millimeter.', 'Crafted, not manufactured.'], driver: 'Craftsmanship content triggers fascination and trust' },\n    { day: 3, label: 'Wednesday', theme: 'Meaning & Symbolism', goal: 'Build emotional connection', concept: 'Position jewelry as a symbol of moments, relationships, or personal identity', angle: 'Storytelling around meaning rather than product specs', hooks: ['Some pieces mark a moment forever.', 'Jewelry is never just jewelry.', 'Every piece tells a story.'], driver: 'Emotion increases saves and comments' },\n    { day: 4, label: 'Thursday', theme: 'Transformation Moment', goal: 'Show the impact when the jewelry is worn', concept: 'The transformation from object to presence', angle: 'Reveal the moment the piece becomes part of identity or style', hooks: ['The moment everything changes.', 'From detail to statement.', 'Presence begins here.'], driver: 'Transformation visuals drive shares and engagement' },\n    { day: 5, label: 'Friday', theme: 'Hidden Detail / Surprise', goal: 'Encourage shares through discovery', concept: 'Reveal something unexpected about the piece, gemstone, or design', angle: 'Educational but visually captivating facts', hooks: ['Most people never notice this.', 'The secret behind the sparkle.', 'Why this cut catches light differently.'], driver: 'Surprise drives sharing behavior' },\n    { day: 6, label: 'Saturday', theme: 'Lifestyle Aspiration', goal: 'Inspire desire and aspiration', concept: 'Place jewelry in aspirational environments', angle: 'Luxury lifestyle storytelling', hooks: ['Luxury is a feeling.', 'Some moments deserve more.', 'Where elegance begins.'], driver: 'Aspirational content fuels desire' },\n    { day: 7, label: 'Sunday', theme: 'Legacy & Timelessness', goal: 'Build brand prestige and long-term emotional value', concept: 'Jewelry as heirloom, tradition, and timeless symbol', angle: 'Focus on longevity, legacy, and generational value', hooks: ['Some pieces outlive trends.', 'Designed to last generations.', 'What will your story be?'], driver: 'Legacy messaging strengthens brand authority' }\n  ],\n  'emotional-journey': [\n    { day: 1, label: 'Monday', theme: 'The Desire', goal: 'Spark longing with aspirational imagery', concept: 'Show the object of desire in its most magnetic form \u2014 warm light on gold, a diamond catching flame, a hand reaching but not yet touching', angle: 'Aspiration over possession \u2014 make the viewer feel the pull before they understand why', hooks: ['You knew the moment you saw it.', 'Some things find you before you find them.', 'This is where wanting begins.'], driver: 'Desire is the strongest purchase initiator \u2014 aspirational imagery triggers dopamine and increases save rates' },\n    { day: 2, label: 'Tuesday', theme: 'The Story Behind', goal: 'Build narrative depth and brand authenticity', concept: 'Origin story of the piece \u2014 the sketch that started it, the mine where the stone was found, the moment of inspiration', angle: 'Backstory creates perceived value \u2014 the longer the origin story, the more precious the object feels', hooks: ['Every piece begins as a whisper.', 'Before it was yours, it was a dream on paper.', 'The story started long before the stone was set.'], driver: 'Origin stories increase perceived value \u2014 story-driven content gets 22x more engagement than facts alone' },\n    { day: 3, label: 'Wednesday', theme: 'The Person', goal: 'Create relatability and social proof through real human connection', concept: 'Feature a real person \u2014 customer, founder, or artisan. Show the piece as part of someone\\'s actual life, not a catalog', angle: 'People buy from people \u2014 humanize the brand through authentic portraiture', hooks: ['She never takes it off.', 'Ask her about the ring. She will tell you everything.', 'This is not a model. This is a moment.'], driver: 'Person-centered content generates 6.9x higher engagement \u2014 social proof reduces purchase anxiety' },\n    { day: 4, label: 'Thursday', theme: 'The Ritual', goal: 'Embed the product into daily life and create habitual association', concept: 'The quiet ritual of putting on jewelry \u2014 morning routines, getting ready, the last thing before leaving', angle: 'Luxury as daily ritual, not special occasion \u2014 normalize the extraordinary', hooks: ['The first thing she reaches for.', 'A ritual that never gets old.', 'Every morning begins with this.'], driver: 'Ritual content creates habitual mental associations \u2014 strongest predictor of purchase intent' },\n    { day: 5, label: 'Friday', theme: 'The Confidence', goal: 'Show the emotional transformation that wearing the piece creates', concept: 'Before/after energy \u2014 not physical but psychological. Posture change, eye contact, the way someone enters a room differently', angle: 'Jewelry as confidence catalyst \u2014 the piece does not just decorate, it activates', hooks: ['She wore it and the room noticed.', 'Confidence is not born. It is worn.', 'The moment you stop adjusting and start owning.'], driver: 'Transformation content is the #1 driver of shares \u2014 viewers tag friends with \"this is you\"' },\n    { day: 6, label: 'Saturday', theme: 'The Celebration', goal: 'Associate the brand with life\\'s peak emotional moments', concept: 'Milestones, gifts, surprises, anniversaries, proposals, promotions. The piece as witness to the moment that matters most', angle: 'Jewelry as emotional anchor \u2014 the physical object that holds the memory', hooks: ['Some nights deserve forever.', 'The gift she will never forget.', 'This is the piece that was there.'], driver: 'Celebration content triggers the strongest emotional response and highest comment engagement' },\n    { day: 7, label: 'Sunday', theme: 'The Promise', goal: 'Create forward-looking emotional resonance and long-term brand connection', concept: 'Heirloom energy \u2014 the piece passing through generations, the promise of \"always,\" the commitment embedded in precious materials', angle: 'Luxury as legacy and emotional covenant \u2014 the piece outlasts the moment', hooks: ['What will you pass down?', 'Made for now. Meant for always.', 'A promise you can hold.'], driver: 'Legacy content builds deepest brand authority \u2014 frames purchase as investment in identity' }\n  ],\n  'authority-educator': [\n    { day: 1, label: 'Monday', theme: 'Industry Myth-Bust', goal: 'Stop the scroll with a provocative claim that challenges conventional wisdom', concept: 'Take a widely believed fact about jewelry or luxury and dismantle it with evidence. Be direct, confident, contrarian', angle: 'Contrarian authority \u2014 the brand knows what others get wrong', hooks: ['Everything you were told about diamonds is wrong.', 'Stop falling for this.', 'The industry does not want you to know this.'], driver: 'Myth-busting triggers the knowledge gap \u2014 contrarian content generates 2x more comments' },\n    { day: 2, label: 'Tuesday', theme: 'Material Deep-Dive', goal: 'Educate on materials, gems, metals, or techniques to build informed desire', concept: 'Extreme close-up education \u2014 molecular structure of a diamond, why 18k gold behaves differently than 14k, how sapphire forms over millions of years', angle: 'Scientific wonder wrapped in beauty \u2014 make education feel like discovery', hooks: ['This took 3 billion years to form.', 'The difference you can feel but never see.', 'Why this metal changes everything.'], driver: 'Educational content is the #1 type saved on Instagram \u2014 material knowledge reduces purchase anxiety' },\n    { day: 3, label: 'Wednesday', theme: 'Design Philosophy', goal: 'Reveal the intentionality behind every design decision', concept: 'Why a piece looks the way it does \u2014 proportions, negative space, influences from architecture or art. Show sketches next to finished pieces', angle: 'Design thinking as luxury differentiator \u2014 every curve has a reason', hooks: ['Nothing about this is accidental.', 'The line you never notice that changes everything.', 'We designed this 47 times before it was right.'], driver: 'Showing the creative process triggers the labor illusion \u2014 knowing how hard it was makes it feel more valuable' },\n    { day: 4, label: 'Thursday', theme: 'Insider Knowledge', goal: 'Share exclusive expertise that only industry insiders possess', concept: 'Tips and secrets jewelers use but consumers never hear \u2014 how to spot quality at a glance, what to look for under a loupe, how professionals evaluate color', angle: 'Exclusive access to expert knowledge \u2014 the viewer becomes the insider', hooks: ['What jewelers check first and never tell you.', 'The test that takes 3 seconds and tells you everything.', 'After this, you will never look at jewelry the same way.'], driver: 'Insider knowledge triggers the exclusivity principle \u2014 highest save-to-impression ratio content type' },\n    { day: 5, label: 'Friday', theme: 'Comparison / Breakdown', goal: 'Build confidence through transparent visual comparison', concept: 'Side-by-side breakdowns \u2014 lab vs natural diamonds, hollow vs solid construction, machine-set vs hand-set stones. Split-screen, macro details, cross-sections', angle: 'Transparent comparison as confidence builder \u2014 the brand has nothing to hide', hooks: ['Same price. Completely different quality.', 'Put them side by side. The truth is obvious.', 'This is what you are actually paying for.'], driver: 'Comparison content resolves the #1 luxury purchase barrier: \"is it really worth it?\"' },\n    { day: 6, label: 'Saturday', theme: 'Trend Forecast', goal: 'Position the brand as a forward-looking authority that shapes taste', concept: 'What is emerging, what is fading, what is next. Upcoming materials, design movements, cultural shifts in how people wear jewelry', angle: 'Tastemaker authority \u2014 the brand sees what is coming before anyone else', hooks: ['This will be everywhere in 6 months.', 'The trend no one is talking about yet.', 'What the next generation of luxury looks like.'], driver: 'Trend content gets shared because sharing predictions signals social currency' },\n    { day: 7, label: 'Sunday', theme: 'Heritage & Legacy', goal: 'Anchor brand authority in history, tradition, and timeless principles', concept: 'History behind techniques, materials, design movements. How ancient goldsmiths solved problems still used today', angle: 'Timeless authority \u2014 the brand stands on centuries of accumulated wisdom', hooks: ['This technique is 4,000 years old. We still use it.', 'Some things were perfected long before us.', 'The oldest rule in jewelry still holds.'], driver: 'Heritage content builds the deepest form of brand authority \u2014 signals permanence and seriousness' }\n  ],\n  'cinematic-series': [\n    { day: 1, label: 'Monday', theme: 'Cold Open / Teaser', goal: 'Drop viewers into a visual moment with zero context \u2014 maximum intrigue', concept: 'Open in medias res \u2014 close-up of light hitting a stone, a velvet box being opened by unknown hands, a piece being placed on skin with no face shown', angle: 'Cold open technique \u2014 hook before context, mystery before meaning', hooks: ['No caption needed.', 'Wait for it.', 'Monday. Episode begins.'], driver: 'Cold opens reduce skip rate by 35% \u2014 the Zeigarnik effect compels viewers to follow for resolution' },\n    { day: 2, label: 'Tuesday', theme: 'The Reveal', goal: 'Pay off Monday\\'s mystery with the full dramatic reveal', concept: 'The answer to \"what was that?\" \u2014 full piece reveal in glory. Wide shot after the macro, context after the mystery, the 360-degree spin', angle: 'Payoff architecture \u2014 the reveal is only as powerful as the setup that preceded it', hooks: ['Now you see it.', 'This is what Monday was hiding.', 'The full picture.'], driver: 'The reveal satisfies Day 1 tension \u2014 this dopamine release keeps viewers coming back weekly' },\n    { day: 3, label: 'Wednesday', theme: 'Behind the Scenes', goal: 'Pull back the curtain on creation to deepen appreciation', concept: 'Show the making \u2014 the workshop, the tools, the hands at work, the CAD design, the wax model, the casting, the stone setting', angle: 'Access as privilege \u2014 showing the process makes the viewer feel like an insider', hooks: ['You were not supposed to see this.', 'Before it was beautiful, it was this.', '36 hours of work in 30 seconds.'], driver: 'BTS content activates the labor illusion \u2014 seeing effort increases perceived value' },\n    { day: 4, label: 'Thursday', theme: 'The Moment', goal: 'Capture the dramatic peak \u2014 the emotional climax of the episode', concept: 'The hero shot \u2014 the unboxing, the first time worn, the reaction, the gasp, the mirror moment. Cinematic pacing: slow build, then the moment hits', angle: 'Peak emotion as content climax \u2014 build tension then deliver catharsis', hooks: ['This is the moment.', 'Watch her face.', 'Some moments change everything.'], driver: 'Peak emotional moments are the most shared content type \u2014 reaction content triggers mirror neurons' },\n    { day: 5, label: 'Friday', theme: 'Plot Twist', goal: 'Surprise the audience with an unexpected angle or hidden feature', concept: 'Subvert expectations \u2014 show the piece in an unexpected context, reveal a hidden feature like a secret engraving or convertible design, flip the camera', angle: 'Surprise as engagement multiplier \u2014 the brain pays more attention after being surprised', hooks: ['You did not see this coming.', 'Turn it over.', 'Not what you expected.'], driver: 'Surprise content generates the highest share rate \u2014 unexpected moments trigger the social sharing reflex' },\n    { day: 6, label: 'Saturday', theme: 'The World', goal: 'Build the cinematic universe \u2014 place the piece in a world worth inhabiting', concept: 'World-building \u2014 the piece in its natural habitat. A candlelit dinner, a rooftop at golden hour, an art gallery opening, a rain-soaked Paris street', angle: 'Lifestyle as set design \u2014 the piece belongs in a world the viewer aspires to', hooks: ['Welcome to the world.', 'Where this piece lives.', 'Step inside.'], driver: 'Aspirational lifestyle content drives desire through environmental storytelling \u2014 viewers want the life, not just the piece' },\n    { day: 7, label: 'Sunday', theme: 'Next Episode Teaser', goal: 'Create a cliffhanger that guarantees return next Monday', concept: 'A 5-second flash of next week\\'s piece \u2014 out of focus, partially obscured, shot through glass, a shadow. Just enough to trigger recognition without confirmation', angle: 'Cliffhanger mechanics \u2014 end on an open loop that can only be closed by returning', hooks: ['Next week changes everything.', 'You are not ready for what is coming.', 'To be continued.'], driver: 'Cliffhangers exploit the Zeigarnik effect at maximum strength \u2014 highest \"turn-on-notifications\" behavior' }\n  ]\n};\n\n// Select framework based on campaign_theme from frontend\nconst campaign_theme = params.campaign_theme || theme.theme_name || 'luxury-intrigue';\nconst storyFramework = storyFrameworks[campaign_theme];\nif (!storyFramework) {\n  throw new Error('Unknown campaign_theme: \"' + campaign_theme + '\". Valid themes: ' + Object.keys(storyFrameworks).join(', '));\n}\n\nconst platformRules = [];\nfor (const plat of platforms) {\n  const p = plat.toLowerCase();\n  if (p === 'linkedin') platformRules.push('- LinkedIn: 1300-1800 chars, thought leadership tone, line breaks between paragraphs, 3-5 professional hashtags, product CTA');\n  if (p === 'instagram') platformRules.push('- Instagram: 150-300 char caption, 20-30 hashtags in separate first_comment field, emoji allowed, product CTA. Video will be generated from product image.');\n  if (p === 'x') platformRules.push('- X: Single tweet under 280 chars, punchy and conversational, product CTA, 3-5 hashtags');\n  if (p === 'youtube') platformRules.push('- YouTube: Write a video CAPTION (150-300 chars) for the YouTube Short post description. Also include title, hashtags, cta. Do NOT include scene breakdowns or video scripts in the caption. Video generated from actual product image.');\n  if (p === 'tiktok') platformRules.push('- TikTok: Short punchy caption (100-200 chars), trending hashtags, casual/fun tone, product CTA. Video will be generated from product image.');\n  if (p === 'facebook') platformRules.push('- Facebook: 200-400 char post, conversational tone, emoji-friendly, product CTA, 3-5 hashtags.');\n}\n\nconst dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];\n\nconst dayDescriptions = [];\nconst dayMeta = [];\nfor (let dayIdx = 0; dayIdx < 7; dayIdx++) {\n  const dayNumber = dayIdx + 1;\n  const framework = storyFramework[dayIdx];\n  const assignment = dailyAssignments[dayIdx] || {};\n  const product_id = assignment.product_id || null;\n  const product = product_id ? (productMap[product_id] || {}) : {};\n  const product_name = assignment.product_name || product.name || 'Featured Product';\n  const product_description = product.description || '';\n  const product_image_url = product.image_url || null;\n  const topic = assignment.topic || framework.theme;\n  const content_angle = assignment.content_angle || framework.angle;\n\n  let scheduledDate = '';\n  let startDateObj;\n  if (params.start_date) {\n    startDateObj = new Date(params.start_date + 'T00:00:00');\n  } else {\n    startDateObj = new Date();\n    startDateObj.setHours(0, 0, 0, 0);\n  }\n  const targetDate = new Date(startDateObj);\n  targetDate.setDate(startDateObj.getDate() + (dayNumber - 1));\n  const sy = targetDate.getFullYear();\n  const sm = String(targetDate.getMonth() + 1).padStart(2, '0');\n  const sd = String(targetDate.getDate()).padStart(2, '0');\n  scheduledDate = sy + '-' + sm + '-' + sd;\n  const actualDayName = dayNames[targetDate.getDay()];\n\n  dayDescriptions.push(\n    'Day ' + dayNumber + ' (' + actualDayName + ' - ' + framework.theme + '):\\n' +\n    '  Goal: ' + framework.goal + '\\n' +\n    '  Concept: ' + framework.concept + '\\n' +\n    '  Angle: ' + framework.angle + '\\n' +\n    '  Hooks: \"' + framework.hooks.join('\", \"') + '\"\\n' +\n    '  Driver: ' + framework.driver + '\\n' +\n    '  Product: ' + product_name + ' -- ' + product_description + '\\n' +\n    '  Topic: \"' + topic + '\"\\n' +\n    '  Angle: \"' + content_angle + '\"'\n  );\n  dayMeta.push({ day_number: dayNumber, product_id, product_name, product_description, product_image_url, topic, content_angle, scheduled_date: scheduledDate });\n}\n\nconst platSchemas = [];\nfor (const plat of platforms) {\n  const p = plat.toLowerCase();\n  if (p === 'linkedin') platSchemas.push('\"linkedin\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'instagram') platSchemas.push('\"instagram\": { \"text\": \"...\", \"hashtags\": [...], \"first_comment\": \"...\", \"cta\": \"...\" }');\n  if (p === 'x') platSchemas.push('\"x\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'youtube') platSchemas.push('\"youtube\": { \"caption\": \"...\", \"title\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'tiktok') platSchemas.push('\"tiktok\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'facebook') platSchemas.push('\"facebook\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n}\n\nconst megaPrompt = 'CRITICAL LANGUAGE REQUIREMENT: Generate ALL content exclusively in ' + content_language + '. Every word, caption, and hashtag must be in ' + content_language + '. No mixing languages. This is non-negotiable.\\n\\n' +\n'You are a luxury brand content strategist. Generate social media content for ALL 7 days following the Viral Storytelling Framework.\\n\\n' +\n'=== STORYTELLING FRAMEWORK ===\\n' +\n'Weekly rhythm: ' + storyFramework.map(f => f.theme).join(' > ') + '\\n\\n' +\n'=== CONTEXT ===\\n' +\n'Show: \"' + show_name + '\"\\n' +\n'Season ' + weekNum + ': \"' + theme_name + '\" -- ' + inspirational_theme + '\\n' +\n'ICP: ' + icp_summary + '\\n' +\n(brandVoiceNotes ? 'Brand Voice (from client): ' + brandVoiceNotes + '\\n' : '') +\n(brandDocSummary ? 'Brand Guidelines:\\n' + brandDocSummary + '\\n' : '') +\n'Platforms: ' + platforms.join(', ') + '\\n\\n' +\n'=== VIDEO NOTE ===\\n' +\n'For Instagram and YouTube, videos will use the ACTUAL PRODUCT IMAGE. Scripts should describe content anchored to real product photos.\\n\\n' +\n'=== 7-DAY PLAN ===\\n\\n' +\ndayDescriptions.join('\\n\\n') + '\\n\\n' +\n'=== PLATFORM RULES ===\\n' +\nplatformRules.join('\\n') + '\\n\\n' +\n'=== OUTPUT FORMAT ===\\n' +\n'Return JSON: { \"days\": [ { \"day_number\": 1, \"storytelling_theme\": \"' + storyFramework[0].theme + '\", \"posts\": { ' + platSchemas.join(', ') + ' }, \"image_prompt\": \"Detailed AI image prompt for this day (max 500 chars)\" }, ... (all 7 days) ] }\\n' +\n'Include ALL platforms for EVERY day. Do not skip any.\\n\\nREMINDER: ALL output must be in ' + content_language + ' only. No exceptions.';\n\nreturn {\n  json: {\n    prompt: megaPrompt,\n    day_meta: dayMeta,\n    user_id: params.user_id,\n    campaign_id,\n    theme_id,\n    show_name,\n    theme_name,\n    week_number: weekNum,\n    platforms,\n    pipeline_run_id: params.pipeline_run_id,\n    callback_url: params.callback_url,\n    step: params.step,\n    icp_summary,\n    inspirational_theme\n  }\n};"
       },
       "id": "04-studio-0020",
       "name": "Prepare Daily Content Loop",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1540,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "id": "04-studio-0021",
-      "name": "Day Content Loop",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
         1760,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const day = $input.item.json;\n\nconst apiBody = {\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  messages: [\n    {\n      role: 'user',\n      content: day.prompt\n    }\n  ]\n};\n\nreturn {\n  json: {\n    apiBody: JSON.stringify(apiBody),\n    ...day\n  }\n};"
-      },
-      "id": "04-studio-0022",
-      "name": "Prepare Day Claude Prompt",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1980,
         200
       ]
     },
@@ -324,7 +304,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ctx = $('Prepare Daily Content Loop').item.json;\nconst claudeResponse = $input.item.json;\n\n// Extract text from Claude response\nlet raw = '';\nif (claudeResponse.content && claudeResponse.content[0]) {\n  raw = claudeResponse.content[0].text;\n} else if (typeof claudeResponse === 'string') {\n  raw = claudeResponse;\n}\n\n// Robust JSON parsing\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try {\n    parsed = JSON.parse(stripped);\n  } catch(e2) {\n    const match = stripped.match(/[\\[{][\\s\\S]*[\\]}]/);\n    if (match) {\n      try { parsed = JSON.parse(match[0]); } catch(e3) { parsed = { days: [] }; }\n    } else {\n      parsed = { days: [] };\n    }\n  }\n}\n\nconst days = parsed.days || [];\nconst dayMeta = ctx.day_meta || [];\nconst platforms = ctx.platforms || [];\n\n// Build content items for all days\nconst allContentItems = [];\nfor (const day of days) {\n  const dayNum = day.day_number || 0;\n  const meta = dayMeta.find(m => m.day_number === dayNum) || dayMeta[dayNum - 1] || {};\n  const posts = day.posts || {};\n  const image_prompt = day.image_prompt || 'Professional product lifestyle image, photorealistic, 1:1';\n\n  for (const platform of platforms) {\n    const plat = platform.toLowerCase();\n    const post = posts[plat] || {};\n\n    if (plat === 'youtube') {\n      // YouTube: store caption text (not full script JSON)\n      allContentItems.push({\n        user_id: ctx.user_id,\n        campaign_id: ctx.campaign_id,\n        theme_id: ctx.theme_id,\n        title: ctx.show_name + ' S' + ctx.week_number + ' Day ' + dayNum + ' - youtube',\n        content: post.caption || post.text || JSON.stringify(post),\n        content_type: 'text',\n        platform: 'youtube',\n        scheduled_date: meta.scheduled_date || '',\n        status: 'pending_review',\n        image_prompt: image_prompt,\n        product_id: meta.product_id || null,\n        hashtags: post.hashtags || [],\n        first_comment: null\n      });\n    } else {\n      // LinkedIn, Instagram, X, TikTok, Facebook: text posts\n      allContentItems.push({\n        user_id: ctx.user_id,\n        campaign_id: ctx.campaign_id,\n        theme_id: ctx.theme_id,\n        title: ctx.show_name + ' S' + ctx.week_number + ' Day ' + dayNum + ' - ' + plat,\n        content: post.text || JSON.stringify(post),\n        content_type: 'text',\n        platform: plat,\n        scheduled_date: meta.scheduled_date || '',\n        status: 'pending_review',\n        image_prompt: image_prompt,\n        product_id: meta.product_id || null,\n        hashtags: post.hashtags || [],\n        first_comment: post.first_comment || null\n      });\n    }\n  }\n}\n\nreturn {\n  json: {\n    content_items: allContentItems,\n    content_count: allContentItems.length,\n    user_id: ctx.user_id,\n    campaign_id: ctx.campaign_id,\n    week_number: ctx.week_number,\n    pipeline_run_id: ctx.pipeline_run_id,\n    callback_url: ctx.callback_url,\n    step: ctx.step\n  }\n};"
+        "jsCode": "const ctx = $('Prepare Daily Content Loop').item.json;\nconst claudeResponse = $input.item.json;\nlet raw = '';\nif (claudeResponse.content && claudeResponse.content[0]) raw = claudeResponse.content[0].text;\nelse if (typeof claudeResponse === 'string') raw = claudeResponse;\n\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { parsed = JSON.parse(stripped); } catch(e2) {\n    const match = stripped.match(/[\\[{][\\s\\S]*[\\]}]/);\n    if (match) { try { parsed = JSON.parse(match[0]); } catch(e3) { parsed = { days: [] }; } }\n    else { parsed = { days: [] }; }\n  }\n}\n\nconst days = parsed.days || [];\nconst dayMeta = ctx.day_meta || [];\nconst platforms = ctx.platforms || [];\nconst allContentItems = [];\nfor (const day of days) {\n  const dayNum = day.day_number || 0;\n  const meta = dayMeta.find(m => m.day_number === dayNum) || dayMeta[dayNum - 1] || {};\n  const posts = day.posts || {};\n  const image_prompt = day.image_prompt || 'Professional product lifestyle image, photorealistic, 1:1';\n  for (const platform of platforms) {\n    const plat = platform.toLowerCase();\n    const post = posts[plat] || {};\n    allContentItems.push({\n      user_id: ctx.user_id, campaign_id: ctx.campaign_id, theme_id: ctx.theme_id,\n      title: ctx.show_name + ' S' + ctx.week_number + ' Day ' + dayNum + ' - ' + plat,\n      content: plat === 'youtube' ? (post.caption || post.text || JSON.stringify(post)) : (post.text || JSON.stringify(post)),\n      content_type: 'text', platform: plat, scheduled_date: meta.scheduled_date || '',\n      status: 'pending_review', image_prompt, product_id: meta.product_id || null,\n      hashtags: post.hashtags || [], first_comment: post.first_comment || null\n    });\n  }\n}\nreturn { json: { content_items: allContentItems, content_count: allContentItems.length, user_id: ctx.user_id, campaign_id: ctx.campaign_id, week_number: ctx.week_number, pipeline_run_id: ctx.pipeline_run_id, callback_url: ctx.callback_url, step: ctx.step } };"
       },
       "id": "04-studio-0024",
       "name": "Parse All Days",
@@ -337,262 +317,14 @@
     },
     {
       "parameters": {
-        "amount": 2
-      },
-      "id": "04-studio-0025",
-      "name": "Rate Limit Wait",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        2640,
-        200
-      ],
-      "webhookId": "04-studio-rate-wait"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Collect all content items from the daily loop\nlet allItems;\ntry {\n  allItems = $('Parse Day Content').all();\n} catch(e) {\n  // Parse Day Content wasn't executed - loop had no items\n  allItems = [];\n}\n\nconst allContentItems = [];\nconst allImagePrompts = [];\nconst videoDays = [];\n\nfor (const item of allItems) {\n  const data = item.json;\n  if (data.content_items && Array.isArray(data.content_items)) {\n    allContentItems.push(...data.content_items);\n  }\n  allImagePrompts.push({\n    day_number: data.day_number,\n    image_prompt: data.image_prompt,\n    scheduled_date: data.scheduled_date\n  });\n  if (data.is_video_day) {\n    videoDays.push({\n      day_number: data.day_number,\n      product_id: data.product_id,\n      product_name: data.product_name,\n      product_description: data.product_description,\n      product_image_url: data.product_image_url,\n      topic: data.topic,\n      content_angle: data.content_angle,\n      scheduled_date: data.scheduled_date\n    });\n  }\n}\n\n// Carry forward context from first item or from Extract Params\nlet ctx = {};\nif (allItems.length > 0) {\n  ctx = allItems[0].json;\n} else {\n  try { ctx = $('Extract Params').item.json; } catch(e2) { ctx = {}; }\n}\n\nreturn {\n  json: {\n    content_items: allContentItems,\n    image_prompts: allImagePrompts,\n    video_days: videoDays,\n    content_count: allContentItems.length,\n    user_id: ctx.user_id,\n    campaign_id: ctx.campaign_id,\n    theme_id: ctx.theme_id,\n    show_name: ctx.show_name,\n    theme_name: ctx.theme_name,\n    week_number: ctx.week_number,\n    platforms: ctx.platforms,\n    pipeline_run_id: ctx.pipeline_run_id,\n    callback_url: ctx.callback_url,\n    step: ctx.step,\n    icp_summary: ctx.icp_summary,\n    inspirational_theme: ctx.inspirational_theme\n  }\n};"
-      },
-      "id": "04-studio-0030",
-      "name": "Collect All Day Content",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2860,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const data = $input.item.json;\nconst videoDays = data.video_days || [];\n\n// Build Perplexity prompt for trending audio research\nconst month = data.week_number ? `Week ${data.week_number}` : 'this month';\nconst industry = data.theme_name || 'business';\n\nconst prompt = `What are the top 10 trending sounds/songs on Instagram Reels and YouTube Shorts right now? For each, provide: song name, artist, and which platform it's trending on. Focus on sounds that work well for ${industry} content. Return as JSON array: [{\"name\": \"...\", \"artist\": \"...\", \"platform\": \"Instagram|YouTube\"}]`;\n\nreturn {\n  json: {\n    ...data,\n    perplexity_prompt: prompt,\n    has_video_days: videoDays.length > 0\n  }\n};"
-      },
-      "id": "04-studio-0031",
-      "name": "Prepare Trending Audio Prompt",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        3080,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.perplexity.ai/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "perplexityApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.perplexity_prompt) }}\n    }\n  ],\n  \"max_tokens\": 2048\n}",
-        "options": {
-          "timeout": 60000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "04-studio-0032",
-      "name": "Research Trending Audio",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3300,
-        200
-      ],
-      "credentials": {
-        "perplexityApi": {
-          "id": "3rYRY1C2K9o0DDXI",
-          "name": "Perplexity account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const prevData = $('Prepare Trending Audio Prompt').item.json;\nconst perplexityResponse = $input.item.json;\n\n// Extract trending audio from Perplexity response\nlet trendingAudioText = '';\ntry {\n  if (perplexityResponse.choices && perplexityResponse.choices[0]) {\n    trendingAudioText = perplexityResponse.choices[0].message.content;\n  }\n} catch(e) {\n  trendingAudioText = 'Trending audio data unavailable';\n}\n\n// Parse trending audio JSON if possible\nlet trendingAudio = [];\ntry {\n  const raw = trendingAudioText;\n  let parsed;\n  try {\n    parsed = JSON.parse(raw);\n  } catch(e) {\n    const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n    try {\n      parsed = JSON.parse(stripped);\n    } catch(e2) {\n      const match = stripped.match(/\\[[\\s\\S]*\\]/);\n      if (match) parsed = JSON.parse(match[0]);\n    }\n  }\n  if (Array.isArray(parsed)) trendingAudio = parsed;\n  else if (parsed && Array.isArray(parsed.trending)) trendingAudio = parsed.trending;\n} catch(e) {\n  // Keep as text\n}\n\n// Now prepare video script prompts for each video day\nconst videoDays = prevData.video_days || [];\nconst videoPrompts = [];\n\nfor (const vday of videoDays) {\n  const audioRecs = trendingAudio.slice(0, 4).map(a => `${a.name} by ${a.artist} (${a.platform})`).join(', ') || trendingAudioText.substring(0, 500);\n\n  const prompt = `Create a professional, production-ready 30-second video script.\\n\\nProduct: ${vday.product_name} - ${vday.product_description || ''}\\nProduct Image/URL: ${vday.product_image_url || 'N/A'}\\nTheme: ${vday.topic}\\nContent Angle: ${vday.content_angle || ''}\\nTarget Audience: ${prevData.icp_summary || ''}\\nSeason Theme: ${prevData.inspirational_theme || ''}\\nTrending Audio Options: ${audioRecs}\\n\\nReturn a JSON object with this EXACT structure:\\n{\\n  \"title\": \"Video title\",\\n  \"duration\": \"30 seconds\",\\n  \"platforms\": [\"Instagram Reels\", \"YouTube Shorts\"],\\n  \"trending_audio\": [\\n    { \"name\": \"...\", \"artist\": \"...\", \"platform\": \"Instagram\" },\\n    { \"name\": \"...\", \"artist\": \"...\", \"platform\": \"YouTube\" }\\n  ],\\n  \"sections\": {\\n    \"hook\": { \"timing\": \"0:00-0:03\", \"script\": \"...\", \"camera\": \"...\", \"b_roll\": \"...\", \"on_screen_text\": \"...\" },\\n    \"setup\": { \"timing\": \"0:03-0:10\", \"script\": \"...\", \"camera\": \"...\", \"b_roll\": \"...\", \"on_screen_text\": \"...\" },\\n    \"value\": { \"timing\": \"0:10-0:25\", \"script\": \"...\", \"camera\": \"...\", \"b_roll\": \"...\", \"on_screen_text\": \"...\", \"key_points\": [...] },\\n    \"cta\": { \"timing\": \"0:25-0:30\", \"script\": \"...\", \"camera\": \"...\", \"on_screen_text\": \"...\", \"action\": \"...\" }\\n  },\\n  \"music_mood\": \"...\",\\n  \"thumbnail_idea\": \"...\",\\n  \"production_notes\": \"...\",\\n  \"product_url\": \"${vday.product_image_url || ''}\",\\n  \"product_image\": \"${vday.product_image_url || ''}\"\\n}`;\n\n  videoPrompts.push({\n    ...vday,\n    video_prompt: prompt\n  });\n}\n\nreturn {\n  json: {\n    ...prevData,\n    trending_audio_raw: trendingAudioText,\n    trending_audio: trendingAudio,\n    video_prompts: videoPrompts\n  }\n};"
-      },
-      "id": "04-studio-0033",
-      "name": "Prepare Video Script Prompts",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        3520,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "has-video-check",
-              "leftValue": "={{ ($json.video_prompts || []).length > 0 }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "04-studio-0044",
-      "name": "Has Video Days?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        3740,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const data = $input.item.json;\nconst videoPrompts = data.video_prompts || [];\n\n// Output each video prompt as a separate item for the loop\nreturn videoPrompts.map(vp => ({\n  json: {\n    ...vp,\n    user_id: data.user_id,\n    campaign_id: data.campaign_id,\n    theme_id: data.theme_id,\n    show_name: data.show_name,\n    week_number: data.week_number,\n    platforms: data.platforms,\n    pipeline_run_id: data.pipeline_run_id,\n    callback_url: data.callback_url,\n    step: data.step,\n    all_content_items: data.content_items,\n    all_image_prompts: data.image_prompts,\n    content_count: data.content_count,\n    trending_audio_raw: data.trending_audio_raw,\n    trending_audio: data.trending_audio\n  }\n}));"
-      },
-      "id": "04-studio-0034",
-      "name": "Prepare Video Loop Items",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        3960,
-        100
-      ]
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "id": "04-studio-0035",
-      "name": "Video Script Loop",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        4180,
-        100
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const vday = $input.item.json;\n\nconst apiBody = {\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  messages: [\n    {\n      role: 'user',\n      content: vday.video_prompt\n    }\n  ]\n};\n\nreturn {\n  json: {\n    apiBody: JSON.stringify(apiBody),\n    ...vday\n  }\n};"
-      },
-      "id": "04-studio-0036",
-      "name": "Prepare Video Claude Prompt",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        4180,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "anthropicApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ $json.apiBody }}",
-        "options": {
-          "timeout": 120000
-        }
-      },
-      "id": "04-studio-0037",
-      "name": "Generate Video Script",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        4400,
-        200
-      ],
-      "credentials": {
-        "anthropicApi": {
-          "id": "cZwkXj4ZfHTkpBtT",
-          "name": "Anthropic account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const vday = $('Prepare Video Claude Prompt').item.json;\nconst claudeResponse = $input.item.json;\n\n// Extract text from Claude response\nlet raw = '';\nif (claudeResponse.content && claudeResponse.content[0]) {\n  raw = claudeResponse.content[0].text;\n} else if (typeof claudeResponse === 'string') {\n  raw = claudeResponse;\n}\n\n// Robust JSON parsing\nlet videoScript;\ntry {\n  videoScript = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try {\n    videoScript = JSON.parse(stripped);\n  } catch(e2) {\n    const match = stripped.match(/[{][\\s\\S]*[}]/);\n    if (match) {\n      try {\n        videoScript = JSON.parse(match[0]);\n      } catch(e3) {\n        videoScript = { title: 'Video Script', error: 'Failed to parse' };\n      }\n    } else {\n      videoScript = { title: 'Video Script', error: 'Failed to parse' };\n    }\n  }\n}\n\n// Add product references\nvideoScript.product_url = vday.product_image_url || '';\nvideoScript.product_image = vday.product_image_url || '';\n\n// Create video content_item for each video-capable platform\nconst videoItems = [];\nconst videoPlatforms = (vday.platforms || []).filter(p => {\n  const pl = p.toLowerCase();\n  return pl === 'instagram' || pl === 'youtube';\n});\n\nfor (const plat of (videoPlatforms.length > 0 ? videoPlatforms : ['instagram'])) {\n  videoItems.push({\n    user_id: vday.user_id,\n    campaign_id: vday.campaign_id,\n    theme_id: vday.theme_id,\n    title: `${vday.show_name} S${vday.week_number} Day ${vday.day_number} - ${plat.toLowerCase()} video`,\n    content: videoScript.title || 'Video Script',\n    content_type: 'video',\n    platform: plat.toLowerCase(),\n    scheduled_date: vday.scheduled_date,\n    status: 'pending_review',\n    image_prompt: null,\n    product_id: vday.product_id,\n    video_script: videoScript,\n    hashtags: [],\n    first_comment: null\n  });\n}\n\nreturn {\n  json: {\n    video_content_items: videoItems,\n    day_number: vday.day_number,\n    video_script: videoScript\n  }\n};"
-      },
-      "id": "04-studio-0038",
-      "name": "Parse Video Script",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        4620,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "amount": 2
-      },
-      "id": "04-studio-0039",
-      "name": "Video Rate Limit Wait",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        4840,
-        200
-      ],
-      "webhookId": "04-studio-video-rate-wait"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Collect all video content items from the video script loop\nconst allVideoItems = $('Parse Video Script').all();\n\nconst videoContentItems = [];\nfor (const item of allVideoItems) {\n  if (item.json.video_content_items) {\n    videoContentItems.push(...item.json.video_content_items);\n  }\n}\n\n// Get the main data from Prepare Video Loop Items (first item has all context)\nconst ctx = $('Prepare Video Loop Items').first().json;\n\nreturn {\n  json: {\n    content_items: ctx.all_content_items || [],\n    video_content_items: videoContentItems,\n    image_prompts: ctx.all_image_prompts || [],\n    content_count: (ctx.content_count || 0) + videoContentItems.length,\n    user_id: ctx.user_id,\n    campaign_id: ctx.campaign_id,\n    theme_id: ctx.theme_id,\n    show_name: ctx.show_name,\n    week_number: ctx.week_number,\n    platforms: ctx.platforms,\n    pipeline_run_id: ctx.pipeline_run_id,\n    callback_url: ctx.callback_url,\n    step: ctx.step\n  }\n};"
-      },
-      "id": "04-studio-0040",
-      "name": "Collect Video Content",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        5060,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const data = $input.item.json;\n\n// Text content only \u2014 images/videos generated after user approval\nconst allItems = data.content_items || [];\n\nconst batchBody = allItems.map(item => ({\n  user_id: item.user_id,\n  campaign_id: item.campaign_id,\n  theme_id: item.theme_id,\n  title: item.title,\n  content: item.content,\n  content_type: item.content_type || 'text',\n  platform: item.platform,\n  scheduled_date: item.scheduled_date,\n  status: 'pending_review',\n  image_prompt: item.image_prompt || null,\n  product_id: item.product_id || null,\n  hashtags: item.hashtags && item.hashtags.length > 0 ? `{${item.hashtags.map(h => `\"${h.replace(/\\\"/g, '\\\\\\\\\"')}\"`).join(',')}}` : null,\n  first_comment: item.first_comment || null\n}));\n\nreturn {\n  json: {\n    batch_body: batchBody,\n    batch_count: batchBody.length,\n    user_id: data.user_id,\n    campaign_id: data.campaign_id,\n    week_number: data.week_number,\n    pipeline_run_id: data.pipeline_run_id,\n    callback_url: data.callback_url,\n    step: data.step\n  }\n};"
+        "jsCode": "const data = $input.item.json;\nconst allItems = data.content_items || [];\nconst batchBody = allItems.map(item => ({\n  user_id: item.user_id, campaign_id: item.campaign_id, theme_id: item.theme_id,\n  title: item.title, content: item.content, content_type: item.content_type || 'text',\n  platform: item.platform, scheduled_date: item.scheduled_date, status: 'pending_review',\n  image_prompt: item.image_prompt || null, product_id: item.product_id || null,\n  hashtags: item.hashtags && item.hashtags.length > 0 ? `{${item.hashtags.map(h => `\"${h.replace(/\\\"/g, '\\\\\\\\\"')}\"`).join(',')}}` : null,\n  first_comment: item.first_comment || null\n}));\nreturn { json: { batch_body: batchBody, batch_count: batchBody.length, user_id: data.user_id, campaign_id: data.campaign_id, week_number: data.week_number, pipeline_run_id: data.pipeline_run_id, callback_url: data.callback_url, step: data.step } };"
       },
       "id": "04-studio-0041",
       "name": "Prepare Batch Insert",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5280,
+        2640,
         200
       ]
     },
@@ -638,287 +370,20 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5500,
+        2860,
         200
       ]
     },
     {
       "parameters": {
-        "jsCode": "const prevData = $('Prepare Batch Insert').item.json;\nconst insertResult = $input.item.json;\n\n// Extract inserted content items for image URL mapping later\nconst insertedItems = Array.isArray(insertResult) ? insertResult : [insertResult];\n\n// Prepare image prompts as loop items\nconst imagePrompts = prevData.image_prompts || [];\n\nreturn imagePrompts.map(ip => ({\n  json: {\n    day_number: ip.day_number,\n    image_prompt: ip.image_prompt,\n    scheduled_date: ip.scheduled_date,\n    campaign_id: prevData.campaign_id,\n    user_id: prevData.user_id,\n    week_number: prevData.week_number,\n    pipeline_run_id: prevData.pipeline_run_id,\n    callback_url: prevData.callback_url,\n    step: prevData.step,\n    batch_count: prevData.batch_count\n  }\n}));"
-      },
-      "id": "04-studio-0050",
-      "name": "Prepare Image Loop Items",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        5720,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "id": "04-studio-0051",
-      "name": "Image Generation Loop",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        5940,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.kieai.com/v1/tasks",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"nano-banana-pro\",\n  \"input\": {\n    \"prompt\": {{ JSON.stringify($json.image_prompt || 'Professional product lifestyle image') }},\n    \"aspect_ratio\": \"1:1\",\n    \"resolution\": \"1K\",\n    \"output_format\": \"png\"\n  }\n}",
-        "options": {
-          "timeout": 60000
-        },
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "httpHeaderAuth"
-      },
-      "id": "04-studio-0052",
-      "name": "Create KIE Task",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        6160,
-        200
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "KIE_AI_API_CREDENTIAL",
-          "name": "KIE AI API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const item = $input.item.json;\nconst imgItem = $('Image Generation Loop').item.json;\n\nreturn {\n  json: {\n    ...item,\n    pollCount: 0,\n    taskId: item.data?.task_id || item.data?.taskId || item.task_id || item.taskId,\n    day_number: imgItem.day_number,\n    scheduled_date: imgItem.scheduled_date,\n    campaign_id: imgItem.campaign_id,\n    user_id: imgItem.user_id,\n    week_number: imgItem.week_number,\n    pipeline_run_id: imgItem.pipeline_run_id,\n    callback_url: imgItem.callback_url,\n    step: imgItem.step,\n    batch_count: imgItem.batch_count\n  }\n};"
-      },
-      "id": "04-studio-0053",
-      "name": "Init Image Poll",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        6380,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "amount": 10
-      },
-      "id": "04-studio-0054",
-      "name": "Image Initial Wait",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        6600,
-        200
-      ],
-      "webhookId": "04-studio-img-initial-wait"
-    },
-    {
-      "parameters": {
-        "url": "=https://api.kieai.com/v1/tasks/{{ $json.taskId }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        },
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "httpHeaderAuth"
-      },
-      "id": "04-studio-0055",
-      "name": "Poll KIE Result",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        6820,
-        200
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "KIE_AI_API_CREDENTIAL",
-          "name": "KIE AI API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const result = $input.item.json;\nconst prevData = $('Init Image Poll').item.json;\nconst pollCount = (prevData.pollCount || 0) + 1;\n\n// Check status -- KIE uses 'succeeded' or 'success' or 'completed'\nconst status = result.output?.status || result.data?.state || result.status || 'processing';\nconst isReady = status === 'succeeded' || status === 'success' || status === 'completed';\nconst isTimeout = pollCount >= 12;\nconst isError = status === 'failed' || status === 'error';\n\n// Extract image URL if ready\nlet imageUrl = null;\nif (isReady) {\n  // Try multiple response formats\n  if (result.output?.works && result.output.works[0]?.resource?.url) {\n    imageUrl = result.output.works[0].resource.url;\n  } else if (result.data?.resultJson) {\n    try {\n      const parsed = JSON.parse(result.data.resultJson);\n      if (parsed.resultUrls && parsed.resultUrls[0]) imageUrl = parsed.resultUrls[0];\n    } catch(e) {}\n  } else if (result.output?.image_url) {\n    imageUrl = result.output.image_url;\n  }\n}\n\nreturn {\n  json: {\n    ...prevData,\n    pollCount,\n    isComplete: isReady || isTimeout || isError,\n    isSuccess: isReady && !!imageUrl,\n    imageUrl,\n    error: isTimeout ? 'Image generation timed out' : isError ? `Image failed: ${status}` : null\n  }\n};"
-      },
-      "id": "04-studio-0056",
-      "name": "Check KIE Result",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7040,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "kie-complete-check",
-              "leftValue": "={{ $json.isComplete }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "04-studio-0057",
-      "name": "IF Complete",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        7260,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "amount": 5
-      },
-      "id": "04-studio-0058",
-      "name": "Image Retry Wait",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        7480,
-        400
-      ],
-      "webhookId": "04-studio-img-retry-wait"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "kie-success-check",
-              "leftValue": "={{ $json.isSuccess }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "04-studio-0059",
-      "name": "IF Success",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        7480,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "method": "PATCH",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?campaign_id=eq.{{ $json.campaign_id }}&scheduled_date=eq.{{ $json.scheduled_date }}&image_url=is.null",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "apikey",
-              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"image_url\": {{ JSON.stringify($json.imageUrl) }}\n}",
-        "options": {
-          "timeout": 15000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "04-studio-0060",
-      "name": "Update Image URL",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        7700,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "amount": 2
-      },
-      "id": "04-studio-0061",
-      "name": "Image Gap Wait",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        7920,
-        200
-      ],
-      "webhookId": "04-studio-img-gap-wait"
-    },
-    {
-      "parameters": {
-        "jsCode": "// After batch insert, prepare callback to orchestrator\nconst batchData = $('Prepare Batch Insert').item.json;\n\n// If no callback_url (called directly from frontend, not orchestrator), skip callback\nif (!batchData.callback_url) {\n  return [];\n}\n\nreturn {\n  json: {\n    pipeline_run_id: batchData.pipeline_run_id,\n    callback_url: batchData.callback_url,\n    step: batchData.step,\n    week_number: batchData.week_number,\n    batch_count: batchData.batch_count\n  }\n};"
+        "jsCode": "const batchData = $('Prepare Batch Insert').item.json;\nif (!batchData.callback_url) return [];\nreturn { json: { pipeline_run_id: batchData.pipeline_run_id, callback_url: batchData.callback_url, step: batchData.step, week_number: batchData.week_number, batch_count: batchData.batch_count } };"
       },
       "id": "04-studio-0070",
       "name": "Prepare Callback",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        8140,
+        3080,
         200
       ]
     },
@@ -956,13 +421,13 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        8360,
+        3300,
         200
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Error handler -- recover context and prepare error callback\nconst allItems = [];\ntry { allItems.push($('Extract Params').item.json); } catch(e) {}\n\nconst ctx = allItems[0] || {};\nconst pipeline_run_id = ctx.pipeline_run_id || null;\nconst callback_url = ctx.callback_url || null;\nconst step = ctx.step || 3;\nconst errorMessage = $input.item.json.message || $input.item.json.error || 'Content Studio execution failed';\n\nreturn {\n  json: {\n    pipeline_run_id,\n    callback_url,\n    step,\n    error_message: errorMessage,\n    has_callback: !!callback_url\n  }\n};"
+        "jsCode": "const allItems = [];\ntry { allItems.push($('Extract Params').item.json); } catch(e) {}\nconst ctx = allItems[0] || {};\nreturn { json: { pipeline_run_id: ctx.pipeline_run_id || null, callback_url: ctx.callback_url || null, step: ctx.step || 3, error_message: $input.item.json.message || 'Content Studio failed', has_callback: !!ctx.callback_url } };"
       },
       "id": "04-studio-0080",
       "name": "Handle Error",
@@ -1046,32 +511,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Handle skip-video path: no video days, go straight to batch insert\n// Data comes from Has Video Days? which received from Prepare Video Script Prompts\nconst data = $input.item.json;\n\nreturn {\n  json: {\n    content_items: data.content_items || [],\n    video_content_items: [],\n    image_prompts: data.image_prompts || [],\n    content_count: data.content_count || 0,\n    user_id: data.user_id,\n    campaign_id: data.campaign_id,\n    theme_id: data.theme_id,\n    show_name: data.show_name,\n    week_number: data.week_number,\n    platforms: data.platforms,\n    pipeline_run_id: data.pipeline_run_id,\n    callback_url: data.callback_url,\n    step: data.step\n  }\n};"
-      },
-      "id": "04-studio-0043",
-      "name": "Skip Video Path",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        4180,
-        400
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// IF Success FALSE path -- image failed, skip update and continue loop\nconst data = $input.item.json;\nreturn {\n  json: {\n    ...data,\n    image_skipped: true\n  }\n};"
-      },
-      "id": "04-studio-0062",
-      "name": "Skip Failed Image",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7700,
-        400
-      ]
-    },
-    {
-      "parameters": {
         "respondWith": "json",
         "responseBody": "={{ JSON.stringify({ success: true, content_count: $json.batch_count || 0 }) }}",
         "options": {
@@ -1083,9 +522,43 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        5500,
+        2860,
         400
       ]
+    },
+    {
+      "id": "bd-docs-04",
+      "name": "Read Brand Docs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1650,
+        200
+      ],
+      "parameters": {
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/brand_documents?user_id=eq.{{ $('Extract Params').item.json.user_id }}&summary_text=not.is.null&select=summary_text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "alwaysOutputData": true
     }
   ],
   "connections": {
@@ -1173,17 +646,6 @@
         ]
       ]
     },
-    "Read Weekly Topics": {
-      "main": [
-        [
-          {
-            "node": "Prepare Daily Content Loop",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Prepare Daily Content Loop": {
       "main": [
         [
@@ -1206,11 +668,11 @@
         ]
       ]
     },
-    "Parse Day Content": {
+    "Parse All Days": {
       "main": [
         [
           {
-            "node": "Day Content Loop",
+            "node": "Prepare Batch Insert",
             "type": "main",
             "index": 0
           }
@@ -1255,11 +717,6 @@
         ]
       ]
     },
-    "Callback to Orchestrator": {
-      "main": [
-        []
-      ]
-    },
     "Handle Error": {
       "main": [
         [
@@ -1282,16 +739,22 @@
         ]
       ]
     },
-    "Error Callback": {
-      "main": [
-        []
-      ]
-    },
-    "Parse All Days": {
+    "Read Weekly Topics": {
       "main": [
         [
           {
-            "node": "Prepare Batch Insert",
+            "node": "Read Brand Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Brand Docs": {
+      "main": [
+        [
+          {
+            "node": "Prepare Daily Content Loop",
             "type": "main",
             "index": 0
           }
@@ -1300,6 +763,808 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "b658bc64-1556-4d3a-a0b0-98e6ec6afc15",
+  "activeVersionId": "b658bc64-1556-4d3a-a0b0-98e6ec6afc15",
+  "versionCounter": 253,
+  "tags": [
+    {
+      "updatedAt": "2026-03-27T20:56:32.303Z",
+      "createdAt": "2026-03-27T20:56:32.303Z",
+      "id": "nixlLW529L6XTb3y",
+      "name": "v1-original"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-04-07T02:53:57.631Z",
+    "createdAt": "2026-04-07T02:53:57.631Z",
+    "versionId": "b658bc64-1556-4d3a-a0b0-98e6ec6afc15",
+    "workflowId": "TreszUaJqlykCrMi",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "eluxr-phase4-studio",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "id": "04-studio-0001",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          200
+        ],
+        "webhookId": "eluxr-phase4-studio"
+      },
+      {
+        "parameters": {
+          "workflowId": "S4QtfIKpvhW4mQYG"
+        },
+        "id": "04-studio-0003",
+        "name": "Auth Validator",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          220,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "auth-check",
+                "leftValue": "={{ $json.authenticated }}",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "04-studio-0004",
+        "name": "Auth OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          440,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+          "options": {
+            "responseCode": 401
+          }
+        },
+        "id": "04-studio-0005",
+        "name": "401 Unauthorized",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          660,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $input.item.json;\nconst body = input.body || {};\n\nconst user_id = input.user_id || body.user_id || '';\nconst week_number = parseInt(body.week_number) || 1;\nconst month = body.month || '';\nconst platforms = body.platforms || ['linkedin'];\nconst pipeline_run_id = body.pipeline_run_id || null;\nconst callback_url = body.callback_url || null;\nconst business_url = body.business_url || '';\nconst industry = body.industry || '';\nconst start_date = body.start_date || '';\nconst end_date = body.end_date || '';\nconst day_count = parseInt(body.day_count) || 7;\nconst content_language = body.content_language || 'English';\nconst campaign_theme = body.campaign_theme || '';\nconst brand_voice_notes = body.brand_voice_notes || '';\nconst brand_voice_traits = body.brand_voice_traits || [];\n\n// Calculate step number: Week 1 = step 3, Week 4 = step 6\nconst step = week_number + 2;\n\nreturn {\n  json: {\n    user_id,\n    week_number,\n    month,\n    platforms,\n    pipeline_run_id,\n    callback_url,\n    business_url,\n    industry,\n    start_date,\n    end_date,\n    day_count,\n    content_language,\n    campaign_theme,\n    brand_voice_notes,\n    brand_voice_traits,\n    step\n  }\n};"
+        },
+        "id": "04-studio-0010",
+        "name": "Extract Params",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          660,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/themes?user_id=eq.{{ $json.user_id }}&week_number=eq.{{ $json.week_number }}&select=*,campaigns(id,show_name,month)",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 15000,
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "04-studio-0011",
+        "name": "Read Theme",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          880,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $('Extract Params').item.json.user_id }}&select=icp_summary,content_pillars,recommended_hashtags",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 15000,
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "04-studio-0012",
+        "name": "Read ICP",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1100,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?user_id=eq.{{ $('Extract Params').item.json.user_id }}&is_active=eq.true&select=id,name,description,price,image_url",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 15000,
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "04-studio-0013",
+        "name": "Read Products",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1320,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?user_id=eq.{{ $('Extract Params').item.json.user_id }}&campaign_id=eq.{{ $('Extract Params').item.json.campaign_id || '' }}&week_number=eq.{{ $('Extract Params').item.json.week_number }}&status=eq.approved&order=day_number.asc",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "04-studio-0019",
+        "name": "Read Weekly Topics",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1540,
+          200
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const params = $('Extract Params').item.json;\nconst content_language = params.content_language || 'English';\nconst themeRaw = $('Read Theme').item.json;\nconst icpRaw = $('Read ICP').item.json;\nconst productsRaw = $('Read Products').item.json;\nconst weeklyTopicsRaw = $('Read Weekly Topics').item.json;\n\n// Read brand context\nconst brandVoiceNotes = params.brand_voice_notes || '';\nlet brandDocSummary = '';\ntry {\n  const brandDocsItems = $('Read Brand Docs').all();\n  brandDocSummary = brandDocsItems\n    .map(item => item.json.summary_text || '')\n    .filter(Boolean)\n    .join('\\n---\\n')\n    .substring(0, 3000);\n} catch(e) { /* no brand docs */ }\n\nconst themes = Array.isArray(themeRaw) ? themeRaw : [themeRaw];\nconst theme = themes[0] || {};\nconst campaign = theme.campaigns || {};\nconst campaign_id = campaign.id || theme.campaign_id || null;\nconst show_name = campaign.show_name || 'Content Series';\nconst theme_id = theme.id || null;\nconst theme_name = theme.theme_name || 'Weekly Theme';\nconst inspirational_theme = theme.inspirational_theme || '';\n\nlet weeklyTopics = [];\ntry {\n  weeklyTopics = Array.isArray(weeklyTopicsRaw) ? weeklyTopicsRaw : [];\n} catch(e) { weeklyTopics = []; }\n\nlet dailyAssignments = [];\nif (weeklyTopics.length > 0) {\n  dailyAssignments = weeklyTopics.map(wt => ({\n    day_number: wt.day_number,\n    topic: wt.topic || 'Engagement',\n    content_angle: wt.content_angle || '',\n    product_id: wt.product_id || null,\n    product_name: wt.product_name || null\n  }));\n} else if (theme.content_types && Array.isArray(theme.content_types)) {\n  dailyAssignments = theme.content_types;\n} else if (typeof theme.content_types === 'string') {\n  try { dailyAssignments = JSON.parse(theme.content_types); } catch(e) { dailyAssignments = []; }\n}\n\nconst icps = Array.isArray(icpRaw) ? icpRaw : [icpRaw];\nconst icp = icps[0] || {};\nconst icp_summary = (icp.icp_summary || '').substring(0, 500);\n\nconst products = Array.isArray(productsRaw) ? productsRaw : (productsRaw ? [productsRaw] : []);\nconst productMap = {};\nconst productList = [];\nfor (const p of products) {\n  if (p.id) {\n    productMap[p.id] = p;\n    productList.push({ id: p.id, name: p.name, description: p.description, image_url: p.image_url || null });\n  }\n}\n\nconst weekNum = params.week_number;\nconst platforms = params.platforms;\nconst month = params.month;\n\n// ============================================================\n// ALL 4 STORYTELLING FRAMEWORKS\n// Each theme provides a complete 7-day narrative structure.\n// The campaign_theme param selects which one to use.\n// ============================================================\n\nconst storyFrameworks = {\n  'luxury-intrigue': [\n    { day: 1, label: 'Monday', theme: 'Curiosity Hook', goal: 'Stop the scroll with intrigue and visual mystery', concept: 'Introduce the piece through partial reveal, light reflection, or extreme macro details that spark curiosity', angle: 'Focus on mystery rather than immediate explanation', hooks: ['The detail most people never notice...', 'A piece that changes everything.', 'Look closer.'], driver: 'Curiosity increases watch time and replays' },\n    { day: 2, label: 'Tuesday', theme: 'Craftsmanship', goal: 'Establish luxury credibility and authority', concept: 'Highlight craftsmanship behind the piece', angle: 'Show the making process or implied craftsmanship story', hooks: ['From raw material to wearable art.', 'Precision in every millimeter.', 'Crafted, not manufactured.'], driver: 'Craftsmanship content triggers fascination and trust' },\n    { day: 3, label: 'Wednesday', theme: 'Meaning & Symbolism', goal: 'Build emotional connection', concept: 'Position jewelry as a symbol of moments, relationships, or personal identity', angle: 'Storytelling around meaning rather than product specs', hooks: ['Some pieces mark a moment forever.', 'Jewelry is never just jewelry.', 'Every piece tells a story.'], driver: 'Emotion increases saves and comments' },\n    { day: 4, label: 'Thursday', theme: 'Transformation Moment', goal: 'Show the impact when the jewelry is worn', concept: 'The transformation from object to presence', angle: 'Reveal the moment the piece becomes part of identity or style', hooks: ['The moment everything changes.', 'From detail to statement.', 'Presence begins here.'], driver: 'Transformation visuals drive shares and engagement' },\n    { day: 5, label: 'Friday', theme: 'Hidden Detail / Surprise', goal: 'Encourage shares through discovery', concept: 'Reveal something unexpected about the piece, gemstone, or design', angle: 'Educational but visually captivating facts', hooks: ['Most people never notice this.', 'The secret behind the sparkle.', 'Why this cut catches light differently.'], driver: 'Surprise drives sharing behavior' },\n    { day: 6, label: 'Saturday', theme: 'Lifestyle Aspiration', goal: 'Inspire desire and aspiration', concept: 'Place jewelry in aspirational environments', angle: 'Luxury lifestyle storytelling', hooks: ['Luxury is a feeling.', 'Some moments deserve more.', 'Where elegance begins.'], driver: 'Aspirational content fuels desire' },\n    { day: 7, label: 'Sunday', theme: 'Legacy & Timelessness', goal: 'Build brand prestige and long-term emotional value', concept: 'Jewelry as heirloom, tradition, and timeless symbol', angle: 'Focus on longevity, legacy, and generational value', hooks: ['Some pieces outlive trends.', 'Designed to last generations.', 'What will your story be?'], driver: 'Legacy messaging strengthens brand authority' }\n  ],\n  'emotional-journey': [\n    { day: 1, label: 'Monday', theme: 'The Desire', goal: 'Spark longing with aspirational imagery', concept: 'Show the object of desire in its most magnetic form \u2014 warm light on gold, a diamond catching flame, a hand reaching but not yet touching', angle: 'Aspiration over possession \u2014 make the viewer feel the pull before they understand why', hooks: ['You knew the moment you saw it.', 'Some things find you before you find them.', 'This is where wanting begins.'], driver: 'Desire is the strongest purchase initiator \u2014 aspirational imagery triggers dopamine and increases save rates' },\n    { day: 2, label: 'Tuesday', theme: 'The Story Behind', goal: 'Build narrative depth and brand authenticity', concept: 'Origin story of the piece \u2014 the sketch that started it, the mine where the stone was found, the moment of inspiration', angle: 'Backstory creates perceived value \u2014 the longer the origin story, the more precious the object feels', hooks: ['Every piece begins as a whisper.', 'Before it was yours, it was a dream on paper.', 'The story started long before the stone was set.'], driver: 'Origin stories increase perceived value \u2014 story-driven content gets 22x more engagement than facts alone' },\n    { day: 3, label: 'Wednesday', theme: 'The Person', goal: 'Create relatability and social proof through real human connection', concept: 'Feature a real person \u2014 customer, founder, or artisan. Show the piece as part of someone\\'s actual life, not a catalog', angle: 'People buy from people \u2014 humanize the brand through authentic portraiture', hooks: ['She never takes it off.', 'Ask her about the ring. She will tell you everything.', 'This is not a model. This is a moment.'], driver: 'Person-centered content generates 6.9x higher engagement \u2014 social proof reduces purchase anxiety' },\n    { day: 4, label: 'Thursday', theme: 'The Ritual', goal: 'Embed the product into daily life and create habitual association', concept: 'The quiet ritual of putting on jewelry \u2014 morning routines, getting ready, the last thing before leaving', angle: 'Luxury as daily ritual, not special occasion \u2014 normalize the extraordinary', hooks: ['The first thing she reaches for.', 'A ritual that never gets old.', 'Every morning begins with this.'], driver: 'Ritual content creates habitual mental associations \u2014 strongest predictor of purchase intent' },\n    { day: 5, label: 'Friday', theme: 'The Confidence', goal: 'Show the emotional transformation that wearing the piece creates', concept: 'Before/after energy \u2014 not physical but psychological. Posture change, eye contact, the way someone enters a room differently', angle: 'Jewelry as confidence catalyst \u2014 the piece does not just decorate, it activates', hooks: ['She wore it and the room noticed.', 'Confidence is not born. It is worn.', 'The moment you stop adjusting and start owning.'], driver: 'Transformation content is the #1 driver of shares \u2014 viewers tag friends with \"this is you\"' },\n    { day: 6, label: 'Saturday', theme: 'The Celebration', goal: 'Associate the brand with life\\'s peak emotional moments', concept: 'Milestones, gifts, surprises, anniversaries, proposals, promotions. The piece as witness to the moment that matters most', angle: 'Jewelry as emotional anchor \u2014 the physical object that holds the memory', hooks: ['Some nights deserve forever.', 'The gift she will never forget.', 'This is the piece that was there.'], driver: 'Celebration content triggers the strongest emotional response and highest comment engagement' },\n    { day: 7, label: 'Sunday', theme: 'The Promise', goal: 'Create forward-looking emotional resonance and long-term brand connection', concept: 'Heirloom energy \u2014 the piece passing through generations, the promise of \"always,\" the commitment embedded in precious materials', angle: 'Luxury as legacy and emotional covenant \u2014 the piece outlasts the moment', hooks: ['What will you pass down?', 'Made for now. Meant for always.', 'A promise you can hold.'], driver: 'Legacy content builds deepest brand authority \u2014 frames purchase as investment in identity' }\n  ],\n  'authority-educator': [\n    { day: 1, label: 'Monday', theme: 'Industry Myth-Bust', goal: 'Stop the scroll with a provocative claim that challenges conventional wisdom', concept: 'Take a widely believed fact about jewelry or luxury and dismantle it with evidence. Be direct, confident, contrarian', angle: 'Contrarian authority \u2014 the brand knows what others get wrong', hooks: ['Everything you were told about diamonds is wrong.', 'Stop falling for this.', 'The industry does not want you to know this.'], driver: 'Myth-busting triggers the knowledge gap \u2014 contrarian content generates 2x more comments' },\n    { day: 2, label: 'Tuesday', theme: 'Material Deep-Dive', goal: 'Educate on materials, gems, metals, or techniques to build informed desire', concept: 'Extreme close-up education \u2014 molecular structure of a diamond, why 18k gold behaves differently than 14k, how sapphire forms over millions of years', angle: 'Scientific wonder wrapped in beauty \u2014 make education feel like discovery', hooks: ['This took 3 billion years to form.', 'The difference you can feel but never see.', 'Why this metal changes everything.'], driver: 'Educational content is the #1 type saved on Instagram \u2014 material knowledge reduces purchase anxiety' },\n    { day: 3, label: 'Wednesday', theme: 'Design Philosophy', goal: 'Reveal the intentionality behind every design decision', concept: 'Why a piece looks the way it does \u2014 proportions, negative space, influences from architecture or art. Show sketches next to finished pieces', angle: 'Design thinking as luxury differentiator \u2014 every curve has a reason', hooks: ['Nothing about this is accidental.', 'The line you never notice that changes everything.', 'We designed this 47 times before it was right.'], driver: 'Showing the creative process triggers the labor illusion \u2014 knowing how hard it was makes it feel more valuable' },\n    { day: 4, label: 'Thursday', theme: 'Insider Knowledge', goal: 'Share exclusive expertise that only industry insiders possess', concept: 'Tips and secrets jewelers use but consumers never hear \u2014 how to spot quality at a glance, what to look for under a loupe, how professionals evaluate color', angle: 'Exclusive access to expert knowledge \u2014 the viewer becomes the insider', hooks: ['What jewelers check first and never tell you.', 'The test that takes 3 seconds and tells you everything.', 'After this, you will never look at jewelry the same way.'], driver: 'Insider knowledge triggers the exclusivity principle \u2014 highest save-to-impression ratio content type' },\n    { day: 5, label: 'Friday', theme: 'Comparison / Breakdown', goal: 'Build confidence through transparent visual comparison', concept: 'Side-by-side breakdowns \u2014 lab vs natural diamonds, hollow vs solid construction, machine-set vs hand-set stones. Split-screen, macro details, cross-sections', angle: 'Transparent comparison as confidence builder \u2014 the brand has nothing to hide', hooks: ['Same price. Completely different quality.', 'Put them side by side. The truth is obvious.', 'This is what you are actually paying for.'], driver: 'Comparison content resolves the #1 luxury purchase barrier: \"is it really worth it?\"' },\n    { day: 6, label: 'Saturday', theme: 'Trend Forecast', goal: 'Position the brand as a forward-looking authority that shapes taste', concept: 'What is emerging, what is fading, what is next. Upcoming materials, design movements, cultural shifts in how people wear jewelry', angle: 'Tastemaker authority \u2014 the brand sees what is coming before anyone else', hooks: ['This will be everywhere in 6 months.', 'The trend no one is talking about yet.', 'What the next generation of luxury looks like.'], driver: 'Trend content gets shared because sharing predictions signals social currency' },\n    { day: 7, label: 'Sunday', theme: 'Heritage & Legacy', goal: 'Anchor brand authority in history, tradition, and timeless principles', concept: 'History behind techniques, materials, design movements. How ancient goldsmiths solved problems still used today', angle: 'Timeless authority \u2014 the brand stands on centuries of accumulated wisdom', hooks: ['This technique is 4,000 years old. We still use it.', 'Some things were perfected long before us.', 'The oldest rule in jewelry still holds.'], driver: 'Heritage content builds the deepest form of brand authority \u2014 signals permanence and seriousness' }\n  ],\n  'cinematic-series': [\n    { day: 1, label: 'Monday', theme: 'Cold Open / Teaser', goal: 'Drop viewers into a visual moment with zero context \u2014 maximum intrigue', concept: 'Open in medias res \u2014 close-up of light hitting a stone, a velvet box being opened by unknown hands, a piece being placed on skin with no face shown', angle: 'Cold open technique \u2014 hook before context, mystery before meaning', hooks: ['No caption needed.', 'Wait for it.', 'Monday. Episode begins.'], driver: 'Cold opens reduce skip rate by 35% \u2014 the Zeigarnik effect compels viewers to follow for resolution' },\n    { day: 2, label: 'Tuesday', theme: 'The Reveal', goal: 'Pay off Monday\\'s mystery with the full dramatic reveal', concept: 'The answer to \"what was that?\" \u2014 full piece reveal in glory. Wide shot after the macro, context after the mystery, the 360-degree spin', angle: 'Payoff architecture \u2014 the reveal is only as powerful as the setup that preceded it', hooks: ['Now you see it.', 'This is what Monday was hiding.', 'The full picture.'], driver: 'The reveal satisfies Day 1 tension \u2014 this dopamine release keeps viewers coming back weekly' },\n    { day: 3, label: 'Wednesday', theme: 'Behind the Scenes', goal: 'Pull back the curtain on creation to deepen appreciation', concept: 'Show the making \u2014 the workshop, the tools, the hands at work, the CAD design, the wax model, the casting, the stone setting', angle: 'Access as privilege \u2014 showing the process makes the viewer feel like an insider', hooks: ['You were not supposed to see this.', 'Before it was beautiful, it was this.', '36 hours of work in 30 seconds.'], driver: 'BTS content activates the labor illusion \u2014 seeing effort increases perceived value' },\n    { day: 4, label: 'Thursday', theme: 'The Moment', goal: 'Capture the dramatic peak \u2014 the emotional climax of the episode', concept: 'The hero shot \u2014 the unboxing, the first time worn, the reaction, the gasp, the mirror moment. Cinematic pacing: slow build, then the moment hits', angle: 'Peak emotion as content climax \u2014 build tension then deliver catharsis', hooks: ['This is the moment.', 'Watch her face.', 'Some moments change everything.'], driver: 'Peak emotional moments are the most shared content type \u2014 reaction content triggers mirror neurons' },\n    { day: 5, label: 'Friday', theme: 'Plot Twist', goal: 'Surprise the audience with an unexpected angle or hidden feature', concept: 'Subvert expectations \u2014 show the piece in an unexpected context, reveal a hidden feature like a secret engraving or convertible design, flip the camera', angle: 'Surprise as engagement multiplier \u2014 the brain pays more attention after being surprised', hooks: ['You did not see this coming.', 'Turn it over.', 'Not what you expected.'], driver: 'Surprise content generates the highest share rate \u2014 unexpected moments trigger the social sharing reflex' },\n    { day: 6, label: 'Saturday', theme: 'The World', goal: 'Build the cinematic universe \u2014 place the piece in a world worth inhabiting', concept: 'World-building \u2014 the piece in its natural habitat. A candlelit dinner, a rooftop at golden hour, an art gallery opening, a rain-soaked Paris street', angle: 'Lifestyle as set design \u2014 the piece belongs in a world the viewer aspires to', hooks: ['Welcome to the world.', 'Where this piece lives.', 'Step inside.'], driver: 'Aspirational lifestyle content drives desire through environmental storytelling \u2014 viewers want the life, not just the piece' },\n    { day: 7, label: 'Sunday', theme: 'Next Episode Teaser', goal: 'Create a cliffhanger that guarantees return next Monday', concept: 'A 5-second flash of next week\\'s piece \u2014 out of focus, partially obscured, shot through glass, a shadow. Just enough to trigger recognition without confirmation', angle: 'Cliffhanger mechanics \u2014 end on an open loop that can only be closed by returning', hooks: ['Next week changes everything.', 'You are not ready for what is coming.', 'To be continued.'], driver: 'Cliffhangers exploit the Zeigarnik effect at maximum strength \u2014 highest \"turn-on-notifications\" behavior' }\n  ]\n};\n\n// Select framework based on campaign_theme from frontend\nconst campaign_theme = params.campaign_theme || theme.theme_name || 'luxury-intrigue';\nconst storyFramework = storyFrameworks[campaign_theme];\nif (!storyFramework) {\n  throw new Error('Unknown campaign_theme: \"' + campaign_theme + '\". Valid themes: ' + Object.keys(storyFrameworks).join(', '));\n}\n\nconst platformRules = [];\nfor (const plat of platforms) {\n  const p = plat.toLowerCase();\n  if (p === 'linkedin') platformRules.push('- LinkedIn: 1300-1800 chars, thought leadership tone, line breaks between paragraphs, 3-5 professional hashtags, product CTA');\n  if (p === 'instagram') platformRules.push('- Instagram: 150-300 char caption, 20-30 hashtags in separate first_comment field, emoji allowed, product CTA. Video will be generated from product image.');\n  if (p === 'x') platformRules.push('- X: Single tweet under 280 chars, punchy and conversational, product CTA, 3-5 hashtags');\n  if (p === 'youtube') platformRules.push('- YouTube: Write a video CAPTION (150-300 chars) for the YouTube Short post description. Also include title, hashtags, cta. Do NOT include scene breakdowns or video scripts in the caption. Video generated from actual product image.');\n  if (p === 'tiktok') platformRules.push('- TikTok: Short punchy caption (100-200 chars), trending hashtags, casual/fun tone, product CTA. Video will be generated from product image.');\n  if (p === 'facebook') platformRules.push('- Facebook: 200-400 char post, conversational tone, emoji-friendly, product CTA, 3-5 hashtags.');\n}\n\nconst dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];\n\nconst dayDescriptions = [];\nconst dayMeta = [];\nfor (let dayIdx = 0; dayIdx < 7; dayIdx++) {\n  const dayNumber = dayIdx + 1;\n  const framework = storyFramework[dayIdx];\n  const assignment = dailyAssignments[dayIdx] || {};\n  const product_id = assignment.product_id || null;\n  const product = product_id ? (productMap[product_id] || {}) : {};\n  const product_name = assignment.product_name || product.name || 'Featured Product';\n  const product_description = product.description || '';\n  const product_image_url = product.image_url || null;\n  const topic = assignment.topic || framework.theme;\n  const content_angle = assignment.content_angle || framework.angle;\n\n  let scheduledDate = '';\n  let startDateObj;\n  if (params.start_date) {\n    startDateObj = new Date(params.start_date + 'T00:00:00');\n  } else {\n    startDateObj = new Date();\n    startDateObj.setHours(0, 0, 0, 0);\n  }\n  const targetDate = new Date(startDateObj);\n  targetDate.setDate(startDateObj.getDate() + (dayNumber - 1));\n  const sy = targetDate.getFullYear();\n  const sm = String(targetDate.getMonth() + 1).padStart(2, '0');\n  const sd = String(targetDate.getDate()).padStart(2, '0');\n  scheduledDate = sy + '-' + sm + '-' + sd;\n  const actualDayName = dayNames[targetDate.getDay()];\n\n  dayDescriptions.push(\n    'Day ' + dayNumber + ' (' + actualDayName + ' - ' + framework.theme + '):\\n' +\n    '  Goal: ' + framework.goal + '\\n' +\n    '  Concept: ' + framework.concept + '\\n' +\n    '  Angle: ' + framework.angle + '\\n' +\n    '  Hooks: \"' + framework.hooks.join('\", \"') + '\"\\n' +\n    '  Driver: ' + framework.driver + '\\n' +\n    '  Product: ' + product_name + ' -- ' + product_description + '\\n' +\n    '  Topic: \"' + topic + '\"\\n' +\n    '  Angle: \"' + content_angle + '\"'\n  );\n  dayMeta.push({ day_number: dayNumber, product_id, product_name, product_description, product_image_url, topic, content_angle, scheduled_date: scheduledDate });\n}\n\nconst platSchemas = [];\nfor (const plat of platforms) {\n  const p = plat.toLowerCase();\n  if (p === 'linkedin') platSchemas.push('\"linkedin\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'instagram') platSchemas.push('\"instagram\": { \"text\": \"...\", \"hashtags\": [...], \"first_comment\": \"...\", \"cta\": \"...\" }');\n  if (p === 'x') platSchemas.push('\"x\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'youtube') platSchemas.push('\"youtube\": { \"caption\": \"...\", \"title\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'tiktok') platSchemas.push('\"tiktok\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n  if (p === 'facebook') platSchemas.push('\"facebook\": { \"text\": \"...\", \"hashtags\": [...], \"cta\": \"...\" }');\n}\n\nconst megaPrompt = 'CRITICAL LANGUAGE REQUIREMENT: Generate ALL content exclusively in ' + content_language + '. Every word, caption, and hashtag must be in ' + content_language + '. No mixing languages. This is non-negotiable.\\n\\n' +\n'You are a luxury brand content strategist. Generate social media content for ALL 7 days following the Viral Storytelling Framework.\\n\\n' +\n'=== STORYTELLING FRAMEWORK ===\\n' +\n'Weekly rhythm: ' + storyFramework.map(f => f.theme).join(' > ') + '\\n\\n' +\n'=== CONTEXT ===\\n' +\n'Show: \"' + show_name + '\"\\n' +\n'Season ' + weekNum + ': \"' + theme_name + '\" -- ' + inspirational_theme + '\\n' +\n'ICP: ' + icp_summary + '\\n' +\n(brandVoiceNotes ? 'Brand Voice (from client): ' + brandVoiceNotes + '\\n' : '') +\n(brandDocSummary ? 'Brand Guidelines:\\n' + brandDocSummary + '\\n' : '') +\n'Platforms: ' + platforms.join(', ') + '\\n\\n' +\n'=== VIDEO NOTE ===\\n' +\n'For Instagram and YouTube, videos will use the ACTUAL PRODUCT IMAGE. Scripts should describe content anchored to real product photos.\\n\\n' +\n'=== 7-DAY PLAN ===\\n\\n' +\ndayDescriptions.join('\\n\\n') + '\\n\\n' +\n'=== PLATFORM RULES ===\\n' +\nplatformRules.join('\\n') + '\\n\\n' +\n'=== OUTPUT FORMAT ===\\n' +\n'Return JSON: { \"days\": [ { \"day_number\": 1, \"storytelling_theme\": \"' + storyFramework[0].theme + '\", \"posts\": { ' + platSchemas.join(', ') + ' }, \"image_prompt\": \"Detailed AI image prompt for this day (max 500 chars)\" }, ... (all 7 days) ] }\\n' +\n'Include ALL platforms for EVERY day. Do not skip any.\\n\\nREMINDER: ALL output must be in ' + content_language + ' only. No exceptions.';\n\nreturn {\n  json: {\n    prompt: megaPrompt,\n    day_meta: dayMeta,\n    user_id: params.user_id,\n    campaign_id,\n    theme_id,\n    show_name,\n    theme_name,\n    week_number: weekNum,\n    platforms,\n    pipeline_run_id: params.pipeline_run_id,\n    callback_url: params.callback_url,\n    step: params.step,\n    icp_summary,\n    inspirational_theme\n  }\n};"
+        },
+        "id": "04-studio-0020",
+        "name": "Prepare Daily Content Loop",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1760,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "anthropicApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 32768, messages: [{ role: 'user', content: $json.prompt }] }) }}",
+          "options": {
+            "timeout": 300000,
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "04-studio-0023",
+        "name": "Generate Day Content",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2200,
+          200
+        ],
+        "credentials": {
+          "anthropicApi": {
+            "id": "cZwkXj4ZfHTkpBtT",
+            "name": "Anthropic account"
+          }
+        },
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const ctx = $('Prepare Daily Content Loop').item.json;\nconst claudeResponse = $input.item.json;\nlet raw = '';\nif (claudeResponse.content && claudeResponse.content[0]) raw = claudeResponse.content[0].text;\nelse if (typeof claudeResponse === 'string') raw = claudeResponse;\n\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { parsed = JSON.parse(stripped); } catch(e2) {\n    const match = stripped.match(/[\\[{][\\s\\S]*[\\]}]/);\n    if (match) { try { parsed = JSON.parse(match[0]); } catch(e3) { parsed = { days: [] }; } }\n    else { parsed = { days: [] }; }\n  }\n}\n\nconst days = parsed.days || [];\nconst dayMeta = ctx.day_meta || [];\nconst platforms = ctx.platforms || [];\nconst allContentItems = [];\nfor (const day of days) {\n  const dayNum = day.day_number || 0;\n  const meta = dayMeta.find(m => m.day_number === dayNum) || dayMeta[dayNum - 1] || {};\n  const posts = day.posts || {};\n  const image_prompt = day.image_prompt || 'Professional product lifestyle image, photorealistic, 1:1';\n  for (const platform of platforms) {\n    const plat = platform.toLowerCase();\n    const post = posts[plat] || {};\n    allContentItems.push({\n      user_id: ctx.user_id, campaign_id: ctx.campaign_id, theme_id: ctx.theme_id,\n      title: ctx.show_name + ' S' + ctx.week_number + ' Day ' + dayNum + ' - ' + plat,\n      content: plat === 'youtube' ? (post.caption || post.text || JSON.stringify(post)) : (post.text || JSON.stringify(post)),\n      content_type: 'text', platform: plat, scheduled_date: meta.scheduled_date || '',\n      status: 'pending_review', image_prompt, product_id: meta.product_id || null,\n      hashtags: post.hashtags || [], first_comment: post.first_comment || null\n    });\n  }\n}\nreturn { json: { content_items: allContentItems, content_count: allContentItems.length, user_id: ctx.user_id, campaign_id: ctx.campaign_id, week_number: ctx.week_number, pipeline_run_id: ctx.pipeline_run_id, callback_url: ctx.callback_url, step: ctx.step } };"
+        },
+        "id": "04-studio-0024",
+        "name": "Parse All Days",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2420,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const data = $input.item.json;\nconst allItems = data.content_items || [];\nconst batchBody = allItems.map(item => ({\n  user_id: item.user_id, campaign_id: item.campaign_id, theme_id: item.theme_id,\n  title: item.title, content: item.content, content_type: item.content_type || 'text',\n  platform: item.platform, scheduled_date: item.scheduled_date, status: 'pending_review',\n  image_prompt: item.image_prompt || null, product_id: item.product_id || null,\n  hashtags: item.hashtags && item.hashtags.length > 0 ? `{${item.hashtags.map(h => `\"${h.replace(/\\\"/g, '\\\\\\\\\"')}\"`).join(',')}}` : null,\n  first_comment: item.first_comment || null\n}));\nreturn { json: { batch_body: batchBody, batch_count: batchBody.length, user_id: data.user_id, campaign_id: data.campaign_id, week_number: data.week_number, pipeline_run_id: data.pipeline_run_id, callback_url: data.callback_url, step: data.step } };"
+        },
+        "id": "04-studio-0041",
+        "name": "Prepare Batch Insert",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2640,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "return=representation"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.batch_body) }}",
+          "options": {
+            "timeout": 30000,
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "04-studio-0042",
+        "name": "Batch Insert Content",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2860,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const batchData = $('Prepare Batch Insert').item.json;\nif (!batchData.callback_url) return [];\nreturn { json: { pipeline_run_id: batchData.pipeline_run_id, callback_url: batchData.callback_url, step: batchData.step, week_number: batchData.week_number, batch_count: batchData.batch_count } };"
+        },
+        "id": "04-studio-0070",
+        "name": "Prepare Callback",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3080,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $json.callback_url }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-Pipeline-Secret",
+                "value": "eluxr-pipeline-internal-2024"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"pipeline_run_id\": {{ JSON.stringify($json.pipeline_run_id) }},\n  \"step\": {{ $json.step }},\n  \"status\": \"complete\"\n}",
+          "options": {
+            "timeout": 10000,
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "04-studio-0071",
+        "name": "Callback to Orchestrator",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3300,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const allItems = [];\ntry { allItems.push($('Extract Params').item.json); } catch(e) {}\nconst ctx = allItems[0] || {};\nreturn { json: { pipeline_run_id: ctx.pipeline_run_id || null, callback_url: ctx.callback_url || null, step: ctx.step || 3, error_message: $input.item.json.message || 'Content Studio failed', has_callback: !!ctx.callback_url } };"
+        },
+        "id": "04-studio-0080",
+        "name": "Handle Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3080,
+          600
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "has-callback-check",
+                "leftValue": "={{ $json.has_callback }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "04-studio-0081",
+        "name": "Has Callback URL?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          3300,
+          600
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $json.callback_url }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-Pipeline-Secret",
+                "value": "eluxr-pipeline-internal-2024"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"pipeline_run_id\": {{ JSON.stringify($json.pipeline_run_id) }},\n  \"step\": {{ $json.step }},\n  \"status\": \"error\",\n  \"error_message\": {{ JSON.stringify($json.error_message) }}\n}",
+          "options": {
+            "timeout": 10000,
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "04-studio-0082",
+        "name": "Error Callback",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3520,
+          600
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ success: true, content_count: $json.batch_count || 0 }) }}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "04-studio-0090",
+        "name": "200 Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          2860,
+          400
+        ]
+      },
+      {
+        "id": "bd-docs-04",
+        "name": "Read Brand Docs",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1650,
+          200
+        ],
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/brand_documents?user_id=eq.{{ $('Extract Params').item.json.user_id }}&summary_text=not.is.null&select=summary_text",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "alwaysOutputData": true
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Auth Validator",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Auth Validator": {
+        "main": [
+          [
+            {
+              "node": "Auth OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Auth OK?": {
+        "main": [
+          [
+            {
+              "node": "Extract Params",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "401 Unauthorized",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Params": {
+        "main": [
+          [
+            {
+              "node": "Read Theme",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Theme": {
+        "main": [
+          [
+            {
+              "node": "Read ICP",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read ICP": {
+        "main": [
+          [
+            {
+              "node": "Read Products",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Products": {
+        "main": [
+          [
+            {
+              "node": "Read Weekly Topics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Daily Content Loop": {
+        "main": [
+          [
+            {
+              "node": "Generate Day Content",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Generate Day Content": {
+        "main": [
+          [
+            {
+              "node": "Parse All Days",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse All Days": {
+        "main": [
+          [
+            {
+              "node": "Prepare Batch Insert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Batch Insert": {
+        "main": [
+          [
+            {
+              "node": "Batch Insert Content",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Batch Insert Content": {
+        "main": [
+          [
+            {
+              "node": "Prepare Callback",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "200 Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Callback": {
+        "main": [
+          [
+            {
+              "node": "Callback to Orchestrator",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Handle Error": {
+        "main": [
+          [
+            {
+              "node": "Has Callback URL?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Has Callback URL?": {
+        "main": [
+          [
+            {
+              "node": "Error Callback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Weekly Topics": {
+        "main": [
+          [
+            {
+              "node": "Read Brand Docs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Brand Docs": {
+        "main": [
+          [
+            {
+              "node": "Prepare Daily Content Loop",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Andrew Gershan",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-04-07T02:53:57.911Z",
+        "id": 413,
+        "workflowId": "TreszUaJqlykCrMi",
+        "versionId": "b658bc64-1556-4d3a-a0b0-98e6ec6afc15",
+        "event": "activated",
+        "userId": "06bbd5c8-929d-415f-9b4a-dc32b3c8c605"
+      },
+      {
+        "createdAt": "2026-04-07T02:53:57.785Z",
+        "id": 412,
+        "workflowId": "TreszUaJqlykCrMi",
+        "versionId": "b658bc64-1556-4d3a-a0b0-98e6ec6afc15",
+        "event": "deactivated",
+        "userId": "06bbd5c8-929d-415f-9b4a-dc32b3c8c605"
+      }
+    ]
   }
 }

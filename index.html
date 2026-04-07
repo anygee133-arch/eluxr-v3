@@ -6389,7 +6389,7 @@ async function generateScheduleContent(dateStr) {
         platform: platform,
         theme: themeText,
         content_type: contentType,
-        brand_voice: context.brand_voice || 'professional',
+        brand_voice_notes: context.brand_voice || '',
         industry: context.industry || '',
         products: context.products || '',
         week_number: backendTheme.week_number || weekNumber,
@@ -10376,6 +10376,26 @@ async function handleBrandDocUpload(input) {
       method: 'POST',
       body: JSON.stringify({ document_id: doc.id, file_url: urlData.publicUrl || filePath, user_id: user.id })
     }).catch(err => console.warn('Brand doc processing:', err));
+
+    // Poll for processing completion (every 5s, max 60s)
+    const docId = doc.id;
+    let pollCount = 0;
+    const pollInterval = setInterval(async () => {
+      try {
+        pollCount++;
+        if (pollCount > 12) { clearInterval(pollInterval); return; }
+        const { data: updated } = await window.supabase
+          .from('brand_documents')
+          .select('summary_text')
+          .eq('id', docId)
+          .single();
+        if (updated && updated.summary_text) {
+          clearInterval(pollInterval);
+          renderBrandDocList(user.id);
+          showToast('Document processed!', 'success');
+        }
+      } catch(e) { /* transient read error, retry on next poll */ }
+    }, 5000);
 
     input.value = '';
   } catch (err) {

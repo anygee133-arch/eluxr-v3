@@ -1,0 +1,1199 @@
+{
+  "updatedAt": "2026-04-07T02:30:04.079Z",
+  "createdAt": "2026-04-06T22:16:54.973Z",
+  "id": "0Bzg0efaa5Mbcczj",
+  "name": "Brand-Doc-Processor",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "bd-0010",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        400,
+        400
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eluxr-process-brand-doc",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "webhookId": "eluxr-process-brand-doc"
+    },
+    {
+      "id": "bd-0020",
+      "name": "Auth Validator",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        620,
+        400
+      ],
+      "parameters": {
+        "workflowId": "S4QtfIKpvhW4mQYG",
+        "options": {}
+      }
+    },
+    {
+      "id": "bd-0030",
+      "name": "Auth OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        840,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.authenticated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "bd-0040",
+      "name": "401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1060,
+        600
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      }
+    },
+    {
+      "id": "bd-0050",
+      "name": "Extract Params",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\nconst fileUrl = body.file_url || '';\nconst urlParts = fileUrl.split('/');\nconst rawName = urlParts[urlParts.length - 1] || '';\nconst cleanName = rawName.split('?')[0];\nconst ext = cleanName.split('.').pop().toLowerCase();\n\n// Build authenticated download URL\nlet downloadUrl = fileUrl;\nif (fileUrl.includes('/storage/v1/object/public/')) {\n  downloadUrl = fileUrl.replace('/storage/v1/object/public/', '/storage/v1/object/');\n}\n\nreturn {\n  json: {\n    document_id: body.document_id || '',\n    file_url: fileUrl,\n    download_url: downloadUrl,\n    user_id: authData.user_id || body.user_id || '',\n    file_extension: ext,\n    file_name: decodeURIComponent(cleanName)\n  }\n};"
+      }
+    },
+    {
+      "id": "bd-0060",
+      "name": "Download File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1280,
+        200
+      ],
+      "parameters": {
+        "url": "={{ $json.download_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "bd-0070",
+      "name": "Is PDF?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "pdf-check",
+              "leftValue": "={{ $('Extract Params').first().json.file_extension }}",
+              "rightValue": "pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "bd-0080",
+      "name": "Extract PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1720,
+        100
+      ],
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "data",
+        "options": {}
+      }
+    },
+    {
+      "id": "bd-0090",
+      "name": "Format PDF Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1940,
+        100
+      ],
+      "parameters": {
+        "jsCode": "// Concatenate all text from PDF extraction\nconst items = $input.all();\nlet text = '';\nfor (const item of items) {\n  const json = item.json;\n  if (json.text) {\n    text += json.text + '\\n';\n  } else {\n    for (const [key, val] of Object.entries(json)) {\n      if (typeof val === 'string' && val.trim()) {\n        text += val + '\\n';\n      }\n    }\n  }\n}\n\nreturn [{ json: { extracted_text: text.trim() } }];"
+      }
+    },
+    {
+      "id": "bd-0100",
+      "name": "Read as Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        350
+      ],
+      "parameters": {
+        "jsCode": "const params = $('Extract Params').first().json;\nconst ext = params.file_extension;\n\n// DOCX files are ZIP archives - can't parse in n8n sandbox\nif (ext === 'docx' || ext === 'doc') {\n  return [{ json: {\n    extracted_text: '[DOCX format - cannot extract text automatically]',\n    is_docx: true\n  }}];\n}\n\n// TXT files - read binary as UTF-8\nconst binary = $input.item.binary;\nif (binary && binary.data) {\n  const buffer = Buffer.from(binary.data.data, 'base64');\n  return [{ json: { extracted_text: buffer.toString('utf-8') } }];\n}\n\nreturn [{ json: { extracted_text: '' } }];"
+      }
+    },
+    {
+      "id": "bd-0110",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const params = $('Extract Params').first().json;\nconst inputData = $input.first().json;\nlet extractedText = (inputData.extracted_text || '').substring(0, 30000);\n\n// Handle DOCX or empty files - skip AI\nif (inputData.is_docx || extractedText.trim().length < 20) {\n  const fallbackMsg = inputData.is_docx\n    ? 'This document is in DOCX format which cannot be automatically processed. Please re-upload as PDF or TXT for brand voice analysis.'\n    : 'Unable to extract sufficient text from this document. Please upload a text-based PDF or TXT file.';\n  \n  return [{ json: {\n    document_id: params.document_id,\n    user_id: params.user_id,\n    extracted_text: extractedText || '[empty]',\n    summary_text: fallbackMsg,\n    skip_ai: true\n  }}];\n}\n\nconst apiBody = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 1024,\n  messages: [{\n    role: 'user',\n    content: 'Analyze the following brand document and produce a structured brand voice profile. Extract the key elements that would guide a social media content writer.\\n\\nDOCUMENT TEXT:\\n' + extractedText + '\\n\\nReturn a structured profile in this exact format (keep total under 2000 characters):\\n\\nBRAND VOICE PROFILE:\\n- Voice & Tone: [2-4 descriptive words about the brand\\'s communication style]\\n- Key Messages: [2-3 core value propositions or positioning statements]\\n- Language Do\\'s: [specific words, phrases, or style choices the brand prefers]\\n- Language Don\\'ts: [words, phrases, or tonal approaches to avoid]\\n- Brand Personality: [1-2 sentences describing how the brand would speak if it were a person]\\n\\nBe specific and actionable. Extract real examples from the document where possible. Do not be generic.'\n  }]\n});\n\nreturn [{ json: {\n  document_id: params.document_id,\n  user_id: params.user_id,\n  extracted_text: extractedText,\n  apiBody: apiBody,\n  skip_ai: false\n}}];"
+      }
+    },
+    {
+      "id": "bd-0120",
+      "name": "Should Call AI?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2380,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip_ai }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "bd-0130",
+      "name": "Claude Summarize",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2600,
+        350
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.apiBody }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "bd-0140",
+      "name": "Parse Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2820,
+        350
+      ],
+      "parameters": {
+        "jsCode": "const params = $('Build Claude Prompt').first().json;\nconst claudeResponse = $input.first().json;\n\nlet summaryText = '';\ntry {\n  summaryText = claudeResponse.content[0].text || '';\n} catch(e) {\n  summaryText = 'Error processing document. Please try uploading again.';\n}\n\nreturn [{ json: {\n  document_id: params.document_id,\n  extracted_text: params.extracted_text,\n  summary_text: summaryText.substring(0, 2000)\n}}];"
+      }
+    },
+    {
+      "id": "bd-0150",
+      "name": "Save to DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3040,
+        200
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/brand_documents?id=eq.{{ $json.document_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ extracted_text: $json.extracted_text, summary_text: $json.summary_text }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "bd-0160",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3260,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const params = $('Extract Params').first().json;\nreturn [{ json: { success: true, document_id: params.document_id } }];"
+      }
+    },
+    {
+      "id": "bd-0170",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3480,
+        200
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth Validator": {
+      "main": [
+        [
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth OK?": {
+      "main": [
+        [
+          {
+            "node": "Extract Params",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Params": {
+      "main": [
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [
+          {
+            "node": "Is PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is PDF?": {
+      "main": [
+        [
+          {
+            "node": "Extract PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read as Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF": {
+      "main": [
+        [
+          {
+            "node": "Format PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format PDF Text": {
+      "main": [
+        [
+          {
+            "node": "Build Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read as Text": {
+      "main": [
+        [
+          {
+            "node": "Build Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "Should Call AI?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Call AI?": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Summarize": {
+      "main": [
+        [
+          {
+            "node": "Parse Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Summary": {
+      "main": [
+        [
+          {
+            "node": "Save to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to DB": {
+      "main": [
+        [
+          {
+            "node": "Prepare Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "092421ad-3985-4ba7-a69b-b351b91370e9",
+  "activeVersionId": "092421ad-3985-4ba7-a69b-b351b91370e9",
+  "versionCounter": 5,
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-04-07T02:29:45.777Z",
+    "createdAt": "2026-04-07T02:29:45.777Z",
+    "versionId": "092421ad-3985-4ba7-a69b-b351b91370e9",
+    "workflowId": "0Bzg0efaa5Mbcczj",
+    "nodes": [
+      {
+        "id": "bd-0010",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          400,
+          400
+        ],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "eluxr-process-brand-doc",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "webhookId": "eluxr-process-brand-doc"
+      },
+      {
+        "id": "bd-0020",
+        "name": "Auth Validator",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          620,
+          400
+        ],
+        "parameters": {
+          "workflowId": "S4QtfIKpvhW4mQYG",
+          "options": {}
+        }
+      },
+      {
+        "id": "bd-0030",
+        "name": "Auth OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          840,
+          400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "auth-check",
+                "leftValue": "={{ $json.authenticated }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "bd-0040",
+        "name": "401 Unauthorized",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1060,
+          600
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+          "options": {
+            "responseCode": 401
+          }
+        }
+      },
+      {
+        "id": "bd-0050",
+        "name": "Extract Params",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1060,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\nconst fileUrl = body.file_url || '';\nconst urlParts = fileUrl.split('/');\nconst rawName = urlParts[urlParts.length - 1] || '';\nconst cleanName = rawName.split('?')[0];\nconst ext = cleanName.split('.').pop().toLowerCase();\n\n// Build authenticated download URL\nlet downloadUrl = fileUrl;\nif (fileUrl.includes('/storage/v1/object/public/')) {\n  downloadUrl = fileUrl.replace('/storage/v1/object/public/', '/storage/v1/object/');\n}\n\nreturn {\n  json: {\n    document_id: body.document_id || '',\n    file_url: fileUrl,\n    download_url: downloadUrl,\n    user_id: authData.user_id || body.user_id || '',\n    file_extension: ext,\n    file_name: decodeURIComponent(cleanName)\n  }\n};"
+        }
+      },
+      {
+        "id": "bd-0060",
+        "name": "Download File",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          1280,
+          200
+        ],
+        "parameters": {
+          "url": "={{ $json.download_url }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true,
+                "responseFormat": "file"
+              }
+            }
+          }
+        },
+        "alwaysOutputData": true
+      },
+      {
+        "id": "bd-0070",
+        "name": "Is PDF?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1500,
+          200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "pdf-check",
+                "leftValue": "={{ $('Extract Params').first().json.file_extension }}",
+                "rightValue": "pdf",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "bd-0080",
+        "name": "Extract PDF",
+        "type": "n8n-nodes-base.extractFromFile",
+        "typeVersion": 1.1,
+        "position": [
+          1720,
+          100
+        ],
+        "parameters": {
+          "operation": "pdf",
+          "binaryPropertyName": "data",
+          "options": {}
+        }
+      },
+      {
+        "id": "bd-0090",
+        "name": "Format PDF Text",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1940,
+          100
+        ],
+        "parameters": {
+          "jsCode": "// Concatenate all text from PDF extraction\nconst items = $input.all();\nlet text = '';\nfor (const item of items) {\n  const json = item.json;\n  if (json.text) {\n    text += json.text + '\\n';\n  } else {\n    for (const [key, val] of Object.entries(json)) {\n      if (typeof val === 'string' && val.trim()) {\n        text += val + '\\n';\n      }\n    }\n  }\n}\n\nreturn [{ json: { extracted_text: text.trim() } }];"
+        }
+      },
+      {
+        "id": "bd-0100",
+        "name": "Read as Text",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1720,
+          350
+        ],
+        "parameters": {
+          "jsCode": "const params = $('Extract Params').first().json;\nconst ext = params.file_extension;\n\n// DOCX files are ZIP archives - can't parse in n8n sandbox\nif (ext === 'docx' || ext === 'doc') {\n  return [{ json: {\n    extracted_text: '[DOCX format - cannot extract text automatically]',\n    is_docx: true\n  }}];\n}\n\n// TXT files - read binary as UTF-8\nconst binary = $input.item.binary;\nif (binary && binary.data) {\n  const buffer = Buffer.from(binary.data.data, 'base64');\n  return [{ json: { extracted_text: buffer.toString('utf-8') } }];\n}\n\nreturn [{ json: { extracted_text: '' } }];"
+        }
+      },
+      {
+        "id": "bd-0110",
+        "name": "Build Claude Prompt",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2160,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const params = $('Extract Params').first().json;\nconst inputData = $input.first().json;\nlet extractedText = (inputData.extracted_text || '').substring(0, 30000);\n\n// Handle DOCX or empty files - skip AI\nif (inputData.is_docx || extractedText.trim().length < 20) {\n  const fallbackMsg = inputData.is_docx\n    ? 'This document is in DOCX format which cannot be automatically processed. Please re-upload as PDF or TXT for brand voice analysis.'\n    : 'Unable to extract sufficient text from this document. Please upload a text-based PDF or TXT file.';\n  \n  return [{ json: {\n    document_id: params.document_id,\n    user_id: params.user_id,\n    extracted_text: extractedText || '[empty]',\n    summary_text: fallbackMsg,\n    skip_ai: true\n  }}];\n}\n\nconst apiBody = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 1024,\n  messages: [{\n    role: 'user',\n    content: 'Analyze the following brand document and produce a structured brand voice profile. Extract the key elements that would guide a social media content writer.\\n\\nDOCUMENT TEXT:\\n' + extractedText + '\\n\\nReturn a structured profile in this exact format (keep total under 2000 characters):\\n\\nBRAND VOICE PROFILE:\\n- Voice & Tone: [2-4 descriptive words about the brand\\'s communication style]\\n- Key Messages: [2-3 core value propositions or positioning statements]\\n- Language Do\\'s: [specific words, phrases, or style choices the brand prefers]\\n- Language Don\\'ts: [words, phrases, or tonal approaches to avoid]\\n- Brand Personality: [1-2 sentences describing how the brand would speak if it were a person]\\n\\nBe specific and actionable. Extract real examples from the document where possible. Do not be generic.'\n  }]\n});\n\nreturn [{ json: {\n  document_id: params.document_id,\n  user_id: params.user_id,\n  extracted_text: extractedText,\n  apiBody: apiBody,\n  skip_ai: false\n}}];"
+        }
+      },
+      {
+        "id": "bd-0120",
+        "name": "Should Call AI?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2380,
+          200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "skip-check",
+                "leftValue": "={{ $json.skip_ai }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "bd-0130",
+        "name": "Claude Summarize",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          2600,
+          350
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "anthropicApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "={{ $json.apiBody }}",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            },
+            "timeout": 120000
+          }
+        },
+        "credentials": {
+          "anthropicApi": {
+            "id": "cZwkXj4ZfHTkpBtT",
+            "name": "Anthropic account"
+          }
+        },
+        "alwaysOutputData": true
+      },
+      {
+        "id": "bd-0140",
+        "name": "Parse Summary",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2820,
+          350
+        ],
+        "parameters": {
+          "jsCode": "const params = $('Build Claude Prompt').first().json;\nconst claudeResponse = $input.first().json;\n\nlet summaryText = '';\ntry {\n  summaryText = claudeResponse.content[0].text || '';\n} catch(e) {\n  summaryText = 'Error processing document. Please try uploading again.';\n}\n\nreturn [{ json: {\n  document_id: params.document_id,\n  extracted_text: params.extracted_text,\n  summary_text: summaryText.substring(0, 2000)\n}}];"
+        }
+      },
+      {
+        "id": "bd-0150",
+        "name": "Save to DB",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          3040,
+          200
+        ],
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/brand_documents?id=eq.{{ $json.document_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "return=minimal"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "={{ JSON.stringify({ extracted_text: $json.extracted_text, summary_text: $json.summary_text }) }}",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "alwaysOutputData": true
+      },
+      {
+        "id": "bd-0160",
+        "name": "Prepare Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3260,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const params = $('Extract Params').first().json;\nreturn [{ json: { success: true, document_id: params.document_id } }];"
+        }
+      },
+      {
+        "id": "bd-0170",
+        "name": "Respond Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          3480,
+          200
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": 200
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Auth Validator",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Auth Validator": {
+        "main": [
+          [
+            {
+              "node": "Auth OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Auth OK?": {
+        "main": [
+          [
+            {
+              "node": "Extract Params",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "401 Unauthorized",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Params": {
+        "main": [
+          [
+            {
+              "node": "Download File",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Download File": {
+        "main": [
+          [
+            {
+              "node": "Is PDF?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is PDF?": {
+        "main": [
+          [
+            {
+              "node": "Extract PDF",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Read as Text",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract PDF": {
+        "main": [
+          [
+            {
+              "node": "Format PDF Text",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format PDF Text": {
+        "main": [
+          [
+            {
+              "node": "Build Claude Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read as Text": {
+        "main": [
+          [
+            {
+              "node": "Build Claude Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Claude Prompt": {
+        "main": [
+          [
+            {
+              "node": "Should Call AI?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Should Call AI?": {
+        "main": [
+          [
+            {
+              "node": "Save to DB",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Claude Summarize",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude Summarize": {
+        "main": [
+          [
+            {
+              "node": "Parse Summary",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Summary": {
+        "main": [
+          [
+            {
+              "node": "Save to DB",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save to DB": {
+        "main": [
+          [
+            {
+              "node": "Prepare Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Response": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Andrew Gershan",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-04-07T02:30:04.541Z",
+        "id": 399,
+        "workflowId": "0Bzg0efaa5Mbcczj",
+        "versionId": "092421ad-3985-4ba7-a69b-b351b91370e9",
+        "event": "activated",
+        "userId": "06bbd5c8-929d-415f-9b4a-dc32b3c8c605"
+      }
+    ]
+  }
+}

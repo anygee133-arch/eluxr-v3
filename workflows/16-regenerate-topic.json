@@ -1,5 +1,11 @@
 {
+  "updatedAt": "2026-04-07T02:39:52.615Z",
+  "createdAt": "2026-03-05T20:26:12.012Z",
+  "id": "jTb1lkySSEcmlBOE",
   "name": "16-Regenerate-Topic",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -10,31 +16,38 @@
           "allowedOrigins": "*"
         }
       },
-      "id": "16-reg-0001",
+      "id": "e9a8af97-ae4a-48e2-a7fb-cf172f962a38",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        -656,
+        208
+      ],
       "webhookId": "eluxr-regenerate-topic"
     },
     {
       "parameters": {
-        "workflowId": "S4QtfIKpvhW4mQYG"
+        "workflowId": "S4QtfIKpvhW4mQYG",
+        "options": {}
       },
-      "id": "16-reg-0002",
+      "id": "48a6711c-80af-4ae0-81ab-4750887741af",
       "name": "Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [220, 0]
+      "position": [
+        -448,
+        208
+      ]
     },
     {
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "version": 2,
             "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
+            "caseSensitive": true,
+            "typeValidation": "strict"
           },
           "conditions": [
             {
@@ -43,7 +56,8 @@
               "rightValue": true,
               "operator": {
                 "type": "boolean",
-                "operation": "true"
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
@@ -51,11 +65,14 @@
         },
         "options": {}
       },
-      "id": "16-reg-0003",
+      "id": "29b79d0c-f22a-452a-bce1-8c69ec13e63e",
       "name": "Auth OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [440, 0]
+      "position": [
+        -224,
+        208
+      ]
     },
     {
       "parameters": {
@@ -65,26 +82,65 @@
           "responseCode": 401
         }
       },
-      "id": "16-reg-0004",
+      "id": "d3526b64-3d37-46a3-8808-60fd503baae3",
       "name": "401 Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [660, 200]
+      "position": [
+        0,
+        400
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nreturn {\n  json: {\n    topic_id: body.topic_id || '',\n    user_id: authData.user_id || ''\n  }\n};"
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nreturn {\n  json: {\n    topic_id: body.topic_id || '',\n    content_id: body.content_id || '',\n    regenerate_text: body.regenerate_text || false,\n    platform: body.platform || '',\n    product_name: body.product_name || '',\n    topic: body.topic || '',\n    campaign_id: body.campaign_id || '',\n    content_language: body.content_language || 'English',\n    user_id: authData.user_id || ''\n  }\n};"
       },
-      "id": "16-reg-0100",
+      "id": "5c85787f-9f9a-49e7-a440-cf925b8baa24",
       "name": "Extract Params",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, -200]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?id=eq.{{ $json.topic_id }}&select=*",
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "text-regen-check",
+              "leftValue": "={{ $json.regenerate_text }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-1111-4444-aaaa-000000000001",
+      "name": "Is Text Regen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?id=eq.{{ $('Extract Params').item.json.content_id }}&select=*",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -106,96 +162,62 @@
           }
         }
       },
-      "id": "16-reg-0200",
-      "name": "Read Current Topic",
+      "id": "a1b2c3d4-2222-4444-aaaa-000000000002",
+      "name": "Read Content Item",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, -200],
+      "position": [
+        448,
+        -200
+      ],
       "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "const topicRaw = $input.item.json;\nconst params = $('Extract Params').item.json;\n\nlet topic = {};\ntry {\n  topic = Array.isArray(topicRaw) ? topicRaw[0] || {} : topicRaw || {};\n} catch(e) { topic = {}; }\n\nreturn {\n  json: {\n    ...topic,\n    user_id: params.user_id,\n    topic_id: params.topic_id\n  }\n};"
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $('Extract Params').item.json.user_id }}&select=*&order=created_at.desc&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
-      "id": "16-reg-0250",
-      "name": "Parse Current Topic",
+      "id": "a1b2c3d4-3333-4444-aaaa-000000000003",
+      "name": "Read ICP for Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        -200
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('Extract Params').item.json;\nconst contentRaw = $('Read Content Item').item.json;\nconst icpRaw = $('Read ICP for Text').item.json;\n\nlet item = {};\ntry { item = Array.isArray(contentRaw) ? contentRaw[0] || {} : contentRaw || {}; } catch(e) { item = {}; }\n\nlet icp = {};\ntry { icp = Array.isArray(icpRaw) ? icpRaw[0] || {} : icpRaw || {}; } catch(e) { icp = {}; }\n\n// Read brand doc summaries\nlet brandContext = '';\ntry {\n  const brandDocsItems = $('Read Brand Docs for Text').all();\n  const docSummary = brandDocsItems\n    .map(item => item.json.summary_text || '')\n    .filter(Boolean)\n    .join('\\n---\\n')\n    .substring(0, 3000);\n  if (docSummary) {\n    brandContext = '\\n\\nBRAND DOCUMENT GUIDELINES:\\n' + docSummary;\n  }\n} catch(e) { /* no brand docs */ }\n\nconst platform = params.platform || item.platform || 'Instagram';\nconst lang = params.content_language || 'English';\nconst currentText = item.content || item.post_text || '';\nconst topic = params.topic || item.topic || '';\nconst productName = params.product_name || item.product_name || '';\n\nconst platformRules = {\n  'LinkedIn': 'LinkedIn post: 1300-1800 characters. Professional thought leadership tone. Include 3-5 relevant hashtags. End with a product CTA. Use line breaks for readability.',\n  'Instagram': 'Instagram caption: 150-300 characters. Engaging, emoji-friendly. Include a product CTA. Put 20-30 hashtags in a separate first_comment field (NOT in the caption). Use line breaks.',\n  'X': 'X/Twitter thread: 5-7 tweets, each under 280 characters. Punchy, conversational. Product CTA in the last tweet. Number each tweet.',\n  'YouTube': 'YouTube video script: 30-60 seconds. Include title, opening hook, 4 scene breakdowns with visual directions, music_mood, thumbnail_concept, and CTA.'\n};\n\nconst rules = platformRules[platform] || platformRules['Instagram'];\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  system: 'You are a luxury brand social media copywriter. Generate a replacement post that is different from the current text but maintains the same topic and product focus. Write EXCLUSIVELY in ' + lang + '. Every word must be in ' + lang + '.',\n  messages: [{\n    role: 'user',\n    content: 'CRITICAL LANGUAGE REQUIREMENT: Write ALL content exclusively in ' + lang + '. No mixing languages.\\n\\nGenerate a NEW replacement post for the platform: ' + platform + '\\n\\n' + rules + '\\n\\nTOPIC: ' + topic + '\\nPRODUCT: ' + productName + '\\n\\nCURRENT POST TO REPLACE (write something DIFFERENT):\\n' + currentText + '\\n\\nBUSINESS CONTEXT:\\n- Industry: ' + (icp.industry || 'Luxury') + '\\n- Target Audience: ' + (icp.target_audience || 'Affluent consumers') + '\\n- ICP Summary: ' + (icp.icp_summary || '') + brandContext + '\\n\\nReturn ONLY a JSON object with these keys:\\n- content: the new post text\\n- hashtags: array of 3-5 hashtags (strings without #)' + (platform === 'Instagram' ? '\\n- first_comment: string with 20-30 hashtags for first comment' : '') + (platform === 'YouTube' ? '\\n- title: video title\\n- music_mood: mood description\\n- thumbnail_concept: thumbnail description' : '') + '\\n\\nNo markdown. No code fences. Just raw JSON.\\n\\nREMINDER: ALL content must be in ' + lang + '.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    content_id: params.content_id,\n    platform: platform\n  }\n};"
+      },
+      "id": "a1b2c3d4-4444-4444-aaaa-000000000004",
+      "name": "Prepare Text Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, -200]
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?user_id=eq.{{ $json.user_id }}&campaign_id=eq.{{ $json.campaign_id }}&week_number=eq.{{ $json.week_number }}&id=neq.{{ $json.topic_id }}&select=topic,content_angle",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "apikey",
-              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "16-reg-0300",
-      "name": "Read Sibling Topics",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1320, -200],
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $('Parse Current Topic').item.json.user_id }}&select=*&order=created_at.desc&limit=1",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
-            },
-            {
-              "name": "apikey",
-              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "16-reg-0400",
-      "name": "Read ICP",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1540, -200],
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const currentTopic = $('Parse Current Topic').item.json;\nconst siblingsRaw = $('Read Sibling Topics').item.json;\nconst icpRaw = $('Read ICP').item.json;\n\nlet siblings = [];\ntry { siblings = Array.isArray(siblingsRaw) ? siblingsRaw : []; } catch(e) { siblings = []; }\n\nlet icp = {};\ntry { icp = Array.isArray(icpRaw) ? icpRaw[0] || {} : icpRaw || {}; } catch(e) { icp = {}; }\n\nconst siblingTopics = siblings.map(s => s.topic + ' (' + s.content_angle + ')').join(', ');\n\nconst dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];\nconst dayName = dayNames[(currentTopic.day_number || 1) - 1] || 'Day ' + currentTopic.day_number;\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 1024,\n  system: 'You are a social media content strategist. Generate a replacement topic that is different from existing topics.',\n  messages: [{\n    role: 'user',\n    content: 'Generate 1 NEW replacement topic for ' + dayName + ' (Day ' + currentTopic.day_number + ') of Week ' + currentTopic.week_number + '.\\n\\nCURRENT TOPIC TO REPLACE: ' + currentTopic.topic + '\\n\\nOTHER TOPICS THIS WEEK (avoid duplicating): ' + (siblingTopics || 'none') + '\\n\\nBUSINESS CONTEXT:\\n- Industry: ' + (icp.industry || 'General') + '\\n- Target Audience: ' + (icp.target_audience || 'General audience') + '\\n- Content Pillars: ' + JSON.stringify(icp.content_pillars || []) + '\\n\\nReturn ONLY a single JSON object with keys: topic, description, content_angle, product_name. Must be completely different from the current topic and siblings. No markdown.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    topic_id: currentTopic.topic_id || currentTopic.id,\n    user_id: currentTopic.user_id,\n    campaign_id: currentTopic.campaign_id,\n    week_number: currentTopic.week_number,\n    day_number: currentTopic.day_number\n  }\n};"
-      },
-      "id": "16-reg-0500",
-      "name": "Prepare Claude Prompt",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1760, -200]
+      "position": [
+        896,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -221,7 +243,73 @@
         "rawContentType": "application/json",
         "body": "={{ $json.apiBody }}",
         "options": {
-          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "a1b2c3d4-5555-4444-aaaa-000000000005",
+      "name": "Claude Regenerate Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        -200
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "anthropicApi": {
+          "id": "cZwkXj4ZfHTkpBtT",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Text Prompt').item.json;\n\nlet raw = '';\ntry { raw = input.content[0].text; } catch(e) { raw = '{}'; }\n\nlet parsed = {};\ntry {\n  parsed = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { parsed = JSON.parse(stripped); } catch(e2) { parsed = {}; }\n}\n\nconst newContent = parsed.content || parsed.post_text || parsed.caption || '';\nlet hashtags = parsed.hashtags || [];\nif (typeof hashtags === 'string') {\n  hashtags = hashtags.split(/[,\\s]+/).filter(h => h).map(h => h.replace(/^#/, ''));\n}\nhashtags = hashtags.slice(0, 5);\n\nconst updateBody = {\n  content: newContent,\n  hashtags: hashtags,\n  updated_at: new Date().toISOString()\n};\n\nif (parsed.first_comment) updateBody.first_comment = parsed.first_comment;\n\nreturn {\n  json: {\n    updateBody: JSON.stringify(updateBody),\n    content_id: prepData.content_id,\n    content: newContent,\n    hashtags: hashtags,\n    first_comment: parsed.first_comment || null\n  }\n};"
+      },
+      "id": "a1b2c3d4-6666-4444-aaaa-000000000006",
+      "name": "Parse New Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?id=eq.{{ $json.content_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.updateBody }}",
+        "options": {
           "response": {
             "response": {
               "neverError": true
@@ -229,28 +317,221 @@
           }
         }
       },
-      "id": "16-reg-0600",
+      "id": "a1b2c3d4-7777-4444-aaaa-000000000007",
+      "name": "Update Content Item",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1568,
+        -200
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, content: $('Parse New Text').item.json.content, hashtags: $('Parse New Text').item.json.hashtags, first_comment: $('Parse New Text').item.json.first_comment }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a1b2c3d4-8888-4444-aaaa-000000000008",
+      "name": "Respond Text Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1792,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?id=eq.{{ $json.topic_id }}&select=*",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "c2faeaaa-ab74-4476-ba1b-6de240fcc06b",
+      "name": "Read Current Topic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        200
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const topicRaw = $input.item.json;\nconst params = $('Extract Params').item.json;\n\nlet topic = {};\ntry {\n  topic = Array.isArray(topicRaw) ? topicRaw[0] || {} : topicRaw || {};\n} catch(e) { topic = {}; }\n\nreturn {\n  json: {\n    ...topic,\n    user_id: params.user_id,\n    topic_id: params.topic_id\n  }\n};"
+      },
+      "id": "21365ee5-da2f-4a5b-ad78-7628855491ba",
+      "name": "Parse Current Topic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?user_id=eq.{{ $json.user_id }}&campaign_id=eq.{{ $json.campaign_id }}&week_number=eq.{{ $json.week_number }}&id=neq.{{ $json.topic_id }}&select=topic,content_angle",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "dec7e6b8-ca5e-4e9e-83ee-b14490f9beb0",
+      "name": "Read Sibling Topics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        896,
+        200
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $('Parse Current Topic').item.json.user_id }}&select=*&order=created_at.desc&limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "d7eef63d-d8bc-482e-a238-94eaf4846704",
+      "name": "Read ICP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        200
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const currentTopic = $('Parse Current Topic').item.json;\nconst siblingsRaw = $('Read Sibling Topics').item.json;\nconst icpRaw = $('Read ICP').item.json;\n\nlet siblings = [];\ntry { siblings = Array.isArray(siblingsRaw) ? siblingsRaw : []; } catch(e) { siblings = []; }\n\nlet icp = {};\ntry { icp = Array.isArray(icpRaw) ? icpRaw[0] || {} : icpRaw || {}; } catch(e) { icp = {}; }\n\n// Read brand doc summaries\nlet brandContext = '';\ntry {\n  const brandDocsItems = $('Read Brand Docs').all();\n  const docSummary = brandDocsItems\n    .map(item => item.json.summary_text || '')\n    .filter(Boolean)\n    .join('\\n---\\n')\n    .substring(0, 3000);\n  if (docSummary) {\n    brandContext = '\\n\\nBRAND DOCUMENT GUIDELINES:\\n' + docSummary;\n  }\n} catch(e) { /* no brand docs */ }\n\nconst siblingTopics = siblings.map(s => s.topic + ' (' + s.content_angle + ')').join(', ');\n\nconst dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];\nconst dayName = dayNames[(currentTopic.day_number || 1) - 1] || 'Day ' + currentTopic.day_number;\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 1024,\n  system: 'You are a social media content strategist. Generate a replacement topic that is different from existing topics.',\n  messages: [{\n    role: 'user',\n    content: 'Generate 1 NEW replacement topic for ' + dayName + ' (Day ' + currentTopic.day_number + ') of Week ' + currentTopic.week_number + '.\\n\\nCURRENT TOPIC TO REPLACE: ' + currentTopic.topic + '\\n\\nOTHER TOPICS THIS WEEK (avoid duplicating): ' + (siblingTopics || 'none') + '\\n\\nBUSINESS CONTEXT:\\n- Industry: ' + (icp.industry || 'General') + '\\n- Target Audience: ' + (icp.target_audience || 'General audience') + '\\n- Content Pillars: ' + JSON.stringify(icp.content_pillars || []) + brandContext + '\\n\\nReturn ONLY a single JSON object with keys: topic, description, content_angle, product_name. Must be completely different from the current topic and siblings. No markdown.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    topic_id: currentTopic.topic_id || currentTopic.id,\n    user_id: currentTopic.user_id,\n    campaign_id: currentTopic.campaign_id,\n    week_number: currentTopic.week_number,\n    day_number: currentTopic.day_number\n  }\n};"
+      },
+      "id": "76045d23-973c-4deb-82e1-c93f5eeb8a5d",
+      "name": "Prepare Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.apiBody }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "8b06ac3b-4e14-4379-b2a4-3eddf8b5009b",
       "name": "Claude Regenerate Topic",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1980, -200],
+      "position": [
+        1568,
+        200
+      ],
+      "alwaysOutputData": true,
       "credentials": {
         "anthropicApi": {
           "id": "cZwkXj4ZfHTkpBtT",
           "name": "Anthropic account"
         }
-      },
-      "alwaysOutputData": true
+      }
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Claude Prompt').item.json;\n\nlet raw = '';\ntry { raw = input.content[0].text; } catch(e) { raw = '{}'; }\n\nlet newTopic = {};\ntry {\n  newTopic = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { newTopic = JSON.parse(stripped); } catch(e2) { newTopic = {}; }\n}\n\nconst updateBody = JSON.stringify({\n  topic: (newTopic.topic || 'New Topic').substring(0, 255),\n  description: (newTopic.description || '').substring(0, 500),\n  content_angle: (newTopic.content_angle || 'General').substring(0, 100),\n  product_name: newTopic.product_name || null,\n  status: 'pending',\n  updated_at: new Date().toISOString()\n});\n\nreturn {\n  json: {\n    updateBody: updateBody,\n    topic_id: prepData.topic_id,\n    newTopic: newTopic\n  }\n};"
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Claude Prompt').item.json;\n\nlet raw = '';\ntry { raw = input.content[0].text; } catch(e) { raw = '{}'; }\n\nlet newTopic = {};\ntry {\n  newTopic = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { newTopic = JSON.parse(stripped); } catch(e2) { newTopic = {}; }\n}\n\nconst updateBody = JSON.stringify({\n  topic: (newTopic.topic || 'New Topic').substring(0, 255),\n  description: (newTopic.description || '').substring(0, 500),\n  content_angle: (newTopic.content_angle || 'General').substring(0, 1000),\n  product_name: newTopic.product_name || null,\n  status: 'pending',\n  updated_at: new Date().toISOString()\n});\n\nreturn {\n  json: {\n    updateBody: updateBody,\n    topic_id: prepData.topic_id,\n    newTopic: newTopic\n  }\n};"
       },
-      "id": "16-reg-0700",
+      "id": "cfa3bd7a-82df-4d9d-bd1b-9481a4662fb4",
       "name": "Parse New Topic",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2200, -200]
+      "position": [
+        1792,
+        200
+      ]
     },
     {
       "parameters": {
@@ -289,22 +570,28 @@
           }
         }
       },
-      "id": "16-reg-0800",
+      "id": "d5749f18-cd12-4679-b209-05adad961fb6",
       "name": "Update Topic",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2420, -200],
+      "position": [
+        2016,
+        200
+      ],
       "alwaysOutputData": true
     },
     {
       "parameters": {
         "jsCode": "const updated = $input.item.json;\nconst parseData = $('Parse New Topic').item.json;\n\nlet topic = {};\ntry {\n  topic = Array.isArray(updated) ? updated[0] || {} : updated || {};\n} catch(e) { topic = {}; }\n\nreturn {\n  json: {\n    success: true,\n    topic: topic.id ? topic : { ...parseData.newTopic, id: parseData.topic_id }\n  }\n};"
       },
-      "id": "16-reg-0900",
+      "id": "219aff17-e31a-4ef6-8218-f55b849347f7",
       "name": "Prepare Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2640, -200]
+      "position": [
+        2240,
+        200
+      ]
     },
     {
       "parameters": {
@@ -314,110 +601,1320 @@
           "responseCode": 200
         }
       },
-      "id": "16-reg-1000",
+      "id": "c10f4476-d4ed-4bd5-a79b-eb84ad395569",
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2860, -200]
+      "position": [
+        2464,
+        200
+      ]
+    },
+    {
+      "id": "bd-docs-16a",
+      "name": "Read Brand Docs for Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        -200
+      ],
+      "parameters": {
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/brand_documents?user_id=eq.{{ $('Extract Params').item.json.user_id }}&summary_text=not.is.null&select=summary_text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "bd-docs-16b",
+      "name": "Read Brand Docs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1230,
+        200
+      ],
+      "parameters": {
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/brand_documents?user_id=eq.{{ $('Extract Params').item.json.user_id }}&summary_text=not.is.null&select=summary_text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "alwaysOutputData": true
     }
   ],
   "connections": {
     "Webhook": {
       "main": [
         [
-          { "node": "Auth Validator", "type": "main", "index": 0 }
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Auth Validator": {
       "main": [
         [
-          { "node": "Auth OK?", "type": "main", "index": 0 }
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Auth OK?": {
       "main": [
         [
-          { "node": "Extract Params", "type": "main", "index": 0 }
+          {
+            "node": "Extract Params",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "401 Unauthorized", "type": "main", "index": 0 }
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Params": {
       "main": [
         [
-          { "node": "Read Current Topic", "type": "main", "index": 0 }
+          {
+            "node": "Is Text Regen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Text Regen?": {
+      "main": [
+        [
+          {
+            "node": "Read Content Item",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Current Topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Content Item": {
+      "main": [
+        [
+          {
+            "node": "Read ICP for Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Text Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude Regenerate Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Regenerate Text": {
+      "main": [
+        [
+          {
+            "node": "Parse New Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse New Text": {
+      "main": [
+        [
+          {
+            "node": "Update Content Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Content Item": {
+      "main": [
+        [
+          {
+            "node": "Respond Text Success",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Read Current Topic": {
       "main": [
         [
-          { "node": "Parse Current Topic", "type": "main", "index": 0 }
+          {
+            "node": "Parse Current Topic",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Parse Current Topic": {
       "main": [
         [
-          { "node": "Read Sibling Topics", "type": "main", "index": 0 }
+          {
+            "node": "Read Sibling Topics",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Read Sibling Topics": {
       "main": [
         [
-          { "node": "Read ICP", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Read ICP": {
-      "main": [
-        [
-          { "node": "Prepare Claude Prompt", "type": "main", "index": 0 }
+          {
+            "node": "Read ICP",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Prepare Claude Prompt": {
       "main": [
         [
-          { "node": "Claude Regenerate Topic", "type": "main", "index": 0 }
+          {
+            "node": "Claude Regenerate Topic",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Claude Regenerate Topic": {
       "main": [
         [
-          { "node": "Parse New Topic", "type": "main", "index": 0 }
+          {
+            "node": "Parse New Topic",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Parse New Topic": {
       "main": [
         [
-          { "node": "Update Topic", "type": "main", "index": 0 }
+          {
+            "node": "Update Topic",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Update Topic": {
       "main": [
         [
-          { "node": "Prepare Response", "type": "main", "index": 0 }
+          {
+            "node": "Prepare Response",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Prepare Response": {
       "main": [
         [
-          { "node": "Respond Success", "type": "main", "index": 0 }
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read ICP for Text": {
+      "main": [
+        [
+          {
+            "node": "Read Brand Docs for Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Brand Docs for Text": {
+      "main": [
+        [
+          {
+            "node": "Prepare Text Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read ICP": {
+      "main": [
+        [
+          {
+            "node": "Read Brand Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Brand Docs": {
+      "main": [
+        [
+          {
+            "node": "Prepare Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "103ed4e7-7722-418b-a4d5-b48f269639f5",
+  "activeVersionId": "103ed4e7-7722-418b-a4d5-b48f269639f5",
+  "versionCounter": 22,
+  "tags": [
+    {
+      "updatedAt": "2026-03-27T20:56:32.303Z",
+      "createdAt": "2026-03-27T20:56:32.303Z",
+      "id": "nixlLW529L6XTb3y",
+      "name": "v1-original"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-04-07T02:39:52.616Z",
+    "createdAt": "2026-04-07T02:39:52.616Z",
+    "versionId": "103ed4e7-7722-418b-a4d5-b48f269639f5",
+    "workflowId": "jTb1lkySSEcmlBOE",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "eluxr-regenerate-topic",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "id": "e9a8af97-ae4a-48e2-a7fb-cf172f962a38",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -656,
+          208
+        ],
+        "webhookId": "eluxr-regenerate-topic"
+      },
+      {
+        "parameters": {
+          "workflowId": "S4QtfIKpvhW4mQYG",
+          "options": {}
+        },
+        "id": "48a6711c-80af-4ae0-81ab-4750887741af",
+        "name": "Auth Validator",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          -448,
+          208
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "auth-check",
+                "leftValue": "={{ $json.authenticated }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "29b79d0c-f22a-452a-bce1-8c69ec13e63e",
+        "name": "Auth OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -224,
+          208
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+          "options": {
+            "responseCode": 401
+          }
+        },
+        "id": "d3526b64-3d37-46a3-8808-60fd503baae3",
+        "name": "401 Unauthorized",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nreturn {\n  json: {\n    topic_id: body.topic_id || '',\n    content_id: body.content_id || '',\n    regenerate_text: body.regenerate_text || false,\n    platform: body.platform || '',\n    product_name: body.product_name || '',\n    topic: body.topic || '',\n    campaign_id: body.campaign_id || '',\n    content_language: body.content_language || 'English',\n    user_id: authData.user_id || ''\n  }\n};"
+        },
+        "id": "5c85787f-9f9a-49e7-a440-cf925b8baa24",
+        "name": "Extract Params",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "text-regen-check",
+                "leftValue": "={{ $json.regenerate_text }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "a1b2c3d4-1111-4444-aaaa-000000000001",
+        "name": "Is Text Regen?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          224,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?id=eq.{{ $('Extract Params').item.json.content_id }}&select=*",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "a1b2c3d4-2222-4444-aaaa-000000000002",
+        "name": "Read Content Item",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          448,
+          -200
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $('Extract Params').item.json.user_id }}&select=*&order=created_at.desc&limit=1",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "a1b2c3d4-3333-4444-aaaa-000000000003",
+        "name": "Read ICP for Text",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          672,
+          -200
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const params = $('Extract Params').item.json;\nconst contentRaw = $('Read Content Item').item.json;\nconst icpRaw = $('Read ICP for Text').item.json;\n\nlet item = {};\ntry { item = Array.isArray(contentRaw) ? contentRaw[0] || {} : contentRaw || {}; } catch(e) { item = {}; }\n\nlet icp = {};\ntry { icp = Array.isArray(icpRaw) ? icpRaw[0] || {} : icpRaw || {}; } catch(e) { icp = {}; }\n\n// Read brand doc summaries\nlet brandContext = '';\ntry {\n  const brandDocsItems = $('Read Brand Docs for Text').all();\n  const docSummary = brandDocsItems\n    .map(item => item.json.summary_text || '')\n    .filter(Boolean)\n    .join('\\n---\\n')\n    .substring(0, 3000);\n  if (docSummary) {\n    brandContext = '\\n\\nBRAND DOCUMENT GUIDELINES:\\n' + docSummary;\n  }\n} catch(e) { /* no brand docs */ }\n\nconst platform = params.platform || item.platform || 'Instagram';\nconst lang = params.content_language || 'English';\nconst currentText = item.content || item.post_text || '';\nconst topic = params.topic || item.topic || '';\nconst productName = params.product_name || item.product_name || '';\n\nconst platformRules = {\n  'LinkedIn': 'LinkedIn post: 1300-1800 characters. Professional thought leadership tone. Include 3-5 relevant hashtags. End with a product CTA. Use line breaks for readability.',\n  'Instagram': 'Instagram caption: 150-300 characters. Engaging, emoji-friendly. Include a product CTA. Put 20-30 hashtags in a separate first_comment field (NOT in the caption). Use line breaks.',\n  'X': 'X/Twitter thread: 5-7 tweets, each under 280 characters. Punchy, conversational. Product CTA in the last tweet. Number each tweet.',\n  'YouTube': 'YouTube video script: 30-60 seconds. Include title, opening hook, 4 scene breakdowns with visual directions, music_mood, thumbnail_concept, and CTA.'\n};\n\nconst rules = platformRules[platform] || platformRules['Instagram'];\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  system: 'You are a luxury brand social media copywriter. Generate a replacement post that is different from the current text but maintains the same topic and product focus. Write EXCLUSIVELY in ' + lang + '. Every word must be in ' + lang + '.',\n  messages: [{\n    role: 'user',\n    content: 'CRITICAL LANGUAGE REQUIREMENT: Write ALL content exclusively in ' + lang + '. No mixing languages.\\n\\nGenerate a NEW replacement post for the platform: ' + platform + '\\n\\n' + rules + '\\n\\nTOPIC: ' + topic + '\\nPRODUCT: ' + productName + '\\n\\nCURRENT POST TO REPLACE (write something DIFFERENT):\\n' + currentText + '\\n\\nBUSINESS CONTEXT:\\n- Industry: ' + (icp.industry || 'Luxury') + '\\n- Target Audience: ' + (icp.target_audience || 'Affluent consumers') + '\\n- ICP Summary: ' + (icp.icp_summary || '') + brandContext + '\\n\\nReturn ONLY a JSON object with these keys:\\n- content: the new post text\\n- hashtags: array of 3-5 hashtags (strings without #)' + (platform === 'Instagram' ? '\\n- first_comment: string with 20-30 hashtags for first comment' : '') + (platform === 'YouTube' ? '\\n- title: video title\\n- music_mood: mood description\\n- thumbnail_concept: thumbnail description' : '') + '\\n\\nNo markdown. No code fences. Just raw JSON.\\n\\nREMINDER: ALL content must be in ' + lang + '.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    content_id: params.content_id,\n    platform: platform\n  }\n};"
+        },
+        "id": "a1b2c3d4-4444-4444-aaaa-000000000004",
+        "name": "Prepare Text Prompt",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          896,
+          -200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "anthropicApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "={{ $json.apiBody }}",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            },
+            "timeout": 60000
+          }
+        },
+        "id": "a1b2c3d4-5555-4444-aaaa-000000000005",
+        "name": "Claude Regenerate Text",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1120,
+          -200
+        ],
+        "alwaysOutputData": true,
+        "credentials": {
+          "anthropicApi": {
+            "id": "cZwkXj4ZfHTkpBtT",
+            "name": "Anthropic account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Text Prompt').item.json;\n\nlet raw = '';\ntry { raw = input.content[0].text; } catch(e) { raw = '{}'; }\n\nlet parsed = {};\ntry {\n  parsed = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { parsed = JSON.parse(stripped); } catch(e2) { parsed = {}; }\n}\n\nconst newContent = parsed.content || parsed.post_text || parsed.caption || '';\nlet hashtags = parsed.hashtags || [];\nif (typeof hashtags === 'string') {\n  hashtags = hashtags.split(/[,\\s]+/).filter(h => h).map(h => h.replace(/^#/, ''));\n}\nhashtags = hashtags.slice(0, 5);\n\nconst updateBody = {\n  content: newContent,\n  hashtags: hashtags,\n  updated_at: new Date().toISOString()\n};\n\nif (parsed.first_comment) updateBody.first_comment = parsed.first_comment;\n\nreturn {\n  json: {\n    updateBody: JSON.stringify(updateBody),\n    content_id: prepData.content_id,\n    content: newContent,\n    hashtags: hashtags,\n    first_comment: parsed.first_comment || null\n  }\n};"
+        },
+        "id": "a1b2c3d4-6666-4444-aaaa-000000000006",
+        "name": "Parse New Text",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1344,
+          -200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/content_items?id=eq.{{ $json.content_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "return=representation"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "={{ $json.updateBody }}",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "a1b2c3d4-7777-4444-aaaa-000000000007",
+        "name": "Update Content Item",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1568,
+          -200
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ success: true, content: $('Parse New Text').item.json.content, hashtags: $('Parse New Text').item.json.hashtags, first_comment: $('Parse New Text').item.json.first_comment }) }}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "a1b2c3d4-8888-4444-aaaa-000000000008",
+        "name": "Respond Text Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1792,
+          -200
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?id=eq.{{ $json.topic_id }}&select=*",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "c2faeaaa-ab74-4476-ba1b-6de240fcc06b",
+        "name": "Read Current Topic",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          448,
+          200
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const topicRaw = $input.item.json;\nconst params = $('Extract Params').item.json;\n\nlet topic = {};\ntry {\n  topic = Array.isArray(topicRaw) ? topicRaw[0] || {} : topicRaw || {};\n} catch(e) { topic = {}; }\n\nreturn {\n  json: {\n    ...topic,\n    user_id: params.user_id,\n    topic_id: params.topic_id\n  }\n};"
+        },
+        "id": "21365ee5-da2f-4a5b-ad78-7628855491ba",
+        "name": "Parse Current Topic",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          672,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?user_id=eq.{{ $json.user_id }}&campaign_id=eq.{{ $json.campaign_id }}&week_number=eq.{{ $json.week_number }}&id=neq.{{ $json.topic_id }}&select=topic,content_angle",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "dec7e6b8-ca5e-4e9e-83ee-b14490f9beb0",
+        "name": "Read Sibling Topics",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          896,
+          200
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $('Parse Current Topic').item.json.user_id }}&select=*&order=created_at.desc&limit=1",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "d7eef63d-d8bc-482e-a238-94eaf4846704",
+        "name": "Read ICP",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1120,
+          200
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const currentTopic = $('Parse Current Topic').item.json;\nconst siblingsRaw = $('Read Sibling Topics').item.json;\nconst icpRaw = $('Read ICP').item.json;\n\nlet siblings = [];\ntry { siblings = Array.isArray(siblingsRaw) ? siblingsRaw : []; } catch(e) { siblings = []; }\n\nlet icp = {};\ntry { icp = Array.isArray(icpRaw) ? icpRaw[0] || {} : icpRaw || {}; } catch(e) { icp = {}; }\n\n// Read brand doc summaries\nlet brandContext = '';\ntry {\n  const brandDocsItems = $('Read Brand Docs').all();\n  const docSummary = brandDocsItems\n    .map(item => item.json.summary_text || '')\n    .filter(Boolean)\n    .join('\\n---\\n')\n    .substring(0, 3000);\n  if (docSummary) {\n    brandContext = '\\n\\nBRAND DOCUMENT GUIDELINES:\\n' + docSummary;\n  }\n} catch(e) { /* no brand docs */ }\n\nconst siblingTopics = siblings.map(s => s.topic + ' (' + s.content_angle + ')').join(', ');\n\nconst dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];\nconst dayName = dayNames[(currentTopic.day_number || 1) - 1] || 'Day ' + currentTopic.day_number;\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 1024,\n  system: 'You are a social media content strategist. Generate a replacement topic that is different from existing topics.',\n  messages: [{\n    role: 'user',\n    content: 'Generate 1 NEW replacement topic for ' + dayName + ' (Day ' + currentTopic.day_number + ') of Week ' + currentTopic.week_number + '.\\n\\nCURRENT TOPIC TO REPLACE: ' + currentTopic.topic + '\\n\\nOTHER TOPICS THIS WEEK (avoid duplicating): ' + (siblingTopics || 'none') + '\\n\\nBUSINESS CONTEXT:\\n- Industry: ' + (icp.industry || 'General') + '\\n- Target Audience: ' + (icp.target_audience || 'General audience') + '\\n- Content Pillars: ' + JSON.stringify(icp.content_pillars || []) + brandContext + '\\n\\nReturn ONLY a single JSON object with keys: topic, description, content_angle, product_name. Must be completely different from the current topic and siblings. No markdown.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    topic_id: currentTopic.topic_id || currentTopic.id,\n    user_id: currentTopic.user_id,\n    campaign_id: currentTopic.campaign_id,\n    week_number: currentTopic.week_number,\n    day_number: currentTopic.day_number\n  }\n};"
+        },
+        "id": "76045d23-973c-4deb-82e1-c93f5eeb8a5d",
+        "name": "Prepare Claude Prompt",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1344,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "anthropicApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "={{ $json.apiBody }}",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            },
+            "timeout": 60000
+          }
+        },
+        "id": "8b06ac3b-4e14-4379-b2a4-3eddf8b5009b",
+        "name": "Claude Regenerate Topic",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1568,
+          200
+        ],
+        "alwaysOutputData": true,
+        "credentials": {
+          "anthropicApi": {
+            "id": "cZwkXj4ZfHTkpBtT",
+            "name": "Anthropic account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Claude Prompt').item.json;\n\nlet raw = '';\ntry { raw = input.content[0].text; } catch(e) { raw = '{}'; }\n\nlet newTopic = {};\ntry {\n  newTopic = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { newTopic = JSON.parse(stripped); } catch(e2) { newTopic = {}; }\n}\n\nconst updateBody = JSON.stringify({\n  topic: (newTopic.topic || 'New Topic').substring(0, 255),\n  description: (newTopic.description || '').substring(0, 500),\n  content_angle: (newTopic.content_angle || 'General').substring(0, 1000),\n  product_name: newTopic.product_name || null,\n  status: 'pending',\n  updated_at: new Date().toISOString()\n});\n\nreturn {\n  json: {\n    updateBody: updateBody,\n    topic_id: prepData.topic_id,\n    newTopic: newTopic\n  }\n};"
+        },
+        "id": "cfa3bd7a-82df-4d9d-bd1b-9481a4662fb4",
+        "name": "Parse New Topic",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1792,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?id=eq.{{ $json.topic_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "return=representation"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "={{ $json.updateBody }}",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "d5749f18-cd12-4679-b209-05adad961fb6",
+        "name": "Update Topic",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2016,
+          200
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const updated = $input.item.json;\nconst parseData = $('Parse New Topic').item.json;\n\nlet topic = {};\ntry {\n  topic = Array.isArray(updated) ? updated[0] || {} : updated || {};\n} catch(e) { topic = {}; }\n\nreturn {\n  json: {\n    success: true,\n    topic: topic.id ? topic : { ...parseData.newTopic, id: parseData.topic_id }\n  }\n};"
+        },
+        "id": "219aff17-e31a-4ef6-8218-f55b849347f7",
+        "name": "Prepare Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2240,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "c10f4476-d4ed-4bd5-a79b-eb84ad395569",
+        "name": "Respond Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          2464,
+          200
+        ]
+      },
+      {
+        "id": "bd-docs-16a",
+        "name": "Read Brand Docs for Text",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          780,
+          -200
+        ],
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/brand_documents?user_id=eq.{{ $('Extract Params').item.json.user_id }}&summary_text=not.is.null&select=summary_text",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "alwaysOutputData": true
+      },
+      {
+        "id": "bd-docs-16b",
+        "name": "Read Brand Docs",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1230,
+          200
+        ],
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/brand_documents?user_id=eq.{{ $('Extract Params').item.json.user_id }}&summary_text=not.is.null&select=summary_text",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "alwaysOutputData": true
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Auth Validator",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Auth Validator": {
+        "main": [
+          [
+            {
+              "node": "Auth OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Auth OK?": {
+        "main": [
+          [
+            {
+              "node": "Extract Params",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "401 Unauthorized",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Params": {
+        "main": [
+          [
+            {
+              "node": "Is Text Regen?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Text Regen?": {
+        "main": [
+          [
+            {
+              "node": "Read Content Item",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Read Current Topic",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Content Item": {
+        "main": [
+          [
+            {
+              "node": "Read ICP for Text",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Text Prompt": {
+        "main": [
+          [
+            {
+              "node": "Claude Regenerate Text",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude Regenerate Text": {
+        "main": [
+          [
+            {
+              "node": "Parse New Text",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse New Text": {
+        "main": [
+          [
+            {
+              "node": "Update Content Item",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Content Item": {
+        "main": [
+          [
+            {
+              "node": "Respond Text Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Current Topic": {
+        "main": [
+          [
+            {
+              "node": "Parse Current Topic",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Current Topic": {
+        "main": [
+          [
+            {
+              "node": "Read Sibling Topics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Sibling Topics": {
+        "main": [
+          [
+            {
+              "node": "Read ICP",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Claude Prompt": {
+        "main": [
+          [
+            {
+              "node": "Claude Regenerate Topic",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude Regenerate Topic": {
+        "main": [
+          [
+            {
+              "node": "Parse New Topic",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse New Topic": {
+        "main": [
+          [
+            {
+              "node": "Update Topic",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Topic": {
+        "main": [
+          [
+            {
+              "node": "Prepare Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Response": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read ICP for Text": {
+        "main": [
+          [
+            {
+              "node": "Read Brand Docs for Text",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Brand Docs for Text": {
+        "main": [
+          [
+            {
+              "node": "Prepare Text Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read ICP": {
+        "main": [
+          [
+            {
+              "node": "Read Brand Docs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Brand Docs": {
+        "main": [
+          [
+            {
+              "node": "Prepare Claude Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Andrew Gershan",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-04-07T02:39:52.899Z",
+        "id": 407,
+        "workflowId": "jTb1lkySSEcmlBOE",
+        "versionId": "103ed4e7-7722-418b-a4d5-b48f269639f5",
+        "event": "activated",
+        "userId": "06bbd5c8-929d-415f-9b4a-dc32b3c8c605"
+      },
+      {
+        "createdAt": "2026-04-07T02:39:52.776Z",
+        "id": 406,
+        "workflowId": "jTb1lkySSEcmlBOE",
+        "versionId": "103ed4e7-7722-418b-a4d5-b48f269639f5",
+        "event": "deactivated",
+        "userId": "06bbd5c8-929d-415f-9b4a-dc32b3c8c605"
+      }
+    ]
   }
 }

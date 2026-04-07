@@ -1,5 +1,11 @@
 {
+  "updatedAt": "2026-04-07T02:32:11.847Z",
+  "createdAt": "2026-03-05T20:25:45.628Z",
+  "id": "qTDGBLtfBqyb1Vm1",
   "name": "15-Generate-Topics",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -10,31 +16,38 @@
           "allowedOrigins": "*"
         }
       },
-      "id": "15-top-0001",
+      "id": "95bc4da4-de4f-4724-bf46-181c7d9413c0",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        656,
+        1776
+      ],
       "webhookId": "eluxr-generate-topics"
     },
     {
       "parameters": {
-        "workflowId": "S4QtfIKpvhW4mQYG"
+        "workflowId": "S4QtfIKpvhW4mQYG",
+        "options": {}
       },
-      "id": "15-top-0002",
+      "id": "3561077e-da3e-424a-a79d-31a14f55123e",
       "name": "Auth Validator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [220, 0]
+      "position": [
+        880,
+        1776
+      ]
     },
     {
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "version": 2,
             "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
+            "caseSensitive": true,
+            "typeValidation": "strict"
           },
           "conditions": [
             {
@@ -43,7 +56,8 @@
               "rightValue": true,
               "operator": {
                 "type": "boolean",
-                "operation": "true"
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
@@ -51,11 +65,14 @@
         },
         "options": {}
       },
-      "id": "15-top-0003",
+      "id": "c033a61d-cbe2-4347-8b88-5759e0823b49",
       "name": "Auth OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [440, 0]
+      "position": [
+        1104,
+        1776
+      ]
     },
     {
       "parameters": {
@@ -65,25 +82,30 @@
           "responseCode": 401
         }
       },
-      "id": "15-top-0004",
+      "id": "af69f4e1-7fd1-4889-b08e-91a2e40fbe82",
       "name": "401 Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [660, 200]
+      "position": [
+        1312,
+        1968
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nreturn {\n  json: {\n    campaign_id: body.campaign_id || '',\n    week_number: parseInt(body.week_number) || 1,\n    user_id: authData.user_id || ''\n  }\n};"
+        "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nreturn {\n  json: {\n    campaign_id: body.campaign_id || '',\n    week_number: parseInt(body.week_number) || 1,\n    user_id: authData.user_id || '',\n    assigned_products: body.assigned_products || [],\n    storytelling_framework: body.storytelling_framework || '',\n    content_language: body.content_language || 'English',\n    day_count: parseInt(body.day_count) || 7,\n    start_date: body.start_date || '',\n    end_date: body.end_date || '',\n    brand_voice_traits: body.brand_voice_traits || [],\n    brand_voice_notes: body.brand_voice_notes || '',\n    campaign_theme: body.campaign_theme || ''\n  }\n};"
       },
-      "id": "15-top-0100",
+      "id": "f566647d-448f-40bb-873b-ccc03ec3026c",
       "name": "Extract Params",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, -200]
+      "position": [
+        1312,
+        1568
+      ]
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $json.user_id }}&select=*&order=created_at.desc&limit=1",
         "sendHeaders": true,
         "headerParameters": {
@@ -106,16 +128,18 @@
           }
         }
       },
-      "id": "15-top-0200",
+      "id": "8c79a9df-669f-481e-b1f7-dd5393fb1c90",
       "name": "Read ICP",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, -200],
+      "position": [
+        1536,
+        1568
+      ],
       "alwaysOutputData": true
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?user_id=eq.{{ $('Extract Params').item.json.user_id }}&is_active=eq.true&select=id,name,description,category,image_url,image_urls,product_url",
         "sendHeaders": true,
         "headerParameters": {
@@ -138,22 +162,28 @@
           }
         }
       },
-      "id": "15-top-0300",
+      "id": "4d2de071-6552-45c9-9f22-b6017d9e1dca",
       "name": "Read Products",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, -200],
+      "position": [
+        1760,
+        1568
+      ],
       "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "const params = $('Extract Params').item.json;\nconst icpRaw = $('Read ICP').item.json;\nconst productsRaw = $('Read Products').item.json;\n\n// Parse ICP\nlet icp = {};\ntry {\n  icp = Array.isArray(icpRaw) ? icpRaw[0] || {} : icpRaw || {};\n} catch(e) { icp = {}; }\n\n// Parse products\nlet products = [];\ntry {\n  products = Array.isArray(productsRaw) ? productsRaw : [];\n} catch(e) { products = []; }\n\nconst productsList = products.map(p => p.name + ' (' + (p.category || 'General') + '): ' + (p.description || '')).join('\\n');\n\nconst weekNum = params.week_number;\nconst dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  system: 'You are a luxury brand social media content strategist specializing in the 7-Day Storytelling Framework. Generate daily topics that follow the weekly narrative arc.',\n  messages: [{\n    role: 'user',\n    content: 'Generate 7 daily social media content topics for WEEK ' + weekNum + ' of a monthly campaign.\\n\\nBUSINESS CONTEXT:\\n- Industry: ' + (icp.industry || 'General') + '\\n- Target Audience: ' + (icp.target_audience || icp.demographics || 'General audience') + '\\n- Brand Voice: ' + (icp.brand_voice || icp.tone || 'Professional and engaging') + '\\n- Content Pillars: ' + JSON.stringify(icp.content_pillars || []) + '\\n- Pain Points: ' + JSON.stringify(icp.pain_points || []) + '\\n\\nPRODUCTS/SERVICES:\\n' + (productsList || 'No specific products listed') + '\\n\\n7-DAY STORYTELLING FRAMEWORK (MANDATORY - each day MUST follow its assigned theme):\\nDay 1 (Monday): CURIOSITY HOOK — Stop the scroll with intrigue and visual mystery. Tease a product detail, an unseen angle, or a surprising fact that makes viewers need to know more.\\nDay 2 (Tuesday): CRAFTSMANSHIP — Establish luxury credibility and authority. Showcase the making process, materials, skill, or heritage behind the product.\\nDay 3 (Wednesday): MEANING & SYMBOLISM — Build emotional connection. Explore what the product represents—love, achievement, identity, tradition.\\nDay 4 (Thursday): TRANSFORMATION MOMENT — Show the impact when the product is worn/used. Before-and-after energy, confidence shift, special occasion moments.\\nDay 5 (Friday): HIDDEN DETAIL / SURPRISE — Encourage shares through discovery. Reveal a detail most people miss, an Easter egg, or an unexpected feature.\\nDay 6 (Saturday): LIFESTYLE ASPIRATION — Inspire desire and aspiration. Show the life, setting, and experiences associated with the product.\\nDay 7 (Sunday): LEGACY & TIMELESSNESS — Build brand prestige. Highlight heritage, generational stories, and enduring value.\\n\\nIMPORTANT RULES:\\n- Each day MUST reference a UNIQUE product from the products list above (no repeats within the week)\\n- The topic and description must clearly embody the assigned storytelling theme\\n- Content angles should be specific to the theme (not generic)\\n\\nFor each of the 7 days provide:\\n1. topic: A compelling topic title that reflects the day\\'s storytelling theme (max 60 chars)\\n2. description: Brief description of the post angle tied to the theme (max 150 chars)\\n3. content_angle: Specific approach for this theme (e.g., for Curiosity: \"Macro Tease\", \"Shadow Reveal\", \"Question Hook\"; for Craftsmanship: \"Workshop Tour\", \"Material Spotlight\", \"Artisan Profile\")\\n4. product_name: Name of a UNIQUE product from the list above to feature\\n5. storytelling_theme: The theme name (curiosity_hook, craftsmanship, meaning_symbolism, transformation, hidden_detail, lifestyle_aspiration, legacy_timelessness)\\n\\nWeek ' + weekNum + ' should feel fresh and distinct from other weeks while maintaining the framework.\\n\\n' + (params.storytelling_framework ? 'ADDITIONAL CONTEXT FROM FRONTEND:\\n' + params.storytelling_framework + '\\n\\n' : '') + 'Return ONLY a valid JSON array of 7 objects with keys: day_number (1-7), topic, description, content_angle, product_name, storytelling_theme. No markdown.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    user_id: params.user_id,\n    campaign_id: params.campaign_id,\n    week_number: weekNum,\n    products: products\n  }\n};"
+        "jsCode": "const params = $('Extract Params').first().json;\nconst icpRaw = $('Read ICP').first().json;\nconst productsRaw = $('Read Products').first().json;\n\n// Parse ICP\nlet icp = {};\ntry {\n  icp = Array.isArray(icpRaw) ? icpRaw[0] || {} : icpRaw || {};\n} catch(e) { icp = {}; }\n\n// Use assigned_products from frontend (preserves user's order) or fall back to Supabase\nlet products = [];\nif (params.assigned_products && params.assigned_products.length > 0) {\n  products = params.assigned_products;\n} else {\n  try {\n    products = Array.isArray(productsRaw) ? productsRaw : [];\n  } catch(e) { products = []; }\n}\n\nconst dayCount = params.day_count || 7;\n\n// Build product list with explicit day assignment (only for available days)\nconst productsList = products.slice(0, dayCount).map((p, i) => 'Day ' + (i + 1) + ': ' + p.name + ' (' + (p.category || 'General') + ')' + (p.description ? ' \\u2014 ' + p.description : '')).join('\\n');\n\nconst weekNum = params.week_number;\n\n// Full 7-day storytelling framework definitions\nconst allDayThemes = [\n  'Day 1 (Monday): CURIOSITY HOOK \\u2014 Stop the scroll with intrigue and visual mystery.',\n  'Day 2 (Tuesday): CRAFTSMANSHIP \\u2014 Establish luxury credibility and authority.',\n  'Day 3 (Wednesday): MEANING & SYMBOLISM \\u2014 Build emotional connection.',\n  'Day 4 (Thursday): TRANSFORMATION MOMENT \\u2014 Show the impact when the product is worn/used.',\n  'Day 5 (Friday): HIDDEN DETAIL / SURPRISE \\u2014 Encourage shares through discovery.',\n  'Day 6 (Saturday): LIFESTYLE ASPIRATION \\u2014 Inspire desire and aspiration.',\n  'Day 7 (Sunday): LEGACY & TIMELESSNESS \\u2014 Build brand prestige.'\n];\n\n// Only include days 1 through dayCount\nconst frameworkLines = allDayThemes.slice(0, dayCount).join('\\n');\nconst frameworkLabel = dayCount < 7 ? dayCount + '-DAY STORYTELLING FRAMEWORK (truncated from 7-day arc)' : '7-DAY STORYTELLING FRAMEWORK';\n\n// Fix target_audience: stringify if object\nlet targetAudience = icp.target_audience || icp.demographics || 'General audience';\nif (typeof targetAudience === 'object') {\n  targetAudience = JSON.stringify(targetAudience);\n}\n\n// Build brand voice section from campaign data\nlet brandVoiceSection = '';\nconst traits = params.brand_voice_traits || [];\nconst voiceNotes = params.brand_voice_notes || '';\nconst campaignTheme = params.campaign_theme || '';\nif (campaignTheme) {\n  brandVoiceSection += '\\n\\nCAMPAIGN THEME: ' + campaignTheme + '\\nAll topics MUST align with this campaign theme.';\n}\nif (traits.length > 0) {\n  brandVoiceSection += '\\n\\nBRAND VOICE TRAITS (from user): ' + traits.join(', ');\n}\nif (voiceNotes) {\n  brandVoiceSection += '\\nBRAND VOICE NOTES (from user): ' + voiceNotes;\n}\n\n// Add brand doc summaries\ntry {\n  const brandDocsItems = $('Read Brand Docs').all();\n  const docSummary = brandDocsItems\n    .map(item => item.json.summary_text || '')\n    .filter(Boolean)\n    .join('\\n---\\n')\n    .substring(0, 3000);\n  if (docSummary) {\n    brandVoiceSection += '\\n\\nBRAND DOCUMENT GUIDELINES:\\n' + docSummary;\n  }\n} catch(e) { /* no brand docs available */ }\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  system: 'You are a luxury brand social media content strategist specializing in the 7-Day Storytelling Framework. Generate daily topics that follow the weekly narrative arc.' + (dayCount < 7 ? ' This week only has ' + dayCount + ' days, so adapt the arc accordingly.' : ''),\n  messages: [{\n    role: 'user',\n    content: 'Generate ' + dayCount + ' daily social media content topics for WEEK ' + weekNum + ' of a monthly campaign.\\n\\nBUSINESS CONTEXT:\\n- Industry: ' + (icp.industry || 'General') + '\\n- Target Audience: ' + targetAudience + '\\n- Brand Voice: ' + (icp.brand_voice || icp.tone || 'Professional and engaging') + '\\n- Content Pillars: ' + JSON.stringify(icp.content_pillars || []) + '\\n- Pain Points: ' + JSON.stringify(icp.pain_points || []) + brandVoiceSection + '\\n\\nPRODUCT ASSIGNMENTS (MANDATORY - each day MUST use its assigned product):\\n' + productsList + '\\n\\n' + frameworkLabel + ' (MANDATORY - each day MUST follow its assigned theme):\\n' + frameworkLines + '\\n\\nIMPORTANT RULES:\\n- Each day MUST use the EXACT product assigned above (Day 1 product for day 1, Day 2 product for day 2, etc.)\\n- Do NOT reassign or swap products between days\\n- The product_name in your response MUST exactly match the assigned product name\\n- Generate EXACTLY ' + dayCount + ' topics (days 1 through ' + dayCount + ')\\n\\n' + (params.storytelling_framework ? 'ADDITIONAL CONTEXT FROM FRONTEND:\\n' + params.storytelling_framework + '\\n\\n' : '') + 'For each of the ' + dayCount + ' days provide:\\n1. topic: A compelling topic title that reflects the day\\'s storytelling theme (max 60 chars)\\n2. description: Brief description of the post angle tied to the theme (max 150 chars)\\n3. content_angle: Specific approach for this theme\\n4. product_name: The EXACT product name assigned to this day (from the list above)\\n5. storytelling_theme: The theme name\\n\\nReturn ONLY a valid JSON array of ' + dayCount + ' objects with keys: day_number (1-' + dayCount + '), topic, description, content_angle, product_name, storytelling_theme. No markdown.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    user_id: params.user_id,\n    campaign_id: params.campaign_id,\n    week_number: weekNum,\n    products: products,\n    day_count: dayCount\n  }\n};"
       },
-      "id": "15-top-0400",
+      "id": "3dd86418-2485-4e6b-9a88-ecc1f6e9b4dd",
       "name": "Prepare Claude Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, -200]
+      "position": [
+        1984,
+        1568
+      ]
     },
     {
       "parameters": {
@@ -179,36 +209,42 @@
         "rawContentType": "application/json",
         "body": "={{ $json.apiBody }}",
         "options": {
-          "timeout": 120000,
           "response": {
             "response": {
               "neverError": true
             }
-          }
+          },
+          "timeout": 120000
         }
       },
-      "id": "15-top-0500",
+      "id": "1199ba60-a2a1-44a0-bee4-e6b9b14e3e9e",
       "name": "Claude Generate Topics",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1540, -200],
+      "position": [
+        2192,
+        1568
+      ],
+      "alwaysOutputData": true,
       "credentials": {
         "anthropicApi": {
           "id": "cZwkXj4ZfHTkpBtT",
           "name": "Anthropic account"
         }
-      },
-      "alwaysOutputData": true
+      }
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Claude Prompt').item.json;\n\nlet raw = '';\ntry {\n  raw = input.content[0].text;\n} catch(e) { raw = '[]'; }\n\nlet topics = [];\ntry {\n  topics = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { topics = JSON.parse(stripped); } catch(e2) {\n    const match = stripped.match(/\\[[\\s\\S]*\\]/);\n    if (match) { try { topics = JSON.parse(match[0]); } catch(e3) { topics = []; } }\n  }\n}\n\nif (!Array.isArray(topics)) topics = [];\n\n// Map product_name to product_id\nconst products = prepData.products || [];\nconst mapped = topics.slice(0, 7).map((t, i) => {\n  let productId = null;\n  let productName = t.product_name || null;\n  if (productName) {\n    const match = products.find(p => p.name.toLowerCase() === productName.toLowerCase());\n    if (match) productId = match.id;\n  }\n  return {\n    user_id: prepData.user_id,\n    campaign_id: prepData.campaign_id,\n    week_number: prepData.week_number,\n    day_number: t.day_number || (i + 1),\n    topic: (t.topic || 'Topic ' + (i + 1)).substring(0, 255),\n    description: (t.description || '').substring(0, 500),\n    content_angle: (t.content_angle || 'General').substring(0, 100),\n    product_id: productId,\n    product_name: productName,\n    status: 'pending'\n  };\n});\n\nreturn {\n  json: {\n    topics: mapped,\n    topics_body: JSON.stringify(mapped),\n    user_id: prepData.user_id,\n    campaign_id: prepData.campaign_id,\n    week_number: prepData.week_number\n  }\n};"
+        "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Claude Prompt').first().json;\n\nconst dayCount = prepData.day_count || 7;\n\nlet raw = '';\ntry {\n  raw = input.content[0].text;\n} catch(e) { raw = '[]'; }\n\nlet topics = [];\ntry {\n  topics = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { topics = JSON.parse(stripped); } catch(e2) {\n    const match = stripped.match(/\\[[\\s\\S]*\\]/);\n    if (match) { try { topics = JSON.parse(match[0]); } catch(e3) { topics = []; } }\n  }\n}\n\nif (!Array.isArray(topics)) topics = [];\n\nconst products = prepData.products || [];\n\nconst validThemes = ['curiosity_hook','craftsmanship','meaning_symbolism','transformation','hidden_detail','lifestyle_aspiration','legacy_timelessness'];\n\nconst allThemes = ['curiosity_hook','craftsmanship','meaning_symbolism','transformation','hidden_detail','lifestyle_aspiration','legacy_timelessness'];\nconst dayThemeMap = {};\nfor (let d = 1; d <= dayCount; d++) {\n  dayThemeMap[d] = allThemes[d - 1] || null;\n}\n\nconst mapped = topics.slice(0, dayCount).map((t, i) => {\n  const dayNum = t.day_number || (i + 1);\n  const dayIndex = dayNum - 1;\n\n  // PRIMARY: Positional match - day 1 = products[0], day 2 = products[1], etc.\n  // The prompt explicitly assigns products by day position, so this is the most reliable.\n  let productId = null;\n  let productName = t.product_name || null;\n\n  if (dayIndex >= 0 && dayIndex < products.length && products[dayIndex] && products[dayIndex].id) {\n    productId = products[dayIndex].id;\n    // Use the real product name from our data, not Claude's version\n    if (products[dayIndex].name) productName = products[dayIndex].name;\n  }\n\n  // FALLBACK: Name match if positional didn't work\n  if (!productId && productName) {\n    const cleanName = productName.replace(/\\s*\\([^)]+\\)\\s*$/, '').trim();\n    let match = products.find(p => p.name && p.name.toLowerCase() === cleanName.toLowerCase());\n    if (!match) match = products.find(p => p.name && (p.name.toLowerCase().includes(cleanName.toLowerCase()) || cleanName.toLowerCase().includes(p.name.toLowerCase())));\n    if (match) {\n      productId = match.id;\n      productName = match.name;\n    }\n  }\n\n  let theme = dayThemeMap[dayNum] || null;\n  if (!theme && t.storytelling_theme) {\n    const normalized = t.storytelling_theme.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');\n    if (validThemes.includes(normalized)) {\n      theme = normalized;\n    } else {\n      theme = validThemes.find(v => normalized.includes(v) || v.includes(normalized)) || null;\n    }\n  }\n\n  return {\n    user_id: prepData.user_id,\n    campaign_id: prepData.campaign_id,\n    week_number: prepData.week_number,\n    day_number: dayNum,\n    topic: t.topic || 'Topic ' + dayNum,\n    description: t.description || '',\n    content_angle: t.content_angle || 'General',\n    product_id: productId,\n    product_name: productName,\n    status: 'pending',\n    storytelling_theme: theme\n  };\n});\n\nreturn {\n  json: {\n    topics: mapped,\n    topics_body: JSON.stringify(mapped),\n    user_id: prepData.user_id,\n    campaign_id: prepData.campaign_id,\n    week_number: prepData.week_number\n  }\n};"
       },
-      "id": "15-top-0600",
+      "id": "db456749-60de-4e68-96f8-7734ec0663d8",
       "name": "Parse Topics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1760, -200]
+      "position": [
+        2416,
+        1568
+      ]
     },
     {
       "parameters": {
@@ -235,11 +271,14 @@
           }
         }
       },
-      "id": "15-top-0700",
+      "id": "24ae5061-2e75-424b-8e71-7df5cc77085c",
       "name": "Delete Old Topics",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1980, -200],
+      "position": [
+        2640,
+        1568
+      ],
       "alwaysOutputData": true
     },
     {
@@ -279,22 +318,28 @@
           }
         }
       },
-      "id": "15-top-0800",
+      "id": "c218b564-58de-4e48-ba98-aeaed85019f5",
       "name": "Save Topics",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2200, -200],
+      "position": [
+        2864,
+        1568
+      ],
       "alwaysOutputData": true
     },
     {
       "parameters": {
         "jsCode": "const saved = $input.item.json;\nconst parseData = $('Parse Topics').item.json;\n\n// Return the saved topics (or original if save didn't return them)\nlet topics = [];\ntry {\n  topics = Array.isArray(saved) ? saved : parseData.topics;\n} catch(e) {\n  topics = parseData.topics;\n}\n\nreturn {\n  json: {\n    success: true,\n    topics: topics,\n    week_number: parseData.week_number,\n    campaign_id: parseData.campaign_id\n  }\n};"
       },
-      "id": "15-top-0900",
+      "id": "18f90343-43e3-4d07-b4c6-8653303873d1",
       "name": "Prepare Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2420, -200]
+      "position": [
+        3072,
+        1568
+      ]
     },
     {
       "parameters": {
@@ -304,103 +349,878 @@
           "responseCode": 200
         }
       },
-      "id": "15-top-1000",
+      "id": "13778abb-b945-495e-989f-0b73f18485c4",
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2640, -200]
+      "position": [
+        3296,
+        1568
+      ]
+    },
+    {
+      "id": "73fa2729-9cc9-4a3d-8c99-5276caa2e966",
+      "name": "Read Used Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1872,
+        1568
+      ],
+      "parameters": {
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?user_id=eq.{{ $('Extract Params').item.json.user_id }}&campaign_id=eq.{{ $('Extract Params').item.json.campaign_id }}&week_number=lt.{{ $('Extract Params').item.json.week_number }}&select=product_id,product_name,week_number",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "bd-docs-15",
+      "name": "Read Brand Docs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1872,
+        1768
+      ],
+      "parameters": {
+        "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/brand_documents?user_id=eq.{{ $('Extract Params').first().json.user_id }}&summary_text=not.is.null&select=summary_text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+            },
+            {
+              "name": "apikey",
+              "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "alwaysOutputData": true
     }
   ],
   "connections": {
     "Webhook": {
       "main": [
         [
-          { "node": "Auth Validator", "type": "main", "index": 0 }
+          {
+            "node": "Auth Validator",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Auth Validator": {
       "main": [
         [
-          { "node": "Auth OK?", "type": "main", "index": 0 }
+          {
+            "node": "Auth OK?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Auth OK?": {
       "main": [
         [
-          { "node": "Extract Params", "type": "main", "index": 0 }
+          {
+            "node": "Extract Params",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "401 Unauthorized", "type": "main", "index": 0 }
+          {
+            "node": "401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Params": {
       "main": [
         [
-          { "node": "Read ICP", "type": "main", "index": 0 }
+          {
+            "node": "Read ICP",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Read ICP": {
       "main": [
         [
-          { "node": "Read Products", "type": "main", "index": 0 }
-        ]
-      ]
-    },
-    "Read Products": {
-      "main": [
-        [
-          { "node": "Prepare Claude Prompt", "type": "main", "index": 0 }
+          {
+            "node": "Read Products",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Prepare Claude Prompt": {
       "main": [
         [
-          { "node": "Claude Generate Topics", "type": "main", "index": 0 }
+          {
+            "node": "Claude Generate Topics",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Claude Generate Topics": {
       "main": [
         [
-          { "node": "Parse Topics", "type": "main", "index": 0 }
+          {
+            "node": "Parse Topics",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Parse Topics": {
       "main": [
         [
-          { "node": "Delete Old Topics", "type": "main", "index": 0 }
+          {
+            "node": "Delete Old Topics",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Delete Old Topics": {
       "main": [
         [
-          { "node": "Save Topics", "type": "main", "index": 0 }
+          {
+            "node": "Save Topics",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Save Topics": {
       "main": [
         [
-          { "node": "Prepare Response", "type": "main", "index": 0 }
+          {
+            "node": "Prepare Response",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Prepare Response": {
       "main": [
         [
-          { "node": "Respond Success", "type": "main", "index": 0 }
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Products": {
+      "main": [
+        [
+          {
+            "node": "Read Used Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Used Products": {
+      "main": [
+        [
+          {
+            "node": "Read Brand Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Brand Docs": {
+      "main": [
+        [
+          {
+            "node": "Prepare Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "40ac5ad8-190a-4e1d-9071-fa1f5b743e22",
+  "activeVersionId": "40ac5ad8-190a-4e1d-9071-fa1f5b743e22",
+  "versionCounter": 67,
+  "tags": [
+    {
+      "updatedAt": "2026-03-27T20:56:32.303Z",
+      "createdAt": "2026-03-27T20:56:32.303Z",
+      "id": "nixlLW529L6XTb3y",
+      "name": "v1-original"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-04-07T02:32:11.848Z",
+    "createdAt": "2026-04-07T02:32:11.848Z",
+    "versionId": "40ac5ad8-190a-4e1d-9071-fa1f5b743e22",
+    "workflowId": "qTDGBLtfBqyb1Vm1",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "eluxr-generate-topics",
+          "responseMode": "responseNode",
+          "options": {
+            "allowedOrigins": "*"
+          }
+        },
+        "id": "95bc4da4-de4f-4724-bf46-181c7d9413c0",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          656,
+          1776
+        ],
+        "webhookId": "eluxr-generate-topics"
+      },
+      {
+        "parameters": {
+          "workflowId": "S4QtfIKpvhW4mQYG",
+          "options": {}
+        },
+        "id": "3561077e-da3e-424a-a79d-31a14f55123e",
+        "name": "Auth Validator",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1,
+        "position": [
+          880,
+          1776
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "auth-check",
+                "leftValue": "={{ $json.authenticated }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "c033a61d-cbe2-4347-8b88-5759e0823b49",
+        "name": "Auth OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1104,
+          1776
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({ success: false, error: 'Unauthorized' }) }}",
+          "options": {
+            "responseCode": 401
+          }
+        },
+        "id": "af69f4e1-7fd1-4889-b08e-91a2e40fbe82",
+        "name": "401 Unauthorized",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1312,
+          1968
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const authData = $input.item.json;\nconst body = authData.body || {};\n\nreturn {\n  json: {\n    campaign_id: body.campaign_id || '',\n    week_number: parseInt(body.week_number) || 1,\n    user_id: authData.user_id || '',\n    assigned_products: body.assigned_products || [],\n    storytelling_framework: body.storytelling_framework || '',\n    content_language: body.content_language || 'English',\n    day_count: parseInt(body.day_count) || 7,\n    start_date: body.start_date || '',\n    end_date: body.end_date || '',\n    brand_voice_traits: body.brand_voice_traits || [],\n    brand_voice_notes: body.brand_voice_notes || '',\n    campaign_theme: body.campaign_theme || ''\n  }\n};"
+        },
+        "id": "f566647d-448f-40bb-873b-ccc03ec3026c",
+        "name": "Extract Params",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1312,
+          1568
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/icps?user_id=eq.{{ $json.user_id }}&select=*&order=created_at.desc&limit=1",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "8c79a9df-669f-481e-b1f7-dd5393fb1c90",
+        "name": "Read ICP",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1536,
+          1568
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/products?user_id=eq.{{ $('Extract Params').item.json.user_id }}&is_active=eq.true&select=id,name,description,category,image_url,image_urls,product_url",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "4d2de071-6552-45c9-9f22-b6017d9e1dca",
+        "name": "Read Products",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1760,
+          1568
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const params = $('Extract Params').first().json;\nconst icpRaw = $('Read ICP').first().json;\nconst productsRaw = $('Read Products').first().json;\n\n// Parse ICP\nlet icp = {};\ntry {\n  icp = Array.isArray(icpRaw) ? icpRaw[0] || {} : icpRaw || {};\n} catch(e) { icp = {}; }\n\n// Use assigned_products from frontend (preserves user's order) or fall back to Supabase\nlet products = [];\nif (params.assigned_products && params.assigned_products.length > 0) {\n  products = params.assigned_products;\n} else {\n  try {\n    products = Array.isArray(productsRaw) ? productsRaw : [];\n  } catch(e) { products = []; }\n}\n\nconst dayCount = params.day_count || 7;\n\n// Build product list with explicit day assignment (only for available days)\nconst productsList = products.slice(0, dayCount).map((p, i) => 'Day ' + (i + 1) + ': ' + p.name + ' (' + (p.category || 'General') + ')' + (p.description ? ' \\u2014 ' + p.description : '')).join('\\n');\n\nconst weekNum = params.week_number;\n\n// Full 7-day storytelling framework definitions\nconst allDayThemes = [\n  'Day 1 (Monday): CURIOSITY HOOK \\u2014 Stop the scroll with intrigue and visual mystery.',\n  'Day 2 (Tuesday): CRAFTSMANSHIP \\u2014 Establish luxury credibility and authority.',\n  'Day 3 (Wednesday): MEANING & SYMBOLISM \\u2014 Build emotional connection.',\n  'Day 4 (Thursday): TRANSFORMATION MOMENT \\u2014 Show the impact when the product is worn/used.',\n  'Day 5 (Friday): HIDDEN DETAIL / SURPRISE \\u2014 Encourage shares through discovery.',\n  'Day 6 (Saturday): LIFESTYLE ASPIRATION \\u2014 Inspire desire and aspiration.',\n  'Day 7 (Sunday): LEGACY & TIMELESSNESS \\u2014 Build brand prestige.'\n];\n\n// Only include days 1 through dayCount\nconst frameworkLines = allDayThemes.slice(0, dayCount).join('\\n');\nconst frameworkLabel = dayCount < 7 ? dayCount + '-DAY STORYTELLING FRAMEWORK (truncated from 7-day arc)' : '7-DAY STORYTELLING FRAMEWORK';\n\n// Fix target_audience: stringify if object\nlet targetAudience = icp.target_audience || icp.demographics || 'General audience';\nif (typeof targetAudience === 'object') {\n  targetAudience = JSON.stringify(targetAudience);\n}\n\n// Build brand voice section from campaign data\nlet brandVoiceSection = '';\nconst traits = params.brand_voice_traits || [];\nconst voiceNotes = params.brand_voice_notes || '';\nconst campaignTheme = params.campaign_theme || '';\nif (campaignTheme) {\n  brandVoiceSection += '\\n\\nCAMPAIGN THEME: ' + campaignTheme + '\\nAll topics MUST align with this campaign theme.';\n}\nif (traits.length > 0) {\n  brandVoiceSection += '\\n\\nBRAND VOICE TRAITS (from user): ' + traits.join(', ');\n}\nif (voiceNotes) {\n  brandVoiceSection += '\\nBRAND VOICE NOTES (from user): ' + voiceNotes;\n}\n\n// Add brand doc summaries\ntry {\n  const brandDocsItems = $('Read Brand Docs').all();\n  const docSummary = brandDocsItems\n    .map(item => item.json.summary_text || '')\n    .filter(Boolean)\n    .join('\\n---\\n')\n    .substring(0, 3000);\n  if (docSummary) {\n    brandVoiceSection += '\\n\\nBRAND DOCUMENT GUIDELINES:\\n' + docSummary;\n  }\n} catch(e) { /* no brand docs available */ }\n\nconst body = JSON.stringify({\n  model: 'claude-sonnet-4-20250514',\n  max_tokens: 4096,\n  system: 'You are a luxury brand social media content strategist specializing in the 7-Day Storytelling Framework. Generate daily topics that follow the weekly narrative arc.' + (dayCount < 7 ? ' This week only has ' + dayCount + ' days, so adapt the arc accordingly.' : ''),\n  messages: [{\n    role: 'user',\n    content: 'Generate ' + dayCount + ' daily social media content topics for WEEK ' + weekNum + ' of a monthly campaign.\\n\\nBUSINESS CONTEXT:\\n- Industry: ' + (icp.industry || 'General') + '\\n- Target Audience: ' + targetAudience + '\\n- Brand Voice: ' + (icp.brand_voice || icp.tone || 'Professional and engaging') + '\\n- Content Pillars: ' + JSON.stringify(icp.content_pillars || []) + '\\n- Pain Points: ' + JSON.stringify(icp.pain_points || []) + brandVoiceSection + '\\n\\nPRODUCT ASSIGNMENTS (MANDATORY - each day MUST use its assigned product):\\n' + productsList + '\\n\\n' + frameworkLabel + ' (MANDATORY - each day MUST follow its assigned theme):\\n' + frameworkLines + '\\n\\nIMPORTANT RULES:\\n- Each day MUST use the EXACT product assigned above (Day 1 product for day 1, Day 2 product for day 2, etc.)\\n- Do NOT reassign or swap products between days\\n- The product_name in your response MUST exactly match the assigned product name\\n- Generate EXACTLY ' + dayCount + ' topics (days 1 through ' + dayCount + ')\\n\\n' + (params.storytelling_framework ? 'ADDITIONAL CONTEXT FROM FRONTEND:\\n' + params.storytelling_framework + '\\n\\n' : '') + 'For each of the ' + dayCount + ' days provide:\\n1. topic: A compelling topic title that reflects the day\\'s storytelling theme (max 60 chars)\\n2. description: Brief description of the post angle tied to the theme (max 150 chars)\\n3. content_angle: Specific approach for this theme\\n4. product_name: The EXACT product name assigned to this day (from the list above)\\n5. storytelling_theme: The theme name\\n\\nReturn ONLY a valid JSON array of ' + dayCount + ' objects with keys: day_number (1-' + dayCount + '), topic, description, content_angle, product_name, storytelling_theme. No markdown.'\n  }]\n});\n\nreturn {\n  json: {\n    apiBody: body,\n    user_id: params.user_id,\n    campaign_id: params.campaign_id,\n    week_number: weekNum,\n    products: products,\n    day_count: dayCount\n  }\n};"
+        },
+        "id": "3dd86418-2485-4e6b-9a88-ecc1f6e9b4dd",
+        "name": "Prepare Claude Prompt",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1984,
+          1568
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "anthropicApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "={{ $json.apiBody }}",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            },
+            "timeout": 120000
+          }
+        },
+        "id": "1199ba60-a2a1-44a0-bee4-e6b9b14e3e9e",
+        "name": "Claude Generate Topics",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2192,
+          1568
+        ],
+        "alwaysOutputData": true,
+        "credentials": {
+          "anthropicApi": {
+            "id": "cZwkXj4ZfHTkpBtT",
+            "name": "Anthropic account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $input.item.json;\nconst prepData = $('Prepare Claude Prompt').first().json;\n\nconst dayCount = prepData.day_count || 7;\n\nlet raw = '';\ntry {\n  raw = input.content[0].text;\n} catch(e) { raw = '[]'; }\n\nlet topics = [];\ntry {\n  topics = JSON.parse(raw);\n} catch(e) {\n  const stripped = raw.replace(/```(?:json)?\\s*/g, '').replace(/```\\s*$/g, '').trim();\n  try { topics = JSON.parse(stripped); } catch(e2) {\n    const match = stripped.match(/\\[[\\s\\S]*\\]/);\n    if (match) { try { topics = JSON.parse(match[0]); } catch(e3) { topics = []; } }\n  }\n}\n\nif (!Array.isArray(topics)) topics = [];\n\nconst products = prepData.products || [];\n\nconst validThemes = ['curiosity_hook','craftsmanship','meaning_symbolism','transformation','hidden_detail','lifestyle_aspiration','legacy_timelessness'];\n\nconst allThemes = ['curiosity_hook','craftsmanship','meaning_symbolism','transformation','hidden_detail','lifestyle_aspiration','legacy_timelessness'];\nconst dayThemeMap = {};\nfor (let d = 1; d <= dayCount; d++) {\n  dayThemeMap[d] = allThemes[d - 1] || null;\n}\n\nconst mapped = topics.slice(0, dayCount).map((t, i) => {\n  const dayNum = t.day_number || (i + 1);\n  const dayIndex = dayNum - 1;\n\n  // PRIMARY: Positional match - day 1 = products[0], day 2 = products[1], etc.\n  // The prompt explicitly assigns products by day position, so this is the most reliable.\n  let productId = null;\n  let productName = t.product_name || null;\n\n  if (dayIndex >= 0 && dayIndex < products.length && products[dayIndex] && products[dayIndex].id) {\n    productId = products[dayIndex].id;\n    // Use the real product name from our data, not Claude's version\n    if (products[dayIndex].name) productName = products[dayIndex].name;\n  }\n\n  // FALLBACK: Name match if positional didn't work\n  if (!productId && productName) {\n    const cleanName = productName.replace(/\\s*\\([^)]+\\)\\s*$/, '').trim();\n    let match = products.find(p => p.name && p.name.toLowerCase() === cleanName.toLowerCase());\n    if (!match) match = products.find(p => p.name && (p.name.toLowerCase().includes(cleanName.toLowerCase()) || cleanName.toLowerCase().includes(p.name.toLowerCase())));\n    if (match) {\n      productId = match.id;\n      productName = match.name;\n    }\n  }\n\n  let theme = dayThemeMap[dayNum] || null;\n  if (!theme && t.storytelling_theme) {\n    const normalized = t.storytelling_theme.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');\n    if (validThemes.includes(normalized)) {\n      theme = normalized;\n    } else {\n      theme = validThemes.find(v => normalized.includes(v) || v.includes(normalized)) || null;\n    }\n  }\n\n  return {\n    user_id: prepData.user_id,\n    campaign_id: prepData.campaign_id,\n    week_number: prepData.week_number,\n    day_number: dayNum,\n    topic: t.topic || 'Topic ' + dayNum,\n    description: t.description || '',\n    content_angle: t.content_angle || 'General',\n    product_id: productId,\n    product_name: productName,\n    status: 'pending',\n    storytelling_theme: theme\n  };\n});\n\nreturn {\n  json: {\n    topics: mapped,\n    topics_body: JSON.stringify(mapped),\n    user_id: prepData.user_id,\n    campaign_id: prepData.campaign_id,\n    week_number: prepData.week_number\n  }\n};"
+        },
+        "id": "db456749-60de-4e68-96f8-7734ec0663d8",
+        "name": "Parse Topics",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2416,
+          1568
+        ]
+      },
+      {
+        "parameters": {
+          "method": "DELETE",
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?user_id=eq.{{ $json.user_id }}&campaign_id=eq.{{ $json.campaign_id }}&week_number=eq.{{ $json.week_number }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "24ae5061-2e75-424b-8e71-7df5cc77085c",
+        "name": "Delete Old Topics",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2640,
+          1568
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "return=representation"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "application/json",
+          "body": "={{ $('Parse Topics').item.json.topics_body }}",
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "id": "c218b564-58de-4e48-ba98-aeaed85019f5",
+        "name": "Save Topics",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2864,
+          1568
+        ],
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const saved = $input.item.json;\nconst parseData = $('Parse Topics').item.json;\n\n// Return the saved topics (or original if save didn't return them)\nlet topics = [];\ntry {\n  topics = Array.isArray(saved) ? saved : parseData.topics;\n} catch(e) {\n  topics = parseData.topics;\n}\n\nreturn {\n  json: {\n    success: true,\n    topics: topics,\n    week_number: parseData.week_number,\n    campaign_id: parseData.campaign_id\n  }\n};"
+        },
+        "id": "18f90343-43e3-4d07-b4c6-8653303873d1",
+        "name": "Prepare Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3072,
+          1568
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "13778abb-b945-495e-989f-0b73f18485c4",
+        "name": "Respond Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          3296,
+          1568
+        ]
+      },
+      {
+        "id": "73fa2729-9cc9-4a3d-8c99-5276caa2e966",
+        "name": "Read Used Products",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1872,
+          1568
+        ],
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/weekly_topics?user_id=eq.{{ $('Extract Params').item.json.user_id }}&campaign_id=eq.{{ $('Extract Params').item.json.campaign_id }}&week_number=lt.{{ $('Extract Params').item.json.week_number }}&select=product_id,product_name,week_number",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "alwaysOutputData": true
+      },
+      {
+        "id": "bd-docs-15",
+        "name": "Read Brand Docs",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1872,
+          1768
+        ],
+        "parameters": {
+          "url": "=https://llpnwaoxisfwptxvdfed.supabase.co/rest/v1/brand_documents?user_id=eq.{{ $('Extract Params').first().json.user_id }}&summary_text=not.is.null&select=summary_text",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscG53YW94aXNmd3B0eHZkZmVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjIyMzg2MCwiZXhwIjoyMDg3Nzk5ODYwfQ._BXPXKrHc6IdAuQNb22SryC69FCdcL_qQzcWKIj78gs"
+              },
+              {
+                "name": "apikey",
+                "value": "sb_publishable_9gnLO_J9HBxVta1f8Ecvxw_KO8huPYQ"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "neverError": true
+              }
+            }
+          }
+        },
+        "alwaysOutputData": true
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Auth Validator",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Auth Validator": {
+        "main": [
+          [
+            {
+              "node": "Auth OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Auth OK?": {
+        "main": [
+          [
+            {
+              "node": "Extract Params",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "401 Unauthorized",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Params": {
+        "main": [
+          [
+            {
+              "node": "Read ICP",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read ICP": {
+        "main": [
+          [
+            {
+              "node": "Read Products",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Claude Prompt": {
+        "main": [
+          [
+            {
+              "node": "Claude Generate Topics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude Generate Topics": {
+        "main": [
+          [
+            {
+              "node": "Parse Topics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Topics": {
+        "main": [
+          [
+            {
+              "node": "Delete Old Topics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Delete Old Topics": {
+        "main": [
+          [
+            {
+              "node": "Save Topics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save Topics": {
+        "main": [
+          [
+            {
+              "node": "Prepare Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Response": {
+        "main": [
+          [
+            {
+              "node": "Respond Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Products": {
+        "main": [
+          [
+            {
+              "node": "Read Used Products",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Used Products": {
+        "main": [
+          [
+            {
+              "node": "Read Brand Docs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Brand Docs": {
+        "main": [
+          [
+            {
+              "node": "Prepare Claude Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Andrew Gershan",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-04-07T02:32:12.128Z",
+        "id": 403,
+        "workflowId": "qTDGBLtfBqyb1Vm1",
+        "versionId": "40ac5ad8-190a-4e1d-9071-fa1f5b743e22",
+        "event": "activated",
+        "userId": "06bbd5c8-929d-415f-9b4a-dc32b3c8c605"
+      },
+      {
+        "createdAt": "2026-04-07T02:32:12.001Z",
+        "id": 402,
+        "workflowId": "qTDGBLtfBqyb1Vm1",
+        "versionId": "40ac5ad8-190a-4e1d-9071-fa1f5b743e22",
+        "event": "deactivated",
+        "userId": "06bbd5c8-929d-415f-9b4a-dc32b3c8c605"
+      }
+    ]
   }
 }
