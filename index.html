@@ -3774,16 +3774,33 @@ function showCalendarEmptyState() {
 // === PROFILE LOADER ===
 async function loadUserProfile() {
   try {
-    const { data: profile, error } = await window.supabase
+    let url = '', industry = '';
+    // Try profiles table first
+    const { data: profile } = await window.supabase
       .from('profiles')
       .select('business_url, industry')
       .maybeSingle();
-    if (profile && !error) {
-      businessContext = { business_url: profile.business_url || '', industry: profile.industry || '' };
-      const urlInput = document.getElementById('business-url');
+    if (profile) {
+      url = profile.business_url || '';
+      industry = profile.industry || '';
+    }
+    // Fall back to icps table if profiles is empty (e.g. after reset)
+    if (!url) {
+      const { data: icp } = await window.supabase
+        .from('icps')
+        .select('business_url, industry')
+        .maybeSingle();
+      if (icp) {
+        url = icp.business_url || '';
+        industry = icp.industry || industry;
+      }
+    }
+    if (url || industry) {
+      businessContext = { business_url: url, industry: industry };
+      const urlInput = document.getElementById('business_url');
       const industryInput = document.getElementById('industry');
-      if (urlInput && profile.business_url) urlInput.value = profile.business_url;
-      if (industryInput && profile.industry) industryInput.value = profile.industry;
+      if (urlInput && url) urlInput.value = url;
+      if (industryInput && industry) industryInput.value = industry;
     }
   } catch (err) {
     console.error('Error loading profile:', err);
@@ -3939,6 +3956,11 @@ function renderICPCard(icp) {
     if (typeof hashtags === 'string') tags = hashtags.split(/[,\s]+/).filter(t => t.length > 1);
     else if (Array.isArray(hashtags)) tags = hashtags.map(h => String(h)).filter(Boolean);
     else if (typeof hashtags === 'object') tags = Object.values(hashtags).flat().map(h => String(h)).filter(Boolean);
+    // Sanitize hashtags: remove spaces within tags (e.g. "#Engagement Ring" → "#EngagementRing")
+    tags = tags.map(t => {
+      const clean = t.startsWith('#') ? '#' + t.slice(1).replace(/\s+/g, '') : t.replace(/\s+/g, '');
+      return clean;
+    });
     tags = [...new Set(tags)];
     if (tags.length > 0) {
       window._icpHashtags = tags;
@@ -10121,16 +10143,19 @@ window.progressiveUnlockFromState = async function() {
     // Load and render products from Supabase on page load
     if (window.loadProducts) await loadProducts();
 
-    // Check products exist (7+) → unlock campaign
+    // Check products exist → unlock campaign
     const { data: products } = await window.supabase.from('products').select('id').eq('user_id', user.id).eq('is_active', true);
-    const hasProducts = products && products.length >= 7;
-    if (!hasProducts) return;
-
-    unlockSection('section-campaign');
+    const hasProducts = products && products.length > 0;
 
     // Check campaign exists → unlock topics
     const { data: campaigns } = await window.supabase.from('campaigns').select('id, month, start_date, campaign_theme, brand_voice_traits, brand_voice_notes, platforms').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(1);
     const hasCampaign = campaigns && campaigns.length > 0;
+
+    // Unlock S4 if user has products OR already has a campaign (they must have had products to create one)
+    if (!hasProducts && !hasCampaign) return;
+
+    unlockSection('section-campaign');
+
     if (!hasCampaign) return;
 
     window.currentCampaignId = campaigns[0].id;
@@ -10142,6 +10167,25 @@ window.progressiveUnlockFromState = async function() {
     if (campaigns[0].start_date) {
       window._campaignStartDate = campaigns[0].start_date;
       _campaignWeeks = null; // Clear cache so weeks recalculate with correct start date
+    }
+    // Restore campaign theme radio selection
+    if (campaigns[0].campaign_theme) {
+      const themeRadio = document.querySelector(`input[name="campaign_theme"][value="${campaigns[0].campaign_theme}"]`);
+      if (themeRadio) {
+        themeRadio.checked = true;
+        themeRadio.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    // Restore platform checkboxes
+    if (campaigns[0].platforms && Array.isArray(campaigns[0].platforms)) {
+      document.querySelectorAll('input[name="campaign_platforms"]').forEach(cb => {
+        cb.checked = campaigns[0].platforms.includes(cb.value);
+      });
+    }
+    // Restore brand voice notes
+    if (campaigns[0].brand_voice_notes) {
+      const bvField = document.getElementById('campaign_brand_voice_notes');
+      if (bvField) bvField.value = campaigns[0].brand_voice_notes;
     }
     unlockSection('section-topics');
     if (window.loadExistingTopics) loadExistingTopics();
@@ -10209,11 +10253,21 @@ window.showConfirmDialog = function({ title, message, confirmText = 'Confirm', c
 async function handleCampaignSubmit(e) {
   e.preventDefault();
 
+  // Guard against double submissions
+  if (window._campaignSubmitting) return;
+  window._campaignSubmitting = true;
+
+  // Disable button to prevent double-clicks
+  const submitBtn = document.getElementById('btn-generate-topics');
+  if (submitBtn) submitBtn.disabled = true;
+
   // Validate platforms
   const platforms = Array.from(document.querySelectorAll('#campaign-platform-selector input:checked')).map(cb => cb.value);
   if (platforms.length === 0) {
     document.getElementById('campaign-platform-error').style.display = 'block';
     showToast('Please select at least one platform', 'error');
+    window._campaignSubmitting = false;
+    if (submitBtn) submitBtn.disabled = false;
     return;
   }
   document.getElementById('campaign-platform-error').style.display = 'none';
@@ -10222,6 +10276,8 @@ async function handleCampaignSubmit(e) {
   const monthInput = document.getElementById('campaign_month').value;
   if (!monthInput) {
     showToast('Please select a content month', 'error');
+    window._campaignSubmitting = false;
+    if (submitBtn) submitBtn.disabled = false;
     return;
   }
 
@@ -10350,12 +10406,27 @@ async function handleCampaignSubmit(e) {
       if (weekProducts.length >= weeks[0].dayCount) {
         await generateTopics(weekProducts);
       } else {
-        showToast(`Need at least ${weeks[0].dayCount} products for this week (have ${allProducts.length}). Review your products first.`, 'error');
+        // Clear the spinner — otherwise user sees infinite loading
+        const tl = document.getElementById('topics-loading');
+        const tgs = document.getElementById('topics-generate-section');
+        if (tl) tl.style.display = 'none';
+        if (tgs) tgs.style.display = 'block';
+        window._topicsGenerating = false;
+        renderWeekView(currentWeek);
+        showToast(`Need at least ${weeks[0].dayCount} products for this week (have ${allProducts.length}). Add more products in Section 3.`, 'error');
       }
     }
   } catch (err) {
     showToast('Error creating campaign: ' + err.message, 'error');
     console.error('Campaign submit error:', err);
+    // Clear spinner on error too
+    const tl = document.getElementById('topics-loading');
+    if (tl) tl.style.display = 'none';
+    window._topicsGenerating = false;
+  } finally {
+    window._campaignSubmitting = false;
+    const btn = document.getElementById('btn-generate-topics');
+    if (btn) btn.disabled = false;
   }
 }
 window.handleCampaignSubmit = handleCampaignSubmit;
