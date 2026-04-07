@@ -4520,27 +4520,42 @@ async function scrapeProductUrl(productId, productUrl, itemEl) {
     thumb.appendChild(spinnerEl);
   }
 
+  // Set a 60-second timeout so the user isn't stuck on "Importing..." forever
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+
   try {
     const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-scrape-product`, {
       method: 'POST',
-      body: JSON.stringify({ product_id: productId, product_url: productUrl })
+      body: JSON.stringify({ product_id: productId, product_url: productUrl }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     if (response.ok) {
+      // Check if scraper actually updated the product name (not still "Importing...")
+      const { data: check } = await window.supabase.from('products').select('name').eq('id', productId).single();
+      if (check && check.name === 'Importing...') {
+        // Scraper returned 200 but didn't update the product — extract domain as name
+        const domain = productUrl.replace(/https?:\/\//, '').split('/')[0];
+        await window.supabase.from('products').update({ name: 'Product from ' + domain, product_url: productUrl }).eq('id', productId);
+      }
       showToast('Product details scraped from URL', 'success');
-      // Reload products to show scraped image/description
       if (window.loadProducts) await loadProducts();
     } else {
-      // Scrape failed — update placeholder name so user knows
-      await window.supabase.from('products').update({ name: 'Import failed — ' + productUrl }).eq('id', productId);
-      showToast('Failed to scrape product from URL', 'error');
+      await window.supabase.from('products').update({ name: 'Import failed — edit name manually', product_url: productUrl }).eq('id', productId);
+      showToast('Failed to scrape product from URL. You can edit the name manually.', 'error');
       if (window.loadProducts) await loadProducts();
     }
   } catch (err) {
+    clearTimeout(timeoutId);
     console.error('Product scrape error:', err);
-    // Update placeholder so user can identify the failed import
-    await window.supabase.from('products').update({ name: 'Import failed — ' + productUrl }).eq('id', productId).catch(() => {});
-    showToast('Failed to scrape product from URL', 'error');
+    const isTimeout = err.name === 'AbortError';
+    await window.supabase.from('products').update({
+      name: isTimeout ? 'Scrape timed out — edit name manually' : 'Import failed — edit name manually',
+      product_url: productUrl
+    }).eq('id', productId).catch(() => {});
+    showToast(isTimeout ? 'Scrape timed out. Edit the product name manually.' : 'Failed to scrape product. Edit the name manually.', 'error');
     if (window.loadProducts) await loadProducts();
   } finally {
     if (spinnerEl) spinnerEl.remove();
