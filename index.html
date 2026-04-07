@@ -4702,6 +4702,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Don't duplicate unlock logic here
 
   document.getElementById('business-form').addEventListener('submit', handleFormSubmit);
+
+  // Refresh S7 data when calendar section scrolls into view
+  const calendarSection = document.getElementById('section-calendar');
+  if (calendarSection && typeof IntersectionObserver !== 'undefined') {
+    let lastCalendarRefresh = 0;
+    const calendarObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !calendarSection.classList.contains('locked')) {
+          const now = Date.now();
+          if (now - lastCalendarRefresh > 5000 && window.loadScheduleThemes) {
+            lastCalendarRefresh = now;
+            loadScheduleThemes();
+          }
+        }
+      });
+    }, { threshold: 0.1 });
+    calendarObserver.observe(calendarSection);
+  }
 });
 
 // Scroll-based navigation for single-scroll layout
@@ -4709,6 +4727,10 @@ function scrollToSection(stepId) {
   const el = document.getElementById(stepId);
   if (el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  // Refresh S7 schedule grid whenever navigating to calendar
+  if (stepId === 'section-calendar' && window.loadScheduleThemes) {
+    loadScheduleThemes();
   }
 }
 
