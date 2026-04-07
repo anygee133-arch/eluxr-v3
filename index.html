@@ -9486,6 +9486,18 @@ function pollVideoStatus(contentId, dateStr) {
           item.video_url = data.video_url;
           item.video_status = 'completed';
         });
+        // Propagate video_url to ALL content items for the day in DB
+        // so S7 can find it regardless of which item is approved
+        try {
+          const { data: { user: vUser } } = await window.supabase.auth.getUser();
+          if (vUser) {
+            await window.supabase.from('content_items')
+              .update({ video_url: data.video_url, video_status: 'completed' })
+              .eq('user_id', vUser.id)
+              .gte('scheduled_date', dateStr + 'T00:00:00')
+              .lte('scheduled_date', dateStr + 'T23:59:59');
+          }
+        } catch (e) { console.warn('Failed to propagate video_url to all day items:', e); }
         showToast('Video generated!', 'success');
         // Re-render modal if still open
         const modal = document.getElementById('content-day-modal');
