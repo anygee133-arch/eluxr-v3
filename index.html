@@ -8007,6 +8007,18 @@ async function generateTopics(assignedProducts) {
       }
     } catch(e) { /* non-fatal */ }
 
+    // Fetch brand document summaries for topic generation
+    let brandDocSummary = '';
+    try {
+      const { data: { user: bdUser } } = await window.supabase.auth.getUser();
+      const { data: brandDocs } = await window.supabase
+        .from('brand_documents')
+        .select('summary_text')
+        .eq('user_id', bdUser.id)
+        .not('summary_text', 'is', null);
+      brandDocSummary = (brandDocs || []).map(d => d.summary_text).filter(Boolean).join('\n\n');
+    } catch(e) { /* non-fatal */ }
+
     var bodyObj = {
       campaign_id: campaignId,
       week_number: currentWeek,
@@ -8018,6 +8030,7 @@ async function generateTopics(assignedProducts) {
       brand_voice_traits: brandVoiceTraits,
       brand_voice_notes: brandVoiceNotes,
       campaign_theme: campaignTheme,
+      brand_document_summary: brandDocSummary,
       icp_summary: icpSummary,
       icp_data: icpData,
       business_notes: getBusinessContext().notes || ''
@@ -8202,9 +8215,48 @@ async function regenerateTopic(topicId) {
   renderTopicCards(topics);
 
   try {
+    // Get campaign context for richer regeneration
+    let regenCampaignTheme = '';
+    let regenVoiceTraits = [];
+    let regenVoiceNotes = '';
+    if (window.currentCampaignId) {
+      const { data: camp } = await window.supabase.from('campaigns').select('campaign_theme, brand_voice_traits, brand_voice_notes').eq('id', window.currentCampaignId).single();
+      if (camp) {
+        regenCampaignTheme = camp.campaign_theme || '';
+        regenVoiceTraits = camp.brand_voice_traits || [];
+        regenVoiceNotes = camp.brand_voice_notes || '';
+      }
+    }
+
+    // Get storytelling theme + tagline from STORYTELLING_THEMES constant
+    const dayNum = topic ? topic.day_number : null;
+    let stTheme = '';
+    let stTagline = '';
+    if (dayNum && regenCampaignTheme && STORYTELLING_THEMES[regenCampaignTheme]) {
+      const fw = STORYTELLING_THEMES[regenCampaignTheme].framework[dayNum];
+      if (fw) { stTheme = fw.theme; stTagline = fw.tagline; }
+    }
+
+    // Get product details from the topic's assigned product
+    let prodCategory = '';
+    let prodDescription = '';
+    if (topic && topic.product_id) {
+      const prod = productsData.find(p => p.id === topic.product_id);
+      if (prod) { prodCategory = prod.category || ''; prodDescription = prod.description || ''; }
+    }
+
     const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-regenerate-topic`, {
       method: 'POST',
-      body: JSON.stringify({ topic_id: topicId })
+      body: JSON.stringify({
+        topic_id: topicId,
+        storytelling_theme: stTheme,
+        theme_tagline: stTagline,
+        brand_voice_traits: regenVoiceTraits,
+        brand_voice_notes: regenVoiceNotes,
+        campaign_theme: regenCampaignTheme,
+        product_category: prodCategory,
+        product_description: prodDescription
+      })
     });
 
     const data = await safeJson(response);
@@ -10188,19 +10240,6 @@ async function handleCampaignSubmit(e) {
     window.currentCampaignId = campaign.id;
     currentMonth = monthInput;
 
-    // Create themes records so WF04 Content Studio can find them
-    // WF04 reads from themes table by user_id + week_number
-    const campaignWeeks = WeekNav.calculateWeeks(monthInput, startDate);
-    // Delete old themes for this user first, then insert fresh
-    await window.supabase.from('themes').delete().eq('user_id', user.id);
-    const themeRows = campaignWeeks.map(week => ({
-      user_id: user.id,
-      campaign_id: campaign.id,
-      week_number: week.weekNum,
-      theme_name: campaignTheme
-    }));
-    await window.supabase.from('themes').insert(themeRows);
-
     // Store business context for downstream use
     if (!businessContext) businessContext = {};
     businessContext.platforms = platforms;
@@ -10211,7 +10250,42 @@ async function handleCampaignSubmit(e) {
     window._campaignStartDate = startDate;
     _campaignWeeks = null;
 
-    showToast('Campaign created! Generating topics...', 'success');
+    showToast('Campaign created! Generating show structure...', 'success');
+
+    // Call WF02 to generate Netflix-model show structure (show_name, seasons, arcs)
+    // This creates rich theme records that WF04 reads for content generation
+    try {
+      const wf02Response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-phase2-themes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          month: monthInput,
+          industry: (businessContext && businessContext.industry) || '',
+          platforms: platforms,
+          campaign_theme: campaignTheme,
+          brand_voice_traits: [],
+          brand_voice_notes: brandNotes || '',
+          brand_doc_summary: brandDocSummary || ''
+        })
+      });
+      const wf02Data = await safeJson(wf02Response);
+      if (wf02Data && wf02Data.show_name) {
+        console.log('WF02 show structure generated:', wf02Data.show_name);
+      }
+    } catch (wf02Err) {
+      // WF02 failure is non-fatal — fall back to creating bare theme records
+      console.warn('WF02 show structure generation failed, creating fallback themes:', wf02Err);
+      const campaignWeeks = WeekNav.calculateWeeks(monthInput, startDate);
+      await window.supabase.from('themes').delete().eq('user_id', user.id);
+      const themeRows = campaignWeeks.map(week => ({
+        user_id: user.id,
+        campaign_id: campaign.id,
+        week_number: week.weekNum,
+        theme_name: campaignTheme
+      }));
+      await window.supabase.from('themes').insert(themeRows);
+    }
+
+    showToast('Generating topics...', 'success');
     window._topicsGenerating = true;
     unlockSection('section-topics');
 
