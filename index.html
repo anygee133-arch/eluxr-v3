@@ -8642,39 +8642,65 @@ async function renderContentReview() {
 
     const sortedDates = Object.keys(_contentByDate).sort();
 
-    // Group dates into weeks using campaign week boundaries (partial week support)
+    // Group dates into weeks using the same campaign week boundaries as S5/S7.
     const campaignWeeks = getCampaignWeeks();
     const weeks = campaignWeeks.map(w => {
       const start = w.startDate instanceof Date ? w.startDate : new Date(w.startDate + 'T00:00:00');
       const end = w.endDate instanceof Date ? w.endDate : new Date(w.endDate + 'T00:00:00');
-      
-      const formatStr = d => d.toISOString().slice(0, 10);
-      const startStr = formatStr(start);
-      const endStr = formatStr(end);
 
       const matchedDates = sortedDates.filter(d => {
         const date = new Date(d + 'T00:00:00');
         return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
       });
-      return { startStr, endStr, dates: matchedDates };
+
+      return {
+        weekNum: w.weekNum,
+        startDate: start,
+        endDate: end,
+        dayCount: w.dayCount,
+        dates: matchedDates
+      };
     }).filter(w => w.dates.length > 0);
 
-    // Render day cards grouped by week
-    const htmlOutput = weeks.map((weekObj, weekIdx) => {
-      const weekNum = weekIdx + 1;
+    if (weeks.length === 0) {
+      container.style.display = 'none';
+      if (empty) empty.style.display = 'block';
+      updateStats();
+      return;
+    }
+
+    const availableWeekNums = new Set(weeks.map(w => w.weekNum));
+    if (!window._contentReviewWeek || !availableWeekNums.has(window._contentReviewWeek)) {
+      window._contentReviewWeek = weeks[0].weekNum;
+    }
+
+    const selectedWeek = window._contentReviewWeek;
+    const visibleWeeks = weeks.filter(w => w.weekNum === selectedWeek);
+
+    // Render the active week under a visible week header, matching S5/S7 week selection.
+    const htmlOutput = visibleWeeks.map((weekObj) => {
+      const weekNum = weekObj.weekNum;
       const weekDates = weekObj.dates;
-      const weekStart = weekObj.startStr;
-      const weekEnd = weekObj.endStr;
+      const weekLabel = WeekNav.formatLabel(weekObj.startDate, weekObj.endDate);
       const weekApproved = weekDates.reduce((sum, d) => sum + (_contentByDate[d] || []).filter(i => i.status === 'approved').length, 0);
       const weekTotal = weekDates.reduce((sum, d) => sum + (_contentByDate[d] || []).length, 0);
 
       return '<div class="content-week-group">' +
+        '<div class="content-week-header">' +
+          '<div class="content-week-title">' +
+            '<div class="content-week-label">Week ' + weekNum + '</div>' +
+            '<div class="content-week-range">' + weekLabel + '</div>' +
+          '</div>' +
+          '<div class="content-week-stats">' +
+            '<span>' + weekDates.length + ' day' + (weekDates.length !== 1 ? 's' : '') + '</span>' +
+            '<span class="approved-count">' + weekApproved + '/' + weekTotal + ' approved</span>' +
+          '</div>' +
+        '</div>' +
         '<div class="content-days-grid">' + weekDates.map((dateStr) => {
-          const globalIdx = sortedDates.indexOf(dateStr);
           const dayItems = _contentByDate[dateStr];
           const dateObj = new Date(dateStr + 'T00:00:00');
           const dayName = _contentDayNames[dateObj.getDay()];
-          const dayInWeek = (globalIdx % 7) + 1;
+          const dayInWeek = Math.max(1, Math.round((dateObj.getTime() - weekObj.startDate.getTime()) / 86400000) + 1);
           const framework = getActiveFramework()[dayInWeek] || {};
           const approvedCount = dayItems.filter(i => i.status === 'approved').length;
           var hasHashtags = dayItems.some(function(i) { return i.hashtags && i.hashtags.length > 0; });
@@ -8698,6 +8724,8 @@ async function renderContentReview() {
     const currentScroll = window.scrollY;
     container.innerHTML = htmlOutput;
     window.scrollTo(0, currentScroll);
+
+    if (window.renderContentWeekNav) renderContentWeekNav();
 
     // Event delegation backup for day card clicks
     container.querySelectorAll('.content-day-card').forEach(card => {
