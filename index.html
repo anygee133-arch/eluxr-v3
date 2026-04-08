@@ -3775,15 +3775,16 @@ function showCalendarEmptyState() {
 // === PROFILE LOADER ===
 async function loadUserProfile() {
   try {
-    let url = '', industry = '';
+    let url = '', industry = '', notes = '';
     // Try profiles table first
     const { data: profile } = await window.supabase
       .from('profiles')
-      .select('business_url, industry')
+      .select('business_url, industry, business_notes')
       .maybeSingle();
     if (profile) {
       url = profile.business_url || '';
       industry = profile.industry || '';
+      notes = profile.business_notes || '';
     }
     // Fall back to icps table if profiles is empty (e.g. after reset)
     if (!url) {
@@ -3796,12 +3797,14 @@ async function loadUserProfile() {
         industry = icp.industry || industry;
       }
     }
-    if (url || industry) {
-      businessContext = { business_url: url, industry: industry };
+    if (url || industry || notes) {
+      businessContext = { business_url: url, industry: industry, notes: notes };
       const urlInput = document.getElementById('business_url');
       const industryInput = document.getElementById('industry');
+      const notesInput = document.getElementById('business_notes');
       if (urlInput && url) urlInput.value = url;
       if (industryInput && industry) industryInput.value = industry;
+      if (notesInput && notes) notesInput.value = notes;
     }
   } catch (err) {
     console.error('Error loading profile:', err);
@@ -5013,6 +5016,7 @@ async function handleFormSubmit(e) {
         .update({
           business_url: formData.business_url,
           industry: formData.industry,
+          business_notes: formData.notes || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
