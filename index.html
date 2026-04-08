@@ -5013,13 +5013,14 @@ async function handleFormSubmit(e) {
     const { data: { user } } = await window.supabase.auth.getUser();
     if (user) {
       await window.supabase.from('profiles')
-        .update({
+        .upsert({
+          id: user.id,
+          email: user.email,
           business_url: formData.business_url,
           industry: formData.industry,
           business_notes: formData.notes || null,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+        }, { onConflict: 'id' });
     }
   } catch (err) {
     console.error('Error saving profile:', err);
