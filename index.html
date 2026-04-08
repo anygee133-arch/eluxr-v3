@@ -8660,18 +8660,12 @@ async function renderContentReview() {
         dayCount: w.dayCount,
         dates: matchedDates
       };
-    }).filter(w => w.dates.length > 0);
+    });
 
-    if (weeks.length === 0) {
-      container.style.display = 'none';
-      if (empty) empty.style.display = 'block';
-      updateStats();
-      return;
-    }
-
-    const availableWeekNums = new Set(weeks.map(w => w.weekNum));
-    if (!window._contentReviewWeek || !availableWeekNums.has(window._contentReviewWeek)) {
-      window._contentReviewWeek = weeks[0].weekNum;
+    if (!window._contentReviewWeek) {
+      // Default to first week with content, or first week overall
+      const firstWithContent = weeks.find(w => w.dates.length > 0);
+      window._contentReviewWeek = firstWithContent ? firstWithContent.weekNum : (weeks[0] ? weeks[0].weekNum : 1);
     }
 
     const selectedWeek = window._contentReviewWeek;
@@ -8684,6 +8678,18 @@ async function renderContentReview() {
       const weekLabel = WeekNav.formatLabel(weekObj.startDate, weekObj.endDate);
       const weekApproved = weekDates.reduce((sum, d) => sum + (_contentByDate[d] || []).filter(i => i.status === 'approved').length, 0);
       const weekTotal = weekDates.reduce((sum, d) => sum + (_contentByDate[d] || []).length, 0);
+
+      if (weekDates.length === 0) {
+        return '<div class="content-week-group">' +
+          '<div class="content-week-header">' +
+            '<div class="content-week-title">' +
+              '<div class="content-week-label">Week ' + weekNum + '</div>' +
+              '<div class="content-week-range">' + weekLabel + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="text-align:center; padding:40px; color:var(--text-muted);">No content generated for this week yet. Generate topics in Section 5 first.</div>' +
+        '</div>';
+      }
 
       return '<div class="content-week-group">' +
         '<div class="content-week-header">' +
@@ -8760,20 +8766,30 @@ function openDayModal(dateStr) {
   const dateObj = new Date(dateStr + 'T00:00:00');
   const dayName = _contentDayNames[dateObj.getDay()];
 
-  // Use sequential date index to determine day-in-week, not calendar day of week
-  const allDates = Object.keys(_contentByDate).sort();
-  const dateIndex = allDates.indexOf(dateStr);
-  const dayInWeek = dateIndex >= 0 ? (dateIndex % 7) + 1 : 1;
+  // Use campaign week boundaries for day-in-week (consistent with day card rendering)
+  const campaignWeeks = getCampaignWeeks();
+  let dayInWeek = 1;
+  let weekNum = window._contentReviewWeek || 1;
+  if (campaignWeeks) {
+    for (const w of campaignWeeks) {
+      const start = w.startDate instanceof Date ? w.startDate : new Date(w.startDate + 'T00:00:00');
+      const end = w.endDate instanceof Date ? w.endDate : new Date(w.endDate + 'T00:00:00');
+      if (dateObj.getTime() >= start.getTime() && dateObj.getTime() <= end.getTime()) {
+        weekNum = w.weekNum;
+        dayInWeek = Math.max(1, Math.round((dateObj.getTime() - start.getTime()) / 86400000) + 1);
+        break;
+      }
+    }
+  }
   const framework = getActiveFramework()[dayInWeek] || {};
 
   titleEl.textContent = dayName + ' — ' + (framework.theme || '') + ' — ' + dateStr;
 
-  // Look up the topic title for this day from weekTopics using date position
+  // Look up the topic title for this day from weekTopics using campaign week boundaries
   let topicTitle = '';
   let topicDescription = '';
   let topicProductName = '';
-  if (dateIndex >= 0) {
-    const weekNum = Math.floor(dateIndex / 7) + 1;
+  {
     const weekTopicsList = weekTopics[weekNum];
     if (weekTopicsList) {
       const match = weekTopicsList.find(t => t.day_number === dayInWeek);
