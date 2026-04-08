@@ -8063,9 +8063,9 @@ async function generateTopics(assignedProducts) {
     return;
   }
 
-  // Show loading
-  const genSection = document.getElementById('topics-generate-section');
-  if (genSection) genSection.style.display = 'none';
+  // Show loading spinner, hide everything else
+  const gridSection = document.getElementById('topics-grid');
+  if (gridSection) gridSection.style.display = 'none';
   document.getElementById('topics-loading').style.display = 'block';
 
   try {
