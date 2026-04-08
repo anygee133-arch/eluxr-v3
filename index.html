@@ -9238,16 +9238,13 @@ async function generateDayImages(dateStr, directionHint) {
         productCategory = prod.category || '';
       }
     }
-    // Fallback: look up from weekTopics
+    // Fallback: look up from weekTopics using campaign week boundaries
     if (!productName) {
-      const allContentDates = Object.keys(_contentByDate || {}).sort();
-      const dIdx = allContentDates.indexOf(dateStr);
-      if (dIdx >= 0) {
-        const wkNum = Math.floor(dIdx / 7) + 1;
-        const dInWk = (dIdx % 7) + 1;
-        const wkTopics = weekTopics[wkNum];
+      const { weekNum, dayInWeek } = getWeekAndDayForDate(dateStr);
+      if (weekNum > 0 && dayInWeek > 0) {
+        const wkTopics = weekTopics[weekNum];
         if (wkTopics) {
-          const topicMatch = wkTopics.find(t => t.day_number === dInWk);
+          const topicMatch = wkTopics.find(t => t.day_number === dayInWeek);
           if (topicMatch) {
             productName = topicMatch.product_name || '';
             if (topicMatch.product_id && productsData) {
@@ -9696,6 +9693,24 @@ window.fetchAndDisplayCalendar = fetchAndDisplayCalendar;
 window.unlockSection = unlockSection;
 
 // === PRODUCT IMAGE HELPERS ===
+
+// Find which campaign week a date belongs to and its position within that week
+function getWeekAndDayForDate(dateStr) {
+  if (!_campaignWeeks || !_campaignWeeks.length) return { weekNum: 0, dayInWeek: 0 };
+  const d = new Date(dateStr + 'T12:00:00');
+  for (const week of _campaignWeeks) {
+    const start = new Date(week.startDate);
+    const end = new Date(week.endDate);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    if (d >= start && d <= end) {
+      const dayOffset = Math.round((d.setHours(0,0,0,0) - start.getTime()) / (1000 * 60 * 60 * 24));
+      return { weekNum: week.weekNum, dayInWeek: dayOffset + 1 };
+    }
+  }
+  return { weekNum: 0, dayInWeek: 0 };
+}
+
 // Look up product images for a given content date via content_items.product_id or weekly_topics
 function getProductImagesForDate(dateStr) {
   if (!dateStr) return [];
@@ -9710,32 +9725,30 @@ function getProductImagesForDate(dateStr) {
       }
     }
 
-    // Fallback: match via weekly_topics using sequential date position
-    const topicsArr = Array.isArray(weekTopics) ? weekTopics : Object.values(weekTopics || {}).flat();
-    const allDates = Object.keys(_contentByDate || {}).sort();
-    const dateIndex = allDates.indexOf(dateStr);
-    const dayInWeek = dateIndex >= 0 ? (dateIndex % 7) + 1 : 0;
-
-    if (dayInWeek > 0) {
-      const topic = topicsArr.find(t => t.day_number === dayInWeek && t.product_id);
-      if (topic) {
-        const product = (productsData || []).find(p => p.id === topic.product_id);
-        if (product) {
-          const imgs = product.image_urls || (product.image_url ? [product.image_url] : []);
-          if (imgs.length > 0) return imgs;
+    // Fallback: match via weekly_topics using campaign week boundaries
+    const { weekNum, dayInWeek } = getWeekAndDayForDate(dateStr);
+    if (weekNum > 0 && dayInWeek > 0) {
+      const wkTopics = weekTopics[weekNum];
+      if (wkTopics) {
+        const topic = wkTopics.find(t => t.day_number === dayInWeek && t.product_id);
+        if (topic) {
+          const product = (productsData || []).find(p => p.id === topic.product_id);
+          if (product) {
+            const imgs = product.image_urls || (product.image_url ? [product.image_url] : []);
+            if (imgs.length > 0) return imgs;
+          }
         }
-      }
-    }
-
-    // Last fallback: match by product_name in topics
-    const topicByName = dayInWeek > 0 ? topicsArr.find(t => t.day_number === dayInWeek && t.product_name) : null;
-    if (topicByName) {
-      const product = (productsData || []).find(p =>
-        p.name && p.name.toLowerCase().includes(topicByName.product_name.toLowerCase())
-      );
-      if (product) {
-        const imgs = product.image_urls || (product.image_url ? [product.image_url] : []);
-        if (imgs.length > 0) return imgs;
+        // Last fallback: match by product_name within same week
+        const topicByName = wkTopics.find(t => t.day_number === dayInWeek && t.product_name);
+        if (topicByName) {
+          const product = (productsData || []).find(p =>
+            p.name && p.name.toLowerCase().includes(topicByName.product_name.toLowerCase())
+          );
+          if (product) {
+            const imgs = product.image_urls || (product.image_url ? [product.image_url] : []);
+            if (imgs.length > 0) return imgs;
+          }
+        }
       }
     }
   } catch (e) {
