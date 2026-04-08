@@ -3519,6 +3519,11 @@ details .details-content { padding: 20px; }
   }
 
   async function handleLogout() {
+    if (typeof calendarRefreshInterval !== 'undefined' && calendarRefreshInterval) clearInterval(calendarRefreshInterval);
+    if (progressChannel) { window.supabase.removeChannel(progressChannel); progressChannel = null; }
+    if (typeof _progressPollInterval !== 'undefined' && _progressPollInterval) { clearInterval(_progressPollInterval); _progressPollInterval = null; }
+    window._initComplete = false;
+    currentPipelineRunId = null;
     await supabase.auth.signOut()
     currentUser = null
     showLoginPage()
@@ -3543,6 +3548,8 @@ details .details-content { padding: 20px; }
         case 'INITIAL_SESSION':
         case 'SIGNED_IN':
           if (session) {
+            if (window._initComplete && event === 'SIGNED_IN') break;
+            window._initComplete = true;
             currentUser = session.user
             showDashboard()
             // Load user profile from Supabase
@@ -3574,6 +3581,7 @@ details .details-content { padding: 20px; }
           }
           break
         case 'SIGNED_OUT':
+          window._initComplete = false;
           currentUser = null
           showLoginPage()
           break
@@ -3704,7 +3712,8 @@ function getBusinessContext() {
     industry: (document.getElementById('industry') || {}).value || '',
     brand_voice: '',
     platforms: typeof getSelectedPlatforms === 'function' ? getSelectedPlatforms() : ['instagram', 'linkedin'],
-    content_language: (document.getElementById('content_language') || {}).value || 'English'
+    content_language: (document.getElementById('content_language') || {}).value || 'English',
+    notes: (document.getElementById('business_notes') || {}).value || ''
   };
 }
 
@@ -3797,14 +3806,26 @@ async function loadUserProfile() {
         industry = icp.industry || industry;
       }
     }
+    // Load content_language from active campaign (scoped by user_id for tenant safety)
+    let contentLanguage = 'English';
+    try {
+      const { data: { user: langUser } } = await window.supabase.auth.getUser();
+      if (langUser) {
+        const { data: camp } = await window.supabase.from('campaigns').select('content_language').eq('user_id', langUser.id).eq('is_active', true).order('updated_at', { ascending: false }).limit(1).maybeSingle();
+        if (camp && camp.content_language) contentLanguage = camp.content_language;
+      }
+    } catch (e) { /* ignore */ }
+
     if (url || industry || notes) {
-      businessContext = { business_url: url, industry: industry, notes: notes };
+      businessContext = { business_url: url, industry: industry, notes: notes, content_language: contentLanguage };
       const urlInput = document.getElementById('business_url');
       const industryInput = document.getElementById('industry');
       const notesInput = document.getElementById('business_notes');
+      const langSelect = document.getElementById('content_language');
       if (urlInput && url) urlInput.value = url;
       if (industryInput && industry) industryInput.value = industry;
       if (notesInput && notes) notesInput.value = notes;
+      if (langSelect) langSelect.value = contentLanguage;
     }
   } catch (err) {
     console.error('Error loading profile:', err);
@@ -4929,6 +4950,9 @@ function goToPhase(n) {
 // Form submission
 async function handleFormSubmit(e) {
   e.preventDefault();
+  if (window._formSubmitting) return;
+  window._formSubmitting = true;
+  try {
 
   const formData = {
     business_url: document.getElementById('business_url').value,
@@ -5051,6 +5075,8 @@ async function handleFormSubmit(e) {
     showToast('Error analyzing business: ' + error.message, 'error');
     scrollToSection('section-business');
   }
+
+  } finally { window._formSubmitting = false; }
 }
 
 // Utility functions
@@ -5494,9 +5520,12 @@ function resetProgressUI() {
   const card = document.getElementById('pipeline-progress-card');
   if (card) card.style.display = 'block';
   
-  document.getElementById('progress-bar').style.width = '0%';
-  document.getElementById('progress-text').textContent = '0%';
-  document.getElementById('phase-text').textContent = 'Starting pipeline...';
+  const bar = document.getElementById('progress-bar');
+  const text = document.getElementById('progress-text');
+  const phase = document.getElementById('phase-text');
+  if (bar) bar.style.width = '0%';
+  if (text) text.textContent = '0%';
+  if (phase) phase.textContent = 'Starting pipeline...';
 
   document.querySelectorAll('.phase-list .phase-item').forEach((item) => {
     item.classList.remove('active', 'completed');
@@ -5572,9 +5601,12 @@ function renderProgress(run) {
   if (run.status === 'completed' && !icpLoaded) percentage = 95;
 
   // Update progress bar
-  document.getElementById('progress-bar').style.width = `${percentage}%`;
-  document.getElementById('progress-text').textContent = `${percentage}%`;
-  document.getElementById('phase-text').textContent = run.step_label || STEP_LABELS[currentStep - 1] || 'Processing...';
+  const bar = document.getElementById('progress-bar');
+  const text = document.getElementById('progress-text');
+  const phase = document.getElementById('phase-text');
+  if (bar) bar.style.width = `${percentage}%`;
+  if (text) text.textContent = `${percentage}%`;
+  if (phase) phase.textContent = run.step_label || STEP_LABELS[currentStep - 1] || 'Processing...';
 
   // ICP card integration: show skeleton when pipeline starts
   if (currentStep === 0 && window.showICPSkeleton) {
@@ -8062,9 +8094,13 @@ function updateApprovalCount(topics) {
 }
 
 async function generateTopics(assignedProducts) {
+  if (window._topicsGenerating) return;
+  window._topicsGenerating = true;
+
   const campaignId = await ensureCampaign();
   if (!campaignId) {
     showToast('No campaign found. Please run the analysis first.', 'error');
+    window._topicsGenerating = false;
     return;
   }
 
@@ -8088,12 +8124,14 @@ async function generateTopics(assignedProducts) {
     let brandVoiceTraits = [];
     let brandVoiceNotes = '';
     let campaignTheme = '';
+    let campContentLanguage = '';
     if (window.currentCampaignId) {
-      const { data: camp } = await window.supabase.from('campaigns').select('brand_voice_traits, brand_voice_notes, campaign_theme').eq('id', window.currentCampaignId).single();
+      const { data: camp } = await window.supabase.from('campaigns').select('brand_voice_traits, brand_voice_notes, campaign_theme, content_language').eq('id', window.currentCampaignId).single();
       if (camp) {
         brandVoiceTraits = camp.brand_voice_traits || [];
         brandVoiceNotes = camp.brand_voice_notes || '';
         campaignTheme = camp.campaign_theme || '';
+        campContentLanguage = camp.content_language || '';
       }
     }
 
@@ -8128,7 +8166,7 @@ async function generateTopics(assignedProducts) {
       start_date: weekInfo ? weekInfo.startDate.toISOString().slice(0, 10) : '',
       end_date: weekInfo ? weekInfo.endDate.toISOString().slice(0, 10) : '',
       storytelling_framework: frameworkContext,
-      content_language: getBusinessContext().content_language || 'English',
+      content_language: campContentLanguage || getBusinessContext().content_language || 'English',
       brand_voice_traits: brandVoiceTraits,
       brand_voice_notes: brandVoiceNotes,
       campaign_theme: campaignTheme,
@@ -8187,8 +8225,8 @@ async function generateTopicsFromProducts() {
     await loadProducts();
   }
 
-  if (!productsData || productsData.length < dayCount) {
-    showToast(`You need at least ${dayCount} products for this week (1 per day). Currently: ${productsData ? productsData.length : 0}.`, 'error');
+  if (!productsData || productsData.length === 0) {
+    showToast('No products found. Add products first.', 'error');
     return;
   }
   if (!productOrder || productOrder.length === 0) {
@@ -8201,7 +8239,7 @@ async function generateTopicsFromProducts() {
     weekStart += weeks[i].dayCount;
   }
   var weekProducts = getOrderedProducts().slice(weekStart, weekStart + dayCount);
-  if (weekProducts.length === 0) {
+  if (weekProducts.length < dayCount) {
     const weekLabel = weekInfo ? WeekNav.formatLabel(weekInfo.startDate, weekInfo.endDate) : `Week ${currentWeek}`;
     showToast('No products available for ' + weekLabel, 'error');
     return;
@@ -8226,6 +8264,7 @@ function updateGenerateTopicsButton() {
 window.updateGenerateTopicsButton = updateGenerateTopicsButton;
 
 async function approveAllAndGenerate() {
+  if (_contentGeneratingWeek) { showToast('Content generation already in progress', 'error'); return; }
   var topics = weekTopics[currentWeek];
   if (!topics || topics.length === 0) {
     showToast('No topics to approve', 'error');
@@ -8395,6 +8434,7 @@ async function regenerateTopic(topicId) {
 }
 
 async function lockInAndGenerate() {
+  if (_contentGeneratingWeek) { showToast('Content generation already in progress', 'error'); return; }
   const campaignId = await ensureCampaign();
   if (!campaignId) return;
 
@@ -8434,7 +8474,7 @@ async function lockInAndGenerate() {
       .eq('campaign_id', campaignId);
 
     // Read campaign data from Supabase for platforms + month
-    const { data: campData } = await window.supabase.from('campaigns').select('platforms, month, brand_voice_traits, brand_voice_notes, campaign_theme').eq('id', campaignId).single();
+    const { data: campData } = await window.supabase.from('campaigns').select('platforms, month, brand_voice_traits, brand_voice_notes, campaign_theme, content_language').eq('id', campaignId).single();
     const campPlatforms = (campData && campData.platforms && campData.platforms.length > 0) ? campData.platforms : ['linkedin', 'instagram', 'x', 'youtube'];
     const campMonth = (campData && campData.month) ? campData.month : new Date().toISOString().slice(0, 7);
 
@@ -8464,7 +8504,7 @@ async function lockInAndGenerate() {
             end_date: weekEndDate,
             day_count: weekDayCount,
             platforms: campPlatforms,
-            content_language: getBusinessContext().content_language || 'English',
+            content_language: (campData && campData.content_language) || getBusinessContext().content_language || 'English',
             brand_voice_traits: campData ? campData.brand_voice_traits : [],
             brand_voice_notes: (campData ? campData.brand_voice_notes : '') + platformInstructions,
             campaign_theme: campData ? campData.campaign_theme : '',
@@ -8493,6 +8533,7 @@ async function lockInAndGenerate() {
     const s6Container = document.getElementById('content-review-container');
 
     const pollForContent = () => new Promise((resolve, reject) => {
+      let errorCount = 0;
       const interval = setInterval(async () => {
         polls++;
         try {
@@ -8502,6 +8543,7 @@ async function lockInAndGenerate() {
             .eq('user_id', user.id)
             .eq('campaign_id', campaignId);
 
+          errorCount = 0;
           const newItems = (currentCount || 0) - (existingCount || 0);
           const daysComplete = Math.floor(newItems / platforms.length);
           progress = Math.min(10 + (newItems / expectedItems) * 85, 95);
@@ -8516,11 +8558,26 @@ async function lockInAndGenerate() {
           }
         } catch (e) {
           console.error('Poll error:', e);
+          errorCount++;
+          if (errorCount >= 5) {
+            clearInterval(interval);
+            // Resolve as unknown — backend job may still be running, don't clear generation lock
+            resolve('poll_error');
+          }
         }
       }, 5000);
     });
 
     const success = await pollForContent();
+
+    // If polling lost contact but backend may still be running, keep lock and inform user
+    if (success === 'poll_error') {
+      showToast('Lost contact with server — content generation may still be running. Refresh the page in a few minutes.', 'warning');
+      // Don't clear _contentGeneratingWeek — prevents duplicate submissions
+      // Render what we have so far
+      if (window.renderContentReview) renderContentReview();
+      return;
+    }
 
     // Clear generating state
     _contentGeneratingWeek = null;
@@ -8551,6 +8608,7 @@ async function lockInAndGenerate() {
       showToast(success ? 'Week ' + currentWeek + ' content generated! Review below.' : 'Content generation may still be running.', success ? 'success' : 'info');
     }, 1000);
   } catch (err) {
+    _contentGeneratingWeek = null;
     console.error('lockInAndGenerate error:', err);
     showToast('Error generating content: ' + err.message, 'error');
     // Restore S6 with error state
@@ -9254,6 +9312,7 @@ function renderContentWeekNav() {
 window.renderContentWeekNav = renderContentWeekNav;
 
 async function generateDayImages(dateStr, directionHint) {
+  if (generatingImageDates.has(dateStr)) return;
   dayImageApproved[dateStr] = false;
   generatingImageDates.add(dateStr);
   updateDayCardSpinner(dateStr, true);
@@ -9507,13 +9566,15 @@ async function unapproveAndRegenerateDayImage(dateStr) {
   dayApprovedImage[dateStr] = null;
   dayImageOptions[dateStr] = [];
   var dayItems = _contentByDate[dateStr] || [];
-  dayItems.forEach(function(item) { item.image_url = null; });
-  // Persist to DB
+  dayItems.forEach(function(item) { item.image_url = null; item.video_url = null; item.video_status = null; });
+  // Invalidate any in-flight video generation for this date
+  if (_videoGeneratingDates) _videoGeneratingDates.delete(dateStr);
+  // Persist to DB — clear image, video, and all approval state
   try {
     const { data: { user } } = await window.supabase.auth.getUser();
     if (user) {
       await window.supabase.from('content_items')
-        .update({ image_approved: null, video_approved: false })
+        .update({ image_approved: null, video_approved: null, image_url: null, video_url: null, video_status: null })
         .eq('user_id', user.id)
         .gte('scheduled_date', dateStr + 'T00:00:00')
         .lte('scheduled_date', dateStr + 'T23:59:59');
@@ -9525,6 +9586,7 @@ async function unapproveAndRegenerateDayImage(dateStr) {
 window.unapproveAndRegenerateDayImage = unapproveAndRegenerateDayImage;
 
 async function generateDayVideo(dateStr) {
+  if (_videoGeneratingDates && _videoGeneratingDates.has(dateStr)) return;
   if (!dayImageApproved[dateStr]) {
     showToast('Please approve the day image first.', 'warning');
     return;
@@ -9549,6 +9611,20 @@ async function generateDayVideo(dateStr) {
         topicText = match.topic || match.storytelling_theme || '';
         productName = match.product_name || productName;
         break;
+      }
+    }
+  }
+
+  // Fallback: look up by week/day position if product_id match failed
+  if (!topicText) {
+    const { weekNum, dayInWeek } = getWeekAndDayForDate(dateStr);
+    const wkTopics = weekTopics[weekNum];
+    if (wkTopics) {
+      const match = wkTopics.find(t => t.day_number === dayInWeek);
+      if (match) {
+        topicText = match.topic || match.storytelling_theme || '';
+        productName = match.product_name || productName;
+        productCategory = match.product_category || '';
       }
     }
   }
@@ -9693,8 +9769,15 @@ async function regeneratePostText(itemId, reopenDate) {
     const { data: item } = await window.supabase.from('content_items').select('*').eq('id', itemId).single();
     if (!item) { showToast('Content item not found', 'error'); return; }
 
-    // Get language from business context
-    const lang = (businessContext && businessContext.content_language) || 'English';
+    // Get language from campaign DB, fall back to business context only if DB lookup fails
+    let lang = null;
+    if (item.campaign_id) {
+      try {
+        const { data: camp } = await window.supabase.from('campaigns').select('content_language').eq('id', item.campaign_id).single();
+        if (camp && camp.content_language) lang = camp.content_language;
+      } catch(e) { /* fall through */ }
+    }
+    if (!lang) lang = (businessContext && businessContext.content_language) || 'English';
 
     const response = await authenticatedFetch(`${N8N_BASE_URL}/eluxr-regenerate-topic`, {
       method: 'POST',
@@ -10462,9 +10545,19 @@ async function handleCampaignSubmit(e) {
     businessContext.brand_voice = brandNotes || '';
     businessContext.content_language = campaignData.content_language;
 
-    // Store campaign start date globally and clear cached weeks
+    // Store campaign start date globally and clear all cached state from prior campaign
     window._campaignStartDate = startDate;
     _campaignWeeks = null;
+    weekTopics = {};
+    contentData = [];
+    if (typeof _contentByDate !== 'undefined') _contentByDate = {};
+    if (typeof dayImageApproved !== 'undefined') dayImageApproved = {};
+    if (typeof dayApprovedImage !== 'undefined') dayApprovedImage = {};
+    if (typeof dayVideoApproved !== 'undefined') dayVideoApproved = {};
+    if (typeof dayVideoUrl !== 'undefined') dayVideoUrl = {};
+    if (typeof dayImageOptions !== 'undefined') dayImageOptions = {};
+    if (typeof generatingImageDates !== 'undefined') generatingImageDates = new Set();
+    if (typeof _videoGeneratingDates !== 'undefined') _videoGeneratingDates = new Set();
 
     showToast('Campaign created! Generating show structure...', 'success');
 
@@ -10502,7 +10595,6 @@ async function handleCampaignSubmit(e) {
     }
 
     showToast('Generating topics...', 'success');
-    window._topicsGenerating = true;
     unlockSection('section-topics');
 
     // Show loading indicator in Section 5 BEFORE scrolling
