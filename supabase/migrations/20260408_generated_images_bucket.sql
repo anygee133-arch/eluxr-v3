@@ -1,0 +1,17 @@
+-- Migration: Create generated-images bucket for AI-generated content
+-- Date: 2026-04-08
+-- Purpose: Move AI-generated images from tempfile.aiquickdraw.com (ephemeral KIE CDN)
+--          to Supabase Storage for permanent, reliable hosting.
+--
+-- Bucket created via Supabase Storage API (not SQL):
+--   POST /storage/v1/bucket
+--   { "id": "generated-images", "name": "generated-images", "public": true,
+--     "file_size_limit": 10485760, "allowed_mime_types": ["image/png","image/jpeg","image/webp"] }
+--
+-- Public bucket: files served at /storage/v1/object/public/generated-images/{path}
+-- Upload path convention: {content_item_id}.png
+-- n8n workflow (Social Calendar - Image Generator) uses service_role key for uploads.
+--
+-- No additional RLS policies needed:
+--   - Public reads: handled by bucket's public=true setting
+--   - Writes: service_role key bypasses RLS
