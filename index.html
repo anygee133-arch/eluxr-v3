@@ -4180,7 +4180,7 @@ function initDragAndDrop() {
   if (container && items.length > 1) {
     var dropZone = document.createElement('div');
     dropZone.id = 'product-drop-zone-top';
-    dropZone.style.cssText = 'height:4px; border:2px dashed transparent; border-radius:4px; transition:all 0.2s; display:none;';
+    dropZone.style.cssText = 'height:12px; border:2px dashed transparent; border-radius:4px; transition:all 0.2s; display:none;';
     container.insertBefore(dropZone, container.firstChild);
 
     dropZone.addEventListener('dragover', function(e) {
@@ -4248,8 +4248,11 @@ function initDragAndDrop() {
 window.initDragAndDrop = initDragAndDrop;
 
 function reorderProducts(fromIndex, toIndex) {
+  // border-top visual = "insert before this item"
+  // When dragging down, removing the source shifts indices, so adjust
+  var adjustedTo = (fromIndex < toIndex) ? toIndex - 1 : toIndex;
   var moved = productOrder.splice(fromIndex, 1)[0];
-  productOrder.splice(toIndex, 0, moved);
+  productOrder.splice(adjustedTo, 0, moved);
   renderProductsCard(getOrderedProducts());
   initDragAndDrop();
   // Autosave sort order after reorder (debounced)
