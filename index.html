@@ -1234,7 +1234,8 @@ details .details-content { padding: 20px; }
 }
 .product-item[draggable="true"] { cursor: grab; }
 .product-item.dragging { opacity: 0.5; transform: scale(0.98); }
-.product-item.drag-over { border-top: 2px solid #000; }
+.product-item.drag-over-above { border-top: 2px solid #000; }
+.product-item.drag-over-below { border-bottom: 2px solid #000; }
 .product-order-badge {
   width: 28px; height: 28px; border-radius: 50%;
   background: #0f172a; color: #fff;
@@ -4216,15 +4217,17 @@ function initDragAndDrop() {
       item.classList.add('dragging');
       e.dataTransfer.setData('text/plain', String(idx));
       e.dataTransfer.effectAllowed = 'move';
+      window._dragFromIndex = idx;
       var dz = document.getElementById('product-drop-zone-top');
       if (dz) dz.style.display = 'block';
     });
 
     item.addEventListener('dragend', function() {
       item.classList.remove('dragging');
-      document.querySelectorAll('.product-item.drag-over').forEach(function(el) {
-        el.classList.remove('drag-over');
+      document.querySelectorAll('.product-item.drag-over-above, .product-item.drag-over-below').forEach(function(el) {
+        el.classList.remove('drag-over-above', 'drag-over-below');
       });
+      window._dragFromIndex = -1;
       var dz = document.getElementById('product-drop-zone-top');
       if (dz) dz.style.display = 'none';
     });
@@ -4233,7 +4236,14 @@ function initDragAndDrop() {
     item.addEventListener('dragenter', function(e) {
       e.preventDefault();
       item._dragOverCount++;
-      item.classList.add('drag-over');
+      // Show border-top when dragging up, border-bottom when dragging down
+      if (window._dragFromIndex >= 0 && idx > window._dragFromIndex) {
+        item.classList.remove('drag-over-above');
+        item.classList.add('drag-over-below');
+      } else {
+        item.classList.remove('drag-over-below');
+        item.classList.add('drag-over-above');
+      }
     });
 
     item.addEventListener('dragover', function(e) {
@@ -4245,14 +4255,14 @@ function initDragAndDrop() {
       item._dragOverCount--;
       if (item._dragOverCount <= 0) {
         item._dragOverCount = 0;
-        item.classList.remove('drag-over');
+        item.classList.remove('drag-over-above', 'drag-over-below');
       }
     });
 
     item.addEventListener('drop', function(e) {
       e.preventDefault();
       item._dragOverCount = 0;
-      item.classList.remove('drag-over');
+      item.classList.remove('drag-over-above', 'drag-over-below');
       var fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
       var toIndex = idx;
       if (fromIndex !== toIndex) {
@@ -4264,11 +4274,8 @@ function initDragAndDrop() {
 window.initDragAndDrop = initDragAndDrop;
 
 function reorderProducts(fromIndex, toIndex) {
-  // border-top visual = "insert before this item"
-  // When dragging down, removing the source shifts indices, so adjust
-  var adjustedTo = (fromIndex < toIndex) ? toIndex - 1 : toIndex;
   var moved = productOrder.splice(fromIndex, 1)[0];
-  productOrder.splice(adjustedTo, 0, moved);
+  productOrder.splice(toIndex, 0, moved);
   renderProductsCard(getOrderedProducts());
   initDragAndDrop();
   // Autosave sort order after reorder (debounced)
