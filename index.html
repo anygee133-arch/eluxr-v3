@@ -8831,9 +8831,8 @@ function openDayModal(dateStr) {
       if (itemWithProduct) dayProduct = productsData.find(p => p.id === itemWithProduct.product_id);
     }
     // 2. From weekly_topics product_id via day_number
-    if (!dayProduct && dateIndex >= 0) {
-      const wkNum = Math.floor(dateIndex / 7) + 1;
-      const wkTopics = weekTopics[wkNum];
+    if (!dayProduct) {
+      const wkTopics = weekTopics[weekNum];
       if (wkTopics) {
         const topicMatch = wkTopics.find(t => t.day_number === dayInWeek && t.product_id);
         if (topicMatch) dayProduct = productsData.find(p => p.id === topicMatch.product_id);
