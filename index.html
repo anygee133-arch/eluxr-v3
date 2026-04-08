@@ -4105,7 +4105,7 @@ function renderProductsCard(products) {
     const prodUrl = p.product_url || '';
     const images = (p.image_urls && p.image_urls.length > 0) ? p.image_urls : (p.image_url ? [p.image_url] : []);
     const thumbHtml = images.length > 0
-      ? '<div class="product-thumb" onclick="' + (prodUrl ? "window.open('" + escapeHTML(prodUrl) + "','_blank')" : "openGallery('" + escapeHTML(p.id || '') + "')") + '" title="' + (prodUrl ? 'View product page' : 'View images (' + images.length + ')') + '"><img src="' + escapeHTML(images[0]) + '" alt="' + nameVal + '"></div>'
+      ? '<div class="product-thumb" onclick="' + (prodUrl ? "window.open('" + escapeHTML(prodUrl) + "','_blank')" : "openGallery('" + escapeHTML(p.id || '') + "')") + '" title="' + (prodUrl ? 'View product page' : 'View images (' + images.length + ')') + '"><img src="' + escapeHTML(images[0]) + '" alt="' + nameVal + '" draggable="false"></div>'
       : (prodUrl
         ? '<div class="product-thumb" onclick="window.open(\'' + escapeHTML(prodUrl) + '\',\'_blank\')" title="View product page"><span class="thumb-placeholder">&#128247;</span></div>'
         : '<div class="product-thumb" style="cursor:default"><span class="thumb-placeholder">&#128247;</span></div>');
@@ -4206,6 +4206,11 @@ function initDragAndDrop() {
   items.forEach(function(item, idx) {
     item.setAttribute('draggable', 'true');
     item.dataset.orderIndex = idx;
+    // Prevent child elements from intercepting drag
+    item.querySelectorAll('img, a').forEach(function(el) { el.setAttribute('draggable', 'false'); });
+    item.querySelectorAll('input, button').forEach(function(el) {
+      el.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+    });
 
     item.addEventListener('dragstart', function(e) {
       item.classList.add('dragging');
@@ -4224,18 +4229,29 @@ function initDragAndDrop() {
       if (dz) dz.style.display = 'none';
     });
 
-    item.addEventListener('dragover', function(e) {
+    item._dragOverCount = 0;
+    item.addEventListener('dragenter', function(e) {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      item._dragOverCount++;
       item.classList.add('drag-over');
     });
 
+    item.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+
     item.addEventListener('dragleave', function() {
-      item.classList.remove('drag-over');
+      item._dragOverCount--;
+      if (item._dragOverCount <= 0) {
+        item._dragOverCount = 0;
+        item.classList.remove('drag-over');
+      }
     });
 
     item.addEventListener('drop', function(e) {
       e.preventDefault();
+      item._dragOverCount = 0;
       item.classList.remove('drag-over');
       var fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
       var toIndex = idx;
