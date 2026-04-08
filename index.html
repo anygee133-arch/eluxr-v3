@@ -4142,8 +4142,20 @@ function toggleProductsCard() {
 let productOrder = [];
 
 function initProductOrder() {
-  if (productsData && productsData.length > 0 && productOrder.length === 0) {
+  if (!productsData || productsData.length === 0) return;
+  if (productOrder.length === 0) {
     productOrder = productsData.map(function(p) { return p.id; });
+  } else {
+    // Add any new products not yet in productOrder (e.g., just added)
+    productsData.forEach(function(p) {
+      if (p.id && productOrder.indexOf(p.id) === -1) {
+        productOrder.unshift(p.id);
+      }
+    });
+    // Remove deleted products no longer in productsData
+    productOrder = productOrder.filter(function(id) {
+      return productsData.some(function(p) { return p.id === id; });
+    });
   }
 }
 window.initProductOrder = initProductOrder;
