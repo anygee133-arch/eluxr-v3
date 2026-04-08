@@ -3131,7 +3131,7 @@ details .details-content { padding: 20px; }
 
     <!-- Content review cards will be rendered here by JS -->
     <div id="content-review-container">
-      <div id="content-review-empty" class="card" style="text-align:center; padding:40px;">
+      <div id="content-review-empty" class="card" style="text-align:center; padding:40px; display:none;">
         <p style="color:var(--text-secondary);">Generate content in Section 5 to review it here.</p>
       </div>
       <div id="content-review-days" style="display:none;"></div>
@@ -3278,7 +3278,7 @@ details .details-content { padding: 20px; }
 </div>
 
 <!-- PRODUCT IMAGE GALLERY MODAL -->
-<div id="gallery-modal" class="gallery-modal" onclick="if(event.target===this)closeGallery()">
+<div id="gallery-modal" class="gallery-modal" aria-hidden="true" onclick="if(event.target===this)closeGallery()">
   <div class="gallery-modal-content">
     <div class="gallery-header">
       <h3 id="gallery-product-name">Product Images</h3>
@@ -8557,11 +8557,12 @@ async function renderContentReview() {
   try {
     const calData = await fetchCalendarData();
     const items = calData.all || [];
-    if (items.length > 0) contentData = items;
+    contentData = items;
 
     if (items.length === 0) {
       container.style.display = 'none';
       if (empty) empty.style.display = 'block';
+      updateStats();
       return;
     }
 
@@ -8679,7 +8680,7 @@ async function renderContentReview() {
           var hasHashtags = dayItems.some(function(i) { return i.hashtags && i.hashtags.length > 0; });
           var isGenerating = generatingImageDates.has(dateStr);
 
-          return '<div class="content-day-card' + (isGenerating ? ' generating-image' : '') + '" onclick="openDayModal(\'' + dateStr + '\')">' +
+          return '<div class="content-day-card' + (isGenerating ? ' generating-image' : '') + '" data-date="' + dateStr + '" onclick="openDayModal(\'' + dateStr + '\')">' +
             '<div class="day-badge">' + dayName + '</div>' +
             '<div class="day-info">' +
               '<div class="day-title">' + escapeHTML(framework.theme || dayName) + ' — ' + dateStr + '</div>' +
@@ -8697,6 +8698,14 @@ async function renderContentReview() {
     const currentScroll = window.scrollY;
     container.innerHTML = htmlOutput;
     window.scrollTo(0, currentScroll);
+
+    // Event delegation backup for day card clicks
+    container.querySelectorAll('.content-day-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const dateStr = this.getAttribute('data-date');
+        if (dateStr) openDayModal(dateStr);
+      });
+    });
 
   } catch (err) {
     console.error('renderContentReview error:', err);
@@ -9939,6 +9948,7 @@ function openGallery(productId) {
   }
 
   modal.classList.add('visible');
+  modal.setAttribute('aria-hidden', 'false');
 }
 
 function renderGallery() {
@@ -9974,7 +9984,9 @@ function galleryGoTo(idx) {
 }
 
 function closeGallery() {
-  document.getElementById('gallery-modal').classList.remove('visible');
+  const modal = document.getElementById('gallery-modal');
+  modal.classList.remove('visible');
+  modal.setAttribute('aria-hidden', 'true');
   galleryImages = [];
   galleryIndex = 0;
 }
